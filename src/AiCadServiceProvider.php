@@ -4,7 +4,7 @@ namespace Tolery\AiCad;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use package\src\Commands\AiCadCommand;
+use Tolery\AiCad\Commands\AiCadCommand;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {

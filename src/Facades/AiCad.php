@@ -11,6 +11,6 @@ class AiCad extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return package\src\AiCad::class;
+        return Tolery\AiCad\AiCad::class;
     }
 }
