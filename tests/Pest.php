@@ -1,5 +1,5 @@
 <?php
 
-use Tolery\AiCad\tests\TestCase;
+use Tolery\AiCad\Tests\TestCase;
 
 uses(TestCase::class)->in(__DIR__);
