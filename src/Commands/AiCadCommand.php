@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Tolery\AiCad\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class AiCadCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'ai-cad';
 
     public $description = 'My command';
 
