@@ -65,7 +65,7 @@ class Chatbot extends Component
 
         $lastAnswer = $this->chat->messages()->whereNull('user_id')->latest()->first();
 
-        if($lastAnswer->created_at > $this->lastTimeAnswer) {
+        if($lastAnswer && $lastAnswer->created_at > $this->lastTimeAnswer) {
             $this->chatMessages = $this->chat->messages()->get();
             $this->lastTimeAnswer = $lastAnswer->created_at;
             $this->waitingForAnswer = false;
