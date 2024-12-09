@@ -7,5 +7,5 @@ return [
 
         'secret-key' => env('ONSHAPE_SECRET_KEY'),
         'access-key' => env('ONSHAPE_ACCESS_KEY'),
-    ]
+    ],
 ];

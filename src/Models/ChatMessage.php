@@ -8,7 +8,6 @@ use Tolery\AiCad\AiCad;
 
 class ChatMessage extends Model
 {
-
     protected $guarded = [];
 
     public function user(): BelongsTo

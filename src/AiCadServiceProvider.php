@@ -24,7 +24,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->hasAssets()
             ->hasMigrations([
                 '2024_12_05_00_create_chats_table',
-                '2024_12_05_01_create_chat_messages_table'
+                '2024_12_05_01_create_chat_messages_table',
             ])
             ->runsMigrations()
             ->hasCommand(AiCadCommand::class);

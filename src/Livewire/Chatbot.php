@@ -3,10 +3,7 @@
 namespace Tolery\AiCad\Livewire;
 
 use Carbon\Carbon;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Component;
 use Tolery\AiCad\Jobs\GetAICADResponse;
@@ -28,8 +25,8 @@ class Chatbot extends Component
 
     public function mount(): void
     {
-        if(! $this->chat) {
-            $chat = new Chat();
+        if (! $this->chat) {
+            $chat = new Chat;
             $chat->team()->associate(auth()->user()->team);
             $chat->user()->associate(auth()->user());
             $chat->save();
@@ -46,8 +43,8 @@ class Chatbot extends Component
         $message = $this->entry;
         // On ajoute le nouveau message a la conversation
         $this->chat->messages()->create([
-           'message' => $message,
-           'user_id' => auth()->id(),
+            'message' => $message,
+            'user_id' => auth()->id(),
         ]);
 
         $this->waitingForAnswer = true;
@@ -61,11 +58,11 @@ class Chatbot extends Component
 
     public function getAnswer(): void
     {
-       // On va regarder si une nouvelle réponse est arrivé et la renvoyer
+        // On va regarder si une nouvelle réponse est arrivé et la renvoyer
 
         $lastAnswer = $this->chat->messages()->whereNull('user_id')->latest()->first();
 
-        if($lastAnswer && $lastAnswer->created_at > $this->lastTimeAnswer) {
+        if ($lastAnswer && $lastAnswer->created_at > $this->lastTimeAnswer) {
             $this->chatMessages = $this->chat->messages()->get();
             $this->lastTimeAnswer = $lastAnswer->created_at;
             $this->waitingForAnswer = false;

@@ -16,7 +16,7 @@ class GetAICADResponse implements ShouldQueue
 {
     use Dispatchable;
 
-    public function __construct(public Chat $chat, public string $message){}
+    public function __construct(public Chat $chat, public string $message) {}
 
     /**
      * @throws ConnectionException
@@ -24,7 +24,7 @@ class GetAICADResponse implements ShouldQueue
     public function handle(): void
     {
 
-        $objName  = 'file-' . uuid_create();
+        $objName = 'file-'.uuid_create();
 
         $args = [
             'image_path' => '',
@@ -32,32 +32,31 @@ class GetAICADResponse implements ShouldQueue
             'part_file_name' => $objName,
         ];
 
-        if( $this->chat->session_id) {
+        if ($this->chat->session_id) {
             $args['session_id'] = $this->chat->session_id;
         }
 
         $response = Http::timeout(60)
             ->post(config('ai-cad.api-url').'/image_chat_to_cad', $args);
 
-        Log::info('ai-cad response : ' . $response->body());
+        Log::info('ai-cad response : '.$response->body());
 
         if ($response->successful()) {
             $chatResponse = json_decode($response->body());
-            if(!$this->chat->session_id){
+            if (! $this->chat->session_id) {
                 $this->chat->session_id = $chatResponse->response->session_id;
                 $this->chat->save();
             }
 
-
             $objPath = null;
 
-            if($chatResponse->response->obj_export){
+            if ($chatResponse->response->obj_export) {
                 try {
                     File::ensureDirectoryExists(Storage::path('ai-cad/responses'));
                     File::ensureDirectoryExists(Storage::path('ai-cad/files'));
 
-                    $responsePathZip = Storage::path('ai-cad/responses/chat-'.$this->chat->id .'.zip' );
-                    $objPath = 'ai-cad/files/'. $objName .'.obj';
+                    $responsePathZip = Storage::path('ai-cad/responses/chat-'.$this->chat->id.'.zip');
+                    $objPath = 'ai-cad/files/'.$objName.'.obj';
 
                     Http::withBasicAuth(config('ai-cad.onshape.access-key'), config('ai-cad.onshape.secret-key'))
                         ->sink($responsePathZip)
@@ -65,20 +64,19 @@ class GetAICADResponse implements ShouldQueue
 
                     Log::info('ai-cad download file');
 
-
                     $zip = new ZipArchive;
                     $zip->open($responsePathZip);
                     $zip->extractTo(Storage::path('ai-cad/responses/chat-'.$this->chat->id));
                     $zip->close();
 
                     $hasMove = Storage::move(
-                        'ai-cad/responses/chat-'.$this->chat->id . '/Part Studio 1.obj',
+                        'ai-cad/responses/chat-'.$this->chat->id.'/Part Studio 1.obj',
                         $objPath
                     );
 
-                    Log::info('ai-cad mouved file : ' . $hasMove ? 'true' : 'false');
+                    Log::info('ai-cad mouved file : '.$hasMove ? 'true' : 'false');
 
-                } catch (\Exception $e ){
+                } catch (\Exception $e) {
                     Log::error($e->getMessage());
                 }
             } else {
@@ -93,7 +91,7 @@ class GetAICADResponse implements ShouldQueue
             $this->chat->messages()->create([
                 'message' => $response->body(),
             ]);
-            Log::error( $response->body());
+            Log::error($response->body());
 
         }
     }
