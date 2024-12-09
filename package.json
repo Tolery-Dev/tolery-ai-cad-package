@@ -1,0 +1,20 @@
+{
+  "name": "tolery-ai-cad",
+  "version": "1.0.0",
+  "description": "[![Latest Version on Packagist](https://img.shields.io/packagist/v/tolery/ai-cad.svg?style=flat-square)](https://packagist.org/packages/tolery/ai-cad) [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/tolery/ai-cad/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/tolery/ai-cad/actions?query=workflow%3Arun-tests+branch%3Amain) [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/tolery/ai-cad/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/tolery/ai-cad/actions?query=workflow%3A\"Fix+PHP+code+style+issues\"+branch%3Amain) [![Total Downloads](https://img.shields.io/packagist/dt/tolery/ai-cad.svg?style=flat-square)](https://packagist.org/packages/tolery/ai-cad)",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+      "dev": "vite",
+      "build": "vite build"
+  },
+  "author": "ultraviolettes",
+  "license": "ISC",
+  "devDependencies": {
+    "laravel-vite-plugin": "^1.1.1",
+    "sass": "^1.82.0",
+    "vite": "^6.0.2"
+  }
+}

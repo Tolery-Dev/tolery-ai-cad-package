@@ -1,0 +1,15 @@
+.chatbot {
+    &__message-bot,
+    &__message-client{
+        max-width: 700px;
+        background-color: #fff;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    &__message-bot{
+        background-color: lightblue;
+        margin: 0 0 1rem auto;
+    }
+}
+
