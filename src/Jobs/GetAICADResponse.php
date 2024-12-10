@@ -26,7 +26,7 @@ class GetAICADResponse implements ShouldQueue
     public function handle(): void
     {
 
-        $objName = 'file-'. uuid_create();
+        $objName = 'file-'.uuid_create();
 
         $args = [
             'image_path' => '',
@@ -73,14 +73,13 @@ class GetAICADResponse implements ShouldQueue
         }
     }
 
-
     /**
      * @throws PathAlreadyExists
      */
     private function unzipObjFile(string $objUrl, string $objName): string
     {
 
-        $tmpDir = (new TemporaryDirectory())
+        $tmpDir = (new TemporaryDirectory)
             ->deleteWhenDestroyed()
             ->force()
             ->create();
@@ -97,7 +96,6 @@ class GetAICADResponse implements ShouldQueue
             Log::error($e->getMessage());
         }
 
-
         Log::info('ai-cad download file');
 
         $unzipPath = $tmpDir->path("chat-{$this->chat->id}");
@@ -106,10 +104,10 @@ class GetAICADResponse implements ShouldQueue
         $zip->extractTo($unzipPath);
         $zip->close();
 
-        $objPathDir = 'ai-cad/' . now()->format('Y-m');
+        $objPathDir = 'ai-cad/'.now()->format('Y-m');
         File::ensureDirectoryExists(Storage::path($objPathDir));
 
-        $objPath = $objPathDir . '/' . $objName . '.obj';
+        $objPath = $objPathDir.'/'.$objName.'.obj';
 
         Storage::put(
             $objPath,

@@ -20,7 +20,7 @@ class ChatMessage extends Model
     public function getObjUrl(): ?string
     {
         return $this->ai_cad_path ?
-            Storage::providesTemporaryUrls() ? Storage::temporaryUrl($this->ai_cad_path, now()->addMinutes(5)) :  Storage::url($this->ai_cad_path)
+            Storage::providesTemporaryUrls() ? Storage::temporaryUrl($this->ai_cad_path, now()->addMinutes(5)) : Storage::url($this->ai_cad_path)
             : null;
     }
 
