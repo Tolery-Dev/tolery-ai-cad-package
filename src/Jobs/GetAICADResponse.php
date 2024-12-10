@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Spatie\TemporaryDirectory\Exceptions\PathAlreadyExists;
+use Spatie\TemporaryDirectory\TemporaryDirectory;
 use Tolery\AiCad\Models\Chat;
 use ZipArchive;
 
@@ -19,12 +21,12 @@ class GetAICADResponse implements ShouldQueue
     public function __construct(public Chat $chat, public string $message) {}
 
     /**
-     * @throws ConnectionException
+     * @throws ConnectionException|PathAlreadyExists
      */
     public function handle(): void
     {
 
-        $objName = 'file-'.uuid_create();
+        $objName = 'file-'. uuid_create();
 
         $args = [
             'image_path' => '',
@@ -51,34 +53,9 @@ class GetAICADResponse implements ShouldQueue
             $objPath = null;
 
             if ($chatResponse->response->obj_export) {
-                try {
-                    File::ensureDirectoryExists(Storage::path('ai-cad/responses'));
-                    File::ensureDirectoryExists(Storage::path('ai-cad/files'));
 
-                    $responsePathZip = Storage::path('ai-cad/responses/chat-'.$this->chat->id.'.zip');
-                    $objPath = 'ai-cad/files/'.$objName.'.obj';
+                $objPath = $this->unzipObjFile($chatResponse->response->obj_export->link, $objName);
 
-                    Http::withBasicAuth(config('ai-cad.onshape.access-key'), config('ai-cad.onshape.secret-key'))
-                        ->sink($responsePathZip)
-                        ->get($chatResponse->response->obj_export->link);
-
-                    Log::info('ai-cad download file');
-
-                    $zip = new ZipArchive;
-                    $zip->open($responsePathZip);
-                    $zip->extractTo(Storage::path('ai-cad/responses/chat-'.$this->chat->id));
-                    $zip->close();
-
-                    $hasMove = Storage::move(
-                        'ai-cad/responses/chat-'.$this->chat->id.'/Part Studio 1.obj',
-                        $objPath
-                    );
-
-                    Log::info('ai-cad mouved file : '.$hasMove ? 'true' : 'false');
-
-                } catch (\Exception $e) {
-                    Log::error($e->getMessage());
-                }
             } else {
                 Log::info('Pas encore de fichier à télécharger');
             }
@@ -94,5 +71,51 @@ class GetAICADResponse implements ShouldQueue
             Log::error($response->body());
 
         }
+    }
+
+
+    /**
+     * @throws PathAlreadyExists
+     */
+    private function unzipObjFile(string $objUrl, string $objName): string
+    {
+
+        $tmpDir = (new TemporaryDirectory())
+            ->deleteWhenDestroyed()
+            ->force()
+            ->create();
+
+        $tmpFile = "chat-{$this->chat->id}.zip";
+        $tmpPath = $tmpDir->path($tmpFile);
+
+        try {
+            Http::withBasicAuth(config('ai-cad.onshape.access-key'), config('ai-cad.onshape.secret-key'))
+                ->sink($tmpPath)
+                ->get($objUrl);
+
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+        }
+
+
+        Log::info('ai-cad download file');
+
+        $unzipPath = $tmpDir->path("chat-{$this->chat->id}");
+        $zip = new ZipArchive;
+        $zip->open($tmpPath);
+        $zip->extractTo($unzipPath);
+        $zip->close();
+
+        $objPathDir = 'ai-cad/' . now()->format('Y-m');
+        File::ensureDirectoryExists(Storage::path($objPathDir));
+
+        $objPath = $objPathDir . '/' . $objName . '.obj';
+
+        Storage::put(
+            $objPath,
+            File::get($unzipPath.'/Part Studio 1.obj')
+        );
+
+        return $objPath;
     }
 }

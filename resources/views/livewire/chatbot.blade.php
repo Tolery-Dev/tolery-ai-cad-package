@@ -1,13 +1,16 @@
 @push('styles')
-    <link href="{{ asset('vendor/ai-cad/assets/chatbot-Bq2PEd0x.css') }}" rel="stylesheet" />
+    <link href="{{ asset('vendor/ai-cad/assets/chatbot-DzHttLK-.css') }}" rel="stylesheet" />
 @endpush
 
 
 <div class="chatbot">
     @foreach($chatMessages as $message)
         <div class="{{ $message->user ? 'chatbot__message-client' : 'chatbot__message-bot' }}">
-            <p>{{$message->user ? $message->user->fullname : 'bot'}}</p>
             <p>{{$message->message}}</p>
+
+            @if($message->getObjUrl())
+                <a href="{{$message->getObjUrl()}}">{{$message->getObjName()}}</a>
+            @endif
         </div>
     @endforeach
 

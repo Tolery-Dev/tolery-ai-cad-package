@@ -17,10 +17,11 @@
     ],
     "require": {
         "php": "^8.3",
+        "ext-zip": "*",
         "illuminate/contracts": "^9.0||^10.0||^11.0",
         "livewire/livewire": "^3.5",
         "spatie/laravel-package-tools": "^1.16",
-        "ext-zip": "*"
+        "spatie/temporary-directory": "^2.2"
     },
     "require-dev": {
         "laravel/pint": "^1.14",
