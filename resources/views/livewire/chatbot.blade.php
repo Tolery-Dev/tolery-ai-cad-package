@@ -1,6 +1,6 @@
 @push('styles')
     <link href="{{ asset('vendor/ai-cad/assets/app-CWlVyv0T.css') }}" rel="stylesheet" />
-    <script src="{{ asset('vendor/ai-cad/assets/app-CZSWL30P.js') }}"/>
+    <script src="{{ asset('vendor/ai-cad/assets/app-CZSWL30P.js') }}" defer></script>
 @endpush
 
 
