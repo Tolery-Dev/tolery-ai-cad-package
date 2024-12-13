@@ -7,8 +7,8 @@
     "test": "tests"
   },
   "scripts": {
-      "dev": "vite",
-      "build": "vite build"
+    "dev": "vite",
+    "build": "vite build"
   },
   "author": "ultraviolettes",
   "license": "ISC",
@@ -16,5 +16,8 @@
     "laravel-vite-plugin": "^1.1.1",
     "sass": "^1.82.0",
     "vite": "^6.0.2"
+  },
+  "dependencies": {
+    "online-3d-viewer": "^0.15.0"
   }
 }

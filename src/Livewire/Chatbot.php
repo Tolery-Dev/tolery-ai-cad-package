@@ -35,6 +35,11 @@ class Chatbot extends Component
 
         $this->chatMessages = $this->chat->messages;
         $this->lastTimeAnswer = $this->chat->messages->isEmpty() ? now() : $this->chat->messages->last()->created_at;
+
+        $objToDisplay = $this->chat->messages->isEmpty() ? null : $this->chat->messages->last()->getObjUrl();
+        if( $objToDisplay ){
+            $this->dispatch('obj-updated', objPath: $objToDisplay);
+        }
     }
 
     public function submitEntry(): void
@@ -65,6 +70,10 @@ class Chatbot extends Component
         if ($lastAnswer && $lastAnswer->created_at > $this->lastTimeAnswer) {
             $this->chatMessages = $this->chat->messages()->get();
             $this->lastTimeAnswer = $lastAnswer->created_at;
+            if( $lastAnswer->getObjUrl() ){
+                $this->dispatch('obj-updated', objPath: $lastAnswer->getObjUrl());
+            }
+
             $this->waitingForAnswer = false;
         }
     }

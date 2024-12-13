@@ -1,4 +1,19 @@
 .chatbot {
+    display: flex;
+    gap: 2rem;
+    max-height: 80vh;
+    overflow: hidden;
+
+    &__message_list{
+        flex: 1 0 50%;
+        max-width: 500px;
+        max-height: 100%;
+        overflow: hidden auto;
+    }
+    &__viewer{
+        flex: 1 1 50%;
+    }
+
     &__message-bot,
     &__message-client{
         max-width: 700px;
@@ -6,10 +21,20 @@
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 1rem;
+        width: 80%;
     }
     &__message-client{
         background-color: lightblue;
         margin: 0 0 1rem auto;
     }
+}
+
+.chatbot *{
+    overflow-anchor: none;
+}
+
+#chatbot-anchor{
+    overflow-anchor: auto;
+    height: 1px;
 }
 

@@ -1,7 +1,11 @@
 {
-  "resources/css/chatbot.scss": {
-    "file": "assets/chatbot-DzHttLK-.css",
-    "src": "resources/css/chatbot.scss",
-    "isEntry": true
+  "resources/js/app.js": {
+    "file": "assets/app-CZSWL30P.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "css": [
+      "assets/app-CWlVyv0T.css"
+    ]
   }
 }
