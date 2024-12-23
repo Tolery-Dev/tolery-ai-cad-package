@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,5 +28,10 @@ class Chat extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(ChatMessage::class);
+    }
+
+    public function scopeForTeam(Builder $builder, $team): void
+    {
+        $builder->where('team_id', $team->id);
     }
 }

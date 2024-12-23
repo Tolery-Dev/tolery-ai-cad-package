@@ -1,6 +1,11 @@
 @push('styles')
-    <link href="{{ asset('vendor/ai-cad/assets/app-CWlVyv0T.css') }}" rel="stylesheet" />
-    <script src="{{ asset('vendor/ai-cad/assets/app-CZSWL30P.js') }}" defer></script>
+
+    @php
+    $version = \Composer\InstalledVersions::getRootPackage()['version'];
+    @endphp
+
+    <link href="{{ asset('vendor/ai-cad/assets/app.css') }}?{{$version}}" rel="stylesheet" />
+    <script src="{{ asset('vendor/ai-cad/assets/app.js') }}?{{$version}}" defer></script>
 @endpush
 
 
