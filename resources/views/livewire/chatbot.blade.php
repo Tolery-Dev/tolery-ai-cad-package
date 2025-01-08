@@ -13,7 +13,7 @@
     <div class="chatbot__message_list">
 
         @foreach($chatMessages as $message)
-            <div class="{{ $message->user ? 'chatbot__message-client' : 'chatbot__message-bot' }}">
+            <div class="{{ $message->user_id ? 'chatbot__message-client' : 'chatbot__message-bot' }}">
                 <p>{{$message->message}}</p>
 
                 @if($message->getObjUrl())
