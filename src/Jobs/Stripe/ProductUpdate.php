@@ -2,11 +2,11 @@
 
 namespace Tolery\AiCad\Jobs\Stripe;
 
-use Tolery\AiCad\Models\SubscriptionProduct;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Laravel\Cashier\Cashier;
 use Stripe\Exception\ApiErrorException;
+use Tolery\AiCad\Models\SubscriptionProduct;
 
 class ProductUpdate implements ShouldQueue
 {
