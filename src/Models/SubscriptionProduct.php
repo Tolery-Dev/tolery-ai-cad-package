@@ -67,7 +67,7 @@ class SubscriptionProduct extends Model
         return "price_for_{$this->id}_subscription";
     }
 
-    public function newFactory(): SubscriptionProductFactory
+    protected static function newFactory(): SubscriptionProductFactory
     {
         return SubscriptionProductFactory::new();
     }
