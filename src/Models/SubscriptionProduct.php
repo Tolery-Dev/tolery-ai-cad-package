@@ -9,6 +9,13 @@ use Illuminate\Database\Eloquent\Model;
 use Tolery\AiCad\Database\Factories\SubscriptionProductFactory;
 use Tolery\AiCad\Observers\SubscriptionProductObserver;
 
+/**
+ * @property string $name
+ * @property string $description
+ * @property int $price
+ * @property bool $active
+ * @property string $stripe_id
+ */
 #[ObservedBy([SubscriptionProductObserver::class])]
 class SubscriptionProduct extends Model
 {
