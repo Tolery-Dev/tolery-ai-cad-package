@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Tolery\AiCad\Database\Factories\SubscriptionProductFactory;
 use Tolery\AiCad\Observers\SubscriptionProductObserver;
 
 #[ObservedBy([SubscriptionProductObserver::class])]
@@ -64,5 +65,10 @@ class SubscriptionProduct extends Model
     public function getStripePriceKey(): string
     {
         return "price_for_{$this->id}_subscription";
+    }
+
+    public function newFactory(): SubscriptionProductFactory
+    {
+        return SubscriptionProductFactory::new();
     }
 }
