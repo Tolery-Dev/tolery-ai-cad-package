@@ -15,6 +15,7 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property int $price
  * @property bool $active
  * @property string $stripe_id
+ * @property string $stripe_price_id
  */
 #[ObservedBy([SubscriptionProductObserver::class])]
 class SubscriptionProduct extends Model
