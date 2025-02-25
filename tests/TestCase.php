@@ -28,9 +28,12 @@ class TestCase extends Orchestra
     {
         config()->set('database.default', 'testing');
 
-        /*
-        $migration = include __DIR__.'/../database/migrations/create_ai-cad_table.php.stub';
+
+        $migration = include __DIR__.'/../database/migrations/2024_12_05_00_create_chats_table.php';
+        $migration = include __DIR__.'/../database/migrations/2024_12_05_01_create_chat_messages_table.php';
+        $migration = include __DIR__.'/../database/migrations/2024_12_24_093516_create_subscription_products_table.php';
+        $migration = include __DIR__.'/../database/migrations/2025_02_17_00_add_json_edge_path_to_chat_message_table.php';
         $migration->up();
-        */
+
     }
 }
