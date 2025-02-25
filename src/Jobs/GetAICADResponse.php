@@ -18,7 +18,10 @@ class GetAICADResponse implements ShouldQueue
 {
     use Dispatchable;
 
-    public function __construct(public Chat $chat, public string $message) {}
+    public function __construct(public Chat $chat, public string $message)
+    {
+        File::ensureDirectoryExists(Storage::path($chat->getStorageFolder()));
+    }
 
     /**
      * @throws ConnectionException|PathAlreadyExists
@@ -51,6 +54,7 @@ class GetAICADResponse implements ShouldQueue
             }
 
             $objPath = null;
+            $jsonEdgePath = null;
 
             if ($chatResponse->response->obj_export) {
 
@@ -60,9 +64,19 @@ class GetAICADResponse implements ShouldQueue
                 Log::info('Pas encore de fichier à télécharger');
             }
 
+            if ($chatResponse->response->tessellated_export) {
+
+                $jsonEdgePath = $this->chat->getStorageFolder().'/'.$objName.'.json';
+                Storage::put($jsonEdgePath, json_encode($chatResponse->response->tessellated_export));
+
+            } else {
+                Log::info('Pas encore de fichier à télécharger');
+            }
+
             $this->chat->messages()->create([
                 'message' => $chatResponse->response->chat_response,
                 'ai_cad_path' => $objPath,
+                'ai_json_edge_path' => $jsonEdgePath,
             ]);
         } else {
             $this->chat->messages()->create([
@@ -104,10 +118,7 @@ class GetAICADResponse implements ShouldQueue
         $zip->extractTo($unzipPath);
         $zip->close();
 
-        $objPathDir = 'ai-cad/'.now()->format('Y-m');
-        File::ensureDirectoryExists(Storage::path($objPathDir));
-
-        $objPath = $objPathDir.'/'.$objName.'.obj';
+        $objPath = $this->chat->getStorageFolder().'/'.$objName.'.obj';
 
         Storage::put(
             $objPath,

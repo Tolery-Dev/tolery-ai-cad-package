@@ -15,9 +15,10 @@
   "devDependencies": {
     "laravel-vite-plugin": "^1.1.1",
     "sass": "^1.82.0",
+    "prettier": "^3.5.1",
     "vite": "^6.0.2"
   },
   "dependencies": {
-    "online-3d-viewer": "^0.15.0"
+    "three": "^0.173.0"
   }
 }

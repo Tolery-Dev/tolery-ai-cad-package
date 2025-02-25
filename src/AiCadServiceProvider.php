@@ -26,6 +26,7 @@ class AiCadServiceProvider extends PackageServiceProvider
                 '2024_12_05_00_create_chats_table',
                 '2024_12_05_01_create_chat_messages_table',
                 '2024_12_24_093516_create_subscription_products_table',
+                '2025_02_17_00_add_json_edge_path_to_chat_message_table',
             ])
             ->runsMigrations()
             ->hasCommand(AiCadCommand::class);

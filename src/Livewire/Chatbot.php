@@ -27,7 +27,7 @@ class Chatbot extends Component
     {
         if (! $this->chat) {
             $chat = new Chat;
-            $chat->team()->associate(auth()->user()->team);
+            $chat->team()->associate(auth()->user()->team); // @phpstan-ignore-line
             $chat->user()->associate(auth()->user());
             $chat->save();
             $this->chat = $chat;
@@ -36,9 +36,9 @@ class Chatbot extends Component
         $this->chatMessages = $this->chat->messages;
         $this->lastTimeAnswer = $this->chat->messages->isEmpty() ? now() : $this->chat->messages->last()->created_at;
 
-        $objToDisplay = $this->chat->messages->isEmpty() ? null : $this->chat->messages->last()->getObjUrl();
+        $objToDisplay = $this->chat->messages->isEmpty() ? null : $this->chat->messages->last()->getJSONEdgeUrl();
         if ($objToDisplay) {
-            $this->dispatch('obj-updated', objPath: $objToDisplay);
+            $this->dispatch('jsonLoaded', jsonPath: $objToDisplay);
         }
     }
 
@@ -70,8 +70,8 @@ class Chatbot extends Component
         if ($lastAnswer && $lastAnswer->created_at > $this->lastTimeAnswer) {
             $this->chatMessages = $this->chat->messages()->get();
             $this->lastTimeAnswer = $lastAnswer->created_at;
-            if ($lastAnswer->getObjUrl()) {
-                $this->dispatch('obj-updated', objPath: $lastAnswer->getObjUrl());
+            if ($objToDisplay = $lastAnswer->getJSONEdgeUrl()) {
+                $this->dispatch('jsonLoaded', jsonPath: $objToDisplay);
             }
 
             $this->waitingForAnswer = false;

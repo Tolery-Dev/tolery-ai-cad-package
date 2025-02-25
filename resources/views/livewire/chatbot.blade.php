@@ -1,7 +1,7 @@
 @push('styles')
 
     @php
-    $version = \Composer\InstalledVersions::getRootPackage()['version'];
+    $version = 'v4';
     @endphp
 
     <link href="{{ asset('vendor/ai-cad/assets/app.css') }}?{{$version}}" rel="stylesheet" />
