@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad;
 
+use Illuminate\View\Compilers\BladeCompiler;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -36,7 +37,9 @@ class AiCadServiceProvider extends PackageServiceProvider
 
     protected function registerLivewireComponents(): self
     {
-        Livewire::component('chatbot', Chatbot::class);
+        $this->callAfterResolving(BladeCompiler::class, function () {
+            Livewire::component('chatbot', Chatbot::class);
+        });
 
         return $this;
     }
