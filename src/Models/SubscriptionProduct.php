@@ -14,6 +14,7 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property string $description
  * @property int $price
  * @property bool $active
+ * @property int $files_allowed
  * @property string $stripe_id
  * @property string $stripe_price_id
  */
@@ -47,6 +48,7 @@ class SubscriptionProduct extends Model
             'name' => $this->name,
             'active' => $this->active,
             'description' => $this->description,
+            'files_allowed' => $this->files_allowed,
             'tax_code' => 'txcd_10103101', // Logiciel en tant que service (SaaS), téléchargement électronique, usage professionnel
             'shippable' => false,
         ];

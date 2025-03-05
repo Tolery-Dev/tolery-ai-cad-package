@@ -19,6 +19,7 @@ class SubscriptionProductFactory extends Factory
             'name' => $this->faker->name(),
             'active' => $this->faker->boolean(),
             'price' => $this->faker->numberBetween(49, 9999),
+            'files_allowed' => $this->faker->numberBetween(10, 50),
             'description' => $this->faker->text(),
             'stripe_id' => $this->faker->word(),
             'created_at' => Carbon::now(),
