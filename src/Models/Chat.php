@@ -25,7 +25,7 @@ class Chat extends Model
      */
     public function team(): BelongsTo
     {
-        return $this->belongsTo(ChatTeam::class);
+        return $this->belongsTo(config('ai-cad.chat_team_model'));
     }
 
     /**
@@ -33,7 +33,7 @@ class Chat extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(ChatUser::class);
+        return $this->belongsTo(config('ai-cad.chat_user_model'));
     }
 
     /**
