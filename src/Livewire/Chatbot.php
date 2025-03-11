@@ -101,11 +101,11 @@ class Chatbot extends Component
     {
         $pdfUrl = null;
 
-        if($this->pdfFile){
+        if ($this->pdfFile) {
             $name = Str::slug($this->pdfFile->getClientOriginalName());
-            $pdfPath = $this->pdfFile->storeAs( path: $this->chat->getStorageFolder(), name: $name);
+            $pdfPath = $this->pdfFile->storeAs(path: $this->chat->getStorageFolder(), name: $name);
             $pdfUrl = Storage::url($pdfPath);
-            Log::info('getAPIResponse : ' . $pdfUrl);
+            Log::info('getAPIResponse : '.$pdfUrl);
         }
         GetAICADResponse::dispatch($this->chat, $this->entry, $pdfUrl);
     }

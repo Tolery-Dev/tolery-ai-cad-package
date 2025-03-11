@@ -2,10 +2,8 @@
 
 namespace Tolery\AiCad\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Foundation\Auth\User;
-
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Foundation\Auth\User;
 
 abstract class ChatUser extends User
 {
