@@ -4,13 +4,21 @@ namespace Tolery\AiCad\Livewire;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use Log;
+use Storage;
 use Tolery\AiCad\Jobs\GetAICADResponse;
 use Tolery\AiCad\Models\Chat;
+use Tolery\AiCad\Models\ChatUser;
 
 class Chatbot extends Component
 {
+    use WithFileUploads;
+
     public ?Chat $chat = null;
 
     public Collection $chatMessages;
@@ -23,12 +31,18 @@ class Chatbot extends Component
 
     public bool $waitingForAnswer = false;
 
+    #[Validate('image|max:1024')] // 1MB Max
+    public $pdfFile;
+
     public function mount(): void
     {
         if (! $this->chat) {
             $chat = new Chat;
-            $chat->team()->associate(auth()->user()->team); // @phpstan-ignore-line
-            $chat->user()->associate(auth()->user());
+
+            /** @var ChatUser $user */
+            $user = auth()->user();
+            $chat->team()->associate($user->team);
+            $chat->user()->associate($user);
             $chat->save();
             $this->chat = $chat;
         }
@@ -55,7 +69,7 @@ class Chatbot extends Component
         $this->waitingForAnswer = true;
 
         // On va récupérer la réponse
-        $this->getAPIResponse($message);
+        $this->getAPIResponse();
 
         $this->entry = '';
         $this->chatMessages = $this->chat->messages()->get();
@@ -83,8 +97,16 @@ class Chatbot extends Component
         return view('ai-cad::livewire.chatbot');
     }
 
-    private function getAPIResponse(string $entry): void
+    private function getAPIResponse(): void
     {
-        GetAICADResponse::dispatch($this->chat, $entry);
+        $pdfUrl = null;
+
+        if ($this->pdfFile) {
+            $name = Str::slug($this->pdfFile->getClientOriginalName());
+            $pdfPath = $this->pdfFile->storeAs(path: $this->chat->getStorageFolder(), name: $name);
+            $pdfUrl = Storage::url($pdfPath);
+            Log::info('getAPIResponse : '.$pdfUrl);
+        }
+        GetAICADResponse::dispatch($this->chat, $this->entry, $pdfUrl);
     }
 }

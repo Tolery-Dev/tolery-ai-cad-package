@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Tolery\AiCad\AiCad;
 
 /**
  * @property string $session_id
@@ -21,14 +20,20 @@ class Chat extends Model
 
     protected $guarded = [];
 
+    /**
+     * @return BelongsTo<ChatTeam, $this>
+     */
     public function team(): BelongsTo
     {
-        return $this->belongsTo(AiCad::$teamModel);
+        return $this->belongsTo(ChatTeam::class);
     }
 
+    /**
+     * @return BelongsTo<ChatUser, $this>
+     */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(AiCad::$userModel);
+        return $this->belongsTo(ChatUser::class);
     }
 
     /**

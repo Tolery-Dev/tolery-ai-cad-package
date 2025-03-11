@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use Tolery\AiCad\AiCad;
 
 /**
  * @property string $message
@@ -20,9 +19,12 @@ class ChatMessage extends Model
 {
     protected $guarded = [];
 
+    /**
+     * @return BelongsTo<ChatUser, $this>
+     */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(AiCad::$userModel);
+        return $this->belongsTo(ChatUser::class);
     }
 
     public function getObjUrl(): ?string
