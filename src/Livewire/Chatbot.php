@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -108,5 +109,17 @@ class Chatbot extends Component
             Log::info('getAPIResponse : '.$pdfUrl);
         }
         GetAICADResponse::dispatch($this->chat, $this->entry, $pdfUrl);
+    }
+
+    #[On('chatObjectClick')]
+    public function chatObjectClick(string $objectId)
+    {
+        $prefix = 'Objet concerné : ';
+        if (Str::contains($this->entry, $prefix)) {
+            $this->entry = preg_replace('/' . preg_quote($prefix, '/') . '\S+/', $prefix . $objectId, $this->entry);
+
+        } else {
+            $this->entry = $this->entry.' '.$prefix . $objectId;
+        }
     }
 }
