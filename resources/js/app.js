@@ -21,8 +21,7 @@ let camera,
     heigth,
     viewer,
     viewerLeft,
-    viewerTop,
-    material;
+    viewerTop;
 
 let labelDiv, labelObject;
 
@@ -44,29 +43,26 @@ const init3dViewer = () => {
     renderer = new THREE.WebGLRenderer({ antialias: true });
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xb8c9d4);
+    scene.background = new THREE.Color(0xffffff);
 
-    // Eclairage
-    const ambient = new THREE.AmbientLight(0xffffff, 1);
-    scene.add(ambient);
-
-    const pointLight = new THREE.PointLight(0xffffff, 1, 100);
-    pointLight.position.set(50, 50, 50);
-    scene.add(pointLight);
-
-    const frontSpot2 = new THREE.SpotLight(0xffffff, 1, 100);
-    frontSpot2.position.set(-80, -80, -80);
-    scene.add(frontSpot2);
-
-    //
+    // camera
 
     camera = new THREE.PerspectiveCamera(27, width / heigth, 0.001, 100);
+    scene.add( camera );
 
-    //
+    // ambient light
 
-    material = new THREE.MeshBasicMaterial({
-        color: 0x94a3ad,
-    });
+    scene.add( new THREE.AmbientLight( 0x666666 ) );
+
+    // point light
+
+    const light = new THREE.PointLight( 0xffffff, 3, 0, 0 );
+    camera.add( light );
+
+    // helper
+
+    //scene.add( new THREE.AxesHelper( 20 ) );
+
 };
 
 const convertJsonToObject = (json) => {
@@ -102,7 +98,13 @@ const convertJsonToObject = (json) => {
                     }
                 });
 
-                // const material2 = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+                const material2 = new THREE.MeshBasicMaterial( { color: 0xb2b2b2 } );
+
+                const meshMaterial = new THREE.MeshLambertMaterial( {
+                    color: 0xffffff,
+                    opacity: 0.5,
+                    //transparent: true
+                } );
 
                 faceGeometry.setAttribute(
                     "position",
@@ -113,7 +115,7 @@ const convertJsonToObject = (json) => {
                     new THREE.Float32BufferAttribute(faceNormals, 3),
                 );
 
-                const faceMesh = new THREE.Mesh(faceGeometry, material);
+                const faceMesh = new THREE.Mesh(faceGeometry, material2);
                 faceMesh.name = faces.id;
 
                 bodyGroup.add(faceMesh);
@@ -186,6 +188,7 @@ const convertJsonToObject = (json) => {
 
     window.addEventListener("click", (e) => {
         intersects.forEach((hit) => {
+            Livewire.dispatch('chatObjectClick', { 'objectId': hit.object.name});
             console.log(hit.object.name);
         });
     });

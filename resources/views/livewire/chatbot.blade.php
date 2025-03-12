@@ -1,7 +1,7 @@
 @push('styles')
 
     @php
-    $version = 'v4';
+    $version = 'v5';
     @endphp
 
     <link href="{{ asset('vendor/ai-cad/assets/app.css') }}?{{$version}}" rel="stylesheet" />
