@@ -5,9 +5,9 @@ namespace Tolery\AiCad\Enum;
 enum MaterialFamily : string
 {
 
-    case STEEL = 'steel';
-    case ALUMINUM = 'aluminum';
-    case INOX = 'inox';
+    case STEEL = 'STEEL';
+    case ALUMINUM = 'ALUMINUM';
+    case STAINLESS = 'STAINLESS';
 
 
     public function label(): string
@@ -15,7 +15,7 @@ enum MaterialFamily : string
         return match ($this) {
             self::STEEL => 'Acier',
             self::ALUMINUM => 'Alluminum',
-            self::INOX => 'Inox',
+            self::STAINLESS => 'Inox',
         };
     }
 }
