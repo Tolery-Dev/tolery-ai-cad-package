@@ -35,6 +35,8 @@ class Chatbot extends Component
     #[Validate('image|max:1024')] // 1MB Max
     public $pdfFile;
 
+    public ?string $objectToConfigId = null;
+
     public function mount(): void
     {
         if (! $this->chat) {
@@ -112,14 +114,24 @@ class Chatbot extends Component
     }
 
     #[On('chatObjectClick')]
-    public function chatObjectClick(string $objectId)
+    public function chatObjectClick(?string $objectId)
     {
         $prefix = 'Objet concerné : ';
-        if (Str::contains($this->entry, $prefix)) {
-            $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', $prefix.$objectId, $this->entry);
+        if (! $objectId) {
+            if (Str::contains($this->entry, $prefix)) {
+                $this->entry = preg_replace('/' . preg_quote($prefix, '/') . '\S+/', '', $this->entry);
 
+            }
         } else {
-            $this->entry = $this->entry.' '.$prefix.$objectId;
+
+            if (Str::contains($this->entry, $prefix)) {
+                $this->entry = preg_replace('/' . preg_quote($prefix, '/') . '\S+/', $prefix . $objectId, $this->entry);
+
+            } else {
+                $this->entry = $this->entry.' '.$prefix . $objectId;
+            }
         }
+
+        $this->objectToConfigId = $objectId;
     }
 }

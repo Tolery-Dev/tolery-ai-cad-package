@@ -8,6 +8,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\AiCadCommand;
 use Tolery\AiCad\Livewire\Chatbot;
+use Tolery\AiCad\Livewire\ChatConfig;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
@@ -28,6 +29,7 @@ class AiCadServiceProvider extends PackageServiceProvider
                 '2024_12_05_01_create_chat_messages_table',
                 '2024_12_24_093516_create_subscription_products_table',
                 '2025_02_17_00_add_json_edge_path_to_chat_message_table',
+                '2025_03_13_135738_add_name_and_mater_familly_to_chat',
             ])
             ->runsMigrations()
             ->hasCommand(AiCadCommand::class);
@@ -39,6 +41,7 @@ class AiCadServiceProvider extends PackageServiceProvider
     {
         $this->callAfterResolving(BladeCompiler::class, function () {
             Livewire::component('chatbot', Chatbot::class);
+            Livewire::component('chat-config', ChatConfig::class);
         });
 
         return $this;

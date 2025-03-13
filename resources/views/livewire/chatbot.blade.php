@@ -1,7 +1,7 @@
 @push('styles')
 
     @php
-    $version = 'v5';
+    $version = '6';
     @endphp
 
     <link href="{{ asset('vendor/ai-cad/assets/app.css') }}?{{$version}}" rel="stylesheet" />
@@ -37,5 +37,15 @@
     <div class="chatbot__viewer">
         <div id="viewer" style="width: 100%; height: 600px;" wire:ignore>
         </div>
+    </div>
+
+    <div class="chatbot__config">
+        <h2>Configuration</h2>
+
+        @if($objectToConfigId)
+            Object {{$objectToConfigId}}
+        @else
+            <livewire:chat-config :chat="$chat"/>
+        @endif
     </div>
 </div>

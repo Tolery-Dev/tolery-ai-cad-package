@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Spatie\TemporaryDirectory\Exceptions\PathAlreadyExists;
 use Spatie\TemporaryDirectory\TemporaryDirectory;
+use Tolery\AiCad\Enum\MaterialFamily;
 use Tolery\AiCad\Models\Chat;
 use ZipArchive;
 
@@ -34,6 +35,7 @@ class GetAICADResponse implements ShouldQueue
         $args = [
             'image_path' => $this->pdfUrl ?? '',
             'message' => $this->message,
+            'material_choice' => $this->chat->material_family ?? MaterialFamily::STEEL->value,
             'part_file_name' => $objName,
         ];
 

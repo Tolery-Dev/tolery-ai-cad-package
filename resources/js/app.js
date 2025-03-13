@@ -65,6 +65,34 @@ const init3dViewer = () => {
 
 };
 
+const detectClicOnObject = (object) => {
+    const delta = 6;
+    let startX;
+    let startY;
+
+    window.addEventListener('mousedown', function (event) {
+        startX = event.pageX;
+        startY = event.pageY;
+    });
+
+    window.addEventListener('mouseup', function (event) {
+        const diffX = Math.abs(event.pageX - startX);
+        const diffY = Math.abs(event.pageY - startY);
+
+        if (diffX < delta && diffY < delta) {
+            if(intersects.length === 0){
+                Livewire.dispatch('chatObjectClick', { 'objectId': null});
+            } else {
+
+                intersects.forEach((hit) => {
+                    Livewire.dispatch('chatObjectClick', { 'objectId': hit.object.name});
+                    console.log(hit.object.name);
+                });
+            }
+        }
+    });
+};
+
 const convertJsonToObject = (json) => {
     const bodyGroup = new THREE.Group();
 
@@ -186,17 +214,13 @@ const convertJsonToObject = (json) => {
 
     document.addEventListener("mousemove", onPointerMove);
 
-    window.addEventListener("click", (e) => {
-        intersects.forEach((hit) => {
-            Livewire.dispatch('chatObjectClick', { 'objectId': hit.object.name});
-            console.log(hit.object.name);
-        });
-    });
 
     function onPointerMove(event) {
         pointer.x = ((event.clientX - viewerLeft) / width) * 2 - 1;
         pointer.y = -((event.clientY - viewerTop) / heigth) * 2 + 1;
     }
+
+    detectClicOnObject();
 };
 
 function onWindowResize() {
