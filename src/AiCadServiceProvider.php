@@ -16,8 +16,8 @@ use Tolery\AiCad\Commands\ResetCache;
 use Tolery\AiCad\Commands\ResetLimitUsages;
 use Tolery\AiCad\Contracts\Limit as LimitContract;
 use Tolery\AiCad\Livewire\Chatbot;
-use Tolery\AiCad\Models\Limit;
 use Tolery\AiCad\Livewire\ChatConfig;
+use Tolery\AiCad\Models\Limit;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
