@@ -119,16 +119,16 @@ class Chatbot extends Component
         $prefix = 'Objet concerné : ';
         if (! $objectId) {
             if (Str::contains($this->entry, $prefix)) {
-                $this->entry = preg_replace('/' . preg_quote($prefix, '/') . '\S+/', '', $this->entry);
+                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', '', $this->entry);
 
             }
         } else {
 
             if (Str::contains($this->entry, $prefix)) {
-                $this->entry = preg_replace('/' . preg_quote($prefix, '/') . '\S+/', $prefix . $objectId, $this->entry);
+                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', $prefix.$objectId, $this->entry);
 
             } else {
-                $this->entry = $this->entry.' '.$prefix . $objectId;
+                $this->entry = $this->entry.' '.$prefix.$objectId;
             }
         }
 

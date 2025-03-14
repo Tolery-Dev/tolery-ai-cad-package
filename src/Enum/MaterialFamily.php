@@ -2,13 +2,11 @@
 
 namespace Tolery\AiCad\Enum;
 
-enum MaterialFamily : string
+enum MaterialFamily: string
 {
-
     case STEEL = 'STEEL';
     case ALUMINUM = 'ALUMINUM';
     case STAINLESS = 'STAINLESS';
-
 
     public function label(): string
     {

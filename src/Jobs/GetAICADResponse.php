@@ -37,14 +37,13 @@ class GetAICADResponse implements ShouldQueue
             'message' => $this->message,
             'material_choice' => $this->chat->material_family?->value ?? MaterialFamily::STEEL->value,
             'part_file_name' => $objName,
-            'export_format' => 'obj'
+            'export_format' => 'obj',
         ];
-
 
         if ($this->chat->session_id) {
             $args['session_id'] = $this->chat->session_id;
         }
-        
+
         $response = Http::timeout(60)
             ->post(config('ai-cad.api-url').'/image_chat_to_cad', $args);
 

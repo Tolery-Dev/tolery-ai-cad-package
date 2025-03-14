@@ -6,7 +6,7 @@ use Livewire\Component;
 use Tolery\AiCad\Livewire\Forms\ChatForm;
 use Tolery\AiCad\Models\Chat;
 
-class ChatConfig  extends Component
+class ChatConfig extends Component
 {
     public Chat $chat;
 

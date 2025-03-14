@@ -36,5 +36,4 @@ class ChatForm extends Form
             'material_family' => $validatedValues['materialFamily'],
         ]);
     }
-
 }
