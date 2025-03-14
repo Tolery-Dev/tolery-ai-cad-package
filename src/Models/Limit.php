@@ -81,7 +81,7 @@ class Limit extends Model implements LimitContract
         if (
             Arr::has($data, ['reset_frequency']) &&
             filled($data['reset_frequency']) &&
-            !in_array($data['reset_frequency'], static::$resetFrequencyPossibleValues)
+            ! in_array($data['reset_frequency'], static::$resetFrequencyPossibleValues)
         ) {
             throw new InvalidLimitResetFrequencyValue;
         }
