@@ -35,11 +35,11 @@ class LimitManager
 
     public function initCache(): void
     {
-        $cacheStore = config('limit.cache.store');
+        $cacheStore = config('ai-cad.usage-limiter.cache.store');
 
-        $this->cacheExpirationTime = config('limit.cache.expiration_time') ?: \DateInterval::createFromDateString('24 hours');
+        $this->cacheExpirationTime = config('ai-cad.usage-limiter.cache.expiration_time') ?: \DateInterval::createFromDateString('24 hours');
 
-        $this->cacheKey = config('limit.cache.key');
+        $this->cacheKey = config('ai-cad.usage-limiter.cache.key');
 
         if ($cacheStore === 'default') {
             $this->cache = Cache::store();

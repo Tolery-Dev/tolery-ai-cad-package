@@ -11,6 +11,7 @@ use Tolery\AiCad\Contracts\Limit as LimitContract;
 use Tolery\AiCad\Exceptions\LimitNotSetOnModel;
 use Tolery\AiCad\Exceptions\UsedAmountShouldBePositiveIntAndLessThanAllowedAmount;
 use Tolery\AiCad\LimitManager;
+use Tolery\AiCad\Models\Limit;
 
 trait HasLimits
 {
@@ -19,11 +20,11 @@ trait HasLimits
         static::resolveRelationUsing(static::getLimitsRelationship(), function (Model $model) {
             return $model
                 ->morphToMany(
-                    config('limit.models.limit'),
+                    Limit::class,
                     'model',
-                    config('limit.tables.model_has_limits'),
+                    config('ai-cad.usage-limiter.tables.model_has_limits'),
                     'model_id',
-                    config('limit.columns.limit_pivot_key'),
+                    config('ai-cad.usage-limiter.columns.limit_pivot_key'),
                 )
                 ->withPivot(['used_amount', 'last_reset', 'next_reset'])
                 ->withTimestamps();
@@ -199,7 +200,7 @@ trait HasLimits
 
     private static function getLimitsRelationship(): string
     {
-        return config('limit.relationship');
+        return config('ai-cad.usage-limiter.relationship');
     }
 
     public function limitUsageReport(string|LimitContract|null $name = null, ?string $plan = null): array

@@ -33,13 +33,13 @@ class Limit extends Model implements LimitContract
      */
     public static function create(array $data): LimitContract
     {
-        return static::findOrCreate($data, true);
+        return static::updateOrCreate($data, true);
     }
 
     /**
      * @throws LimitAlreadyExists
      */
-    public static function findOrCreate(array $data, bool $throw = false): LimitContract
+    public static function updateOrCreate(array $data, bool $throw = false): LimitContract
     {
         $data = static::validateArgs($data);
 
@@ -49,10 +49,7 @@ class Limit extends Model implements LimitContract
             return static::query()->create($data);
         }
 
-        if ($throw) {
-            throw new LimitAlreadyExists($data['name'], $data['plan'] ?? null);
-        }
-
+        static::query()->where('id', $limit->id)->update($data);
         return $limit;
     }
 

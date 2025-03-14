@@ -33,7 +33,7 @@ class ResetLimitUsages extends Command
         $affectedRows = 0;
 
         foreach ($limits as $limit) {
-            $affectedRows += DB::table(config('limit.tables.model_has_limits'))
+            $affectedRows += DB::table(config('ai-cad.usage-limiter.tables.model_has_limits'))
                 ->where('used_amount', '>', 0)
                 ->where('next_reset', '<=', now())
                 ->update([
