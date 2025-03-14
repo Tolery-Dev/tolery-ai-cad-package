@@ -17,6 +17,7 @@ use Tolery\AiCad\Commands\ResetLimitUsages;
 use Tolery\AiCad\Contracts\Limit as LimitContract;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Models\Limit;
+use Tolery\AiCad\Livewire\ChatConfig;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
@@ -31,7 +32,6 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->name('ai-cad')
             ->hasConfigFile('ai-cad')
             ->hasViews()
-            ->hasAssets()
             ->discoversMigrations()
             ->runsMigrations()
             ->hasCommands([
@@ -60,6 +60,7 @@ class AiCadServiceProvider extends PackageServiceProvider
     {
         $this->callAfterResolving(BladeCompiler::class, function () {
             Livewire::component('chatbot', Chatbot::class);
+            Livewire::component('chat-config', ChatConfig::class);
         });
 
         return $this;

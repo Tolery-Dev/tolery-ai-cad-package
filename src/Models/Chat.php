@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Tolery\AiCad\Enum\MaterialFamily;
 
 /**
  * @property string $session_id
+ * @property string $name
+ * @property MaterialFamily $material_family
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -19,6 +22,15 @@ class Chat extends Model
     use HasFactory;
 
     protected $guarded = [];
+
+    /**
+     * @var array{
+     *     'material_family': '\Tolery\AiCad\Enum\MaterialFamily'
+     * }
+     */
+    protected $casts = [
+        'material_family' => MaterialFamily::class,
+    ];
 
     /**
      * @return BelongsTo<ChatTeam, $this>

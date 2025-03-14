@@ -23,6 +23,18 @@ You can install the package via composer:
 composer require tolery/ai-cad
 ```
 
+Your projet need to use Tailwind. Add this line to your main CSS file ( ex: `app.css` ) : 
+
+```css
+@source '../../vendor/tolery/ai-cad/resources/views/**/*.blade.php';
+```
+
+Your projet need to use vite and to build this package javascript file. Add this line in your main JS file :
+
+```javascript
+import '../../vendor/tolery/ai-cad/resources/js/app.js'
+```
+
 You can publish and run the migrations with:
 
 ```bash
