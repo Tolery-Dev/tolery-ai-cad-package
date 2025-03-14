@@ -1,21 +1,10 @@
-@push('styles')
+<div class="chatbot grid grid-cols-3 overflow-hidden h-full">
+    <div class="chatbot__message_list flex flex-col overflow-hidden">
 
-    @php
-    $version = '6';
-    @endphp
-
-    <link href="{{ asset('vendor/ai-cad/assets/app.css') }}?{{$version}}" rel="stylesheet" />
-    <script src="{{ asset('vendor/ai-cad/assets/app.js') }}?{{$version}}" defer></script>
-@endpush
-
-
-<div class="chatbot">
-    <div class="chatbot__message_list">
-
-        <div class="chatbot__message_list_wrapper">
+        <div class="chatbot__message_list_wrapper overflow-y-auto p-6">
 
             @foreach($chatMessages as $message)
-                <div class="{{ $message->user_id ? 'chatbot__message-client' : 'chatbot__message-bot' }}">
+                <div class="w-[80%] mb-6 p-6 rounded-xl {{ $message->user_id ? 'chatbot__message-client ml-auto bg-gray-100' : 'chatbot__message-bot bg-gray-300' }}">
                     <p>{{$message->message}}</p>
                 </div>
             @endforeach
@@ -27,19 +16,19 @@
             @endif
         </div>
 
-        <div class="chatbot__form">
-            <textarea wire:model="entry" placeholder="votre message"></textarea>
+        <div class="chatbot__form p-6">
+            <flux:textarea wire:model="entry" placeholder="votre message" />
             <input type="file" wire:model="pdfFile"/>
             <button wire:click="submitEntry" @if($waitingForAnswer) disabled="disabled" @endif>Soumettre</button>
         </div>
         <div id="chatbot-anchor"></div>
     </div>
     <div class="chatbot__viewer">
-        <div id="viewer" style="width: 100%; height: 600px;" wire:ignore>
+        <div id="viewer" style="width: 100%; height: 100%;" wire:ignore>
         </div>
     </div>
 
-    <div class="chatbot__config">
+    <div class="chatbot__config p-6">
         <flux:heading size="xl" level="2" class="mb-6">Configuration</flux:heading>
 
         @if($objectToConfigId)

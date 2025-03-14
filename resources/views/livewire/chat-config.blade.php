@@ -1,5 +1,5 @@
 <form wire:submit="save">
-    <div class="felx space-y-6">
+    <div class="space-y-6">
 
         <flux:input wire:model="form.name" label="Nom de la piéce" type="text" />
 
@@ -10,6 +10,6 @@
             @endforeach
         </flux:radio.group>
 
-        <flux:button>Save</flux:button>
+        <flux:button type="submit">Save</flux:button>
     </div>
 </form>

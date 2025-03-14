@@ -23,14 +23,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->name('ai-cad')
             ->hasConfigFile()
             ->hasViews()
-            ->hasAssets()
-            ->hasMigrations([
-                '2024_12_05_00_create_chats_table',
-                '2024_12_05_01_create_chat_messages_table',
-                '2024_12_24_093516_create_subscription_products_table',
-                '2025_02_17_00_add_json_edge_path_to_chat_message_table',
-                '2025_03_13_135738_add_name_and_mater_familly_to_chat',
-            ])
+            ->discoversMigrations()
             ->runsMigrations()
             ->hasCommand(AiCadCommand::class);
 
