@@ -18,7 +18,7 @@ class GetAICADResponse implements ShouldQueue
 {
     use Dispatchable;
 
-    public function __construct(public Chat $chat, public string $message)
+    public function __construct(public Chat $chat, public string $message, public ?string $pdfUrl)
     {
         File::ensureDirectoryExists(Storage::path($chat->getStorageFolder()));
     }
@@ -32,7 +32,7 @@ class GetAICADResponse implements ShouldQueue
         $objName = 'file-'.uuid_create();
 
         $args = [
-            'image_path' => '',
+            'image_path' => $this->pdfUrl ?? '',
             'message' => $this->message,
             'part_file_name' => $objName,
         ];
