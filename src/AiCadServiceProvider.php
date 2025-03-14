@@ -2,12 +2,20 @@
 
 namespace Tolery\AiCad;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Compilers\BladeCompiler;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\AiCadCommand;
+use Tolery\AiCad\Commands\CreateLimit;
+use Tolery\AiCad\Commands\DeleteLimit;
+use Tolery\AiCad\Commands\ListLimits;
+use Tolery\AiCad\Commands\ResetCache;
+use Tolery\AiCad\Commands\ResetLimitUsages;
 use Tolery\AiCad\Livewire\Chatbot;
+use Tolery\AiCad\Models\Limit;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
@@ -20,19 +28,29 @@ class AiCadServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('ai-cad')
-            ->hasConfigFile()
+            ->hasConfigFile('ai-cad')
             ->hasViews()
             ->hasAssets()
-            ->hasMigrations([
-                '2024_12_05_00_create_chats_table',
-                '2024_12_05_01_create_chat_messages_table',
-                '2024_12_24_093516_create_subscription_products_table',
-                '2025_02_17_00_add_json_edge_path_to_chat_message_table',
-            ])
+            ->discoversMigrations()
             ->runsMigrations()
-            ->hasCommand(AiCadCommand::class);
+            ->hasCommands([
+                AiCadCommand::class,
+                CreateLimit::class,
+                DeleteLimit::class,
+                ListLimits::class,
+                ResetLimitUsages::class,
+                ResetCache::class,
+            ]);
 
         $this->registerLivewireComponents();
+
+        Blade::if('limit', function (Model $model, string|Limit $name, ?string $plan = null): bool {
+            try {
+                return $model->hasEnoughLimit($name, $plan);
+            } catch (\Throwable $th) {
+                return false;
+            }
+        });
     }
 
     protected function registerLivewireComponents(): self
