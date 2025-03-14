@@ -3,6 +3,7 @@
 namespace Tolery\AiCad\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -80,5 +81,10 @@ class SubscriptionProduct extends Model
     protected static function newFactory(): SubscriptionProductFactory
     {
         return SubscriptionProductFactory::new();
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true)->orderBy('price', 'asc');
     }
 }
