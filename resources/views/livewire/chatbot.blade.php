@@ -40,7 +40,7 @@
     </div>
 
     <div class="chatbot__config">
-        <h2>Configuration</h2>
+        <flux:heading size="xl" level="2" class="mb-6">Configuration</flux:heading>
 
         @if($objectToConfigId)
             Object {{$objectToConfigId}}

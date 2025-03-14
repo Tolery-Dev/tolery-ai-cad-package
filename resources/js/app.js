@@ -27,7 +27,24 @@ let labelDiv, labelObject;
 
 const pointer = new THREE.Vector2();
 
+let allMesh = [];
+let bodyGroup = new THREE.Group();
+
 Livewire.on("jsonLoaded", function ({ jsonPath }) {
+
+    // On supprime tout ce qu'il y a avant
+    scene.remove(bodyGroup);
+
+    allMesh.forEach((mesh) => {
+        scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+        console.log("mesh removed", mesh.name);
+    })
+
+    allMesh = [];
+    bodyGroup = new THREE.Group();
+
     // fetch json
     fetch(jsonPath)
         .then((response) => response.json())
@@ -63,7 +80,38 @@ const init3dViewer = () => {
 
     //scene.add( new THREE.AxesHelper( 20 ) );
 
+    //
+
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(width, heigth);
+    renderer.setAnimationLoop(animate);
+    viewer.appendChild(renderer.domElement);
+
+    labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(width, heigth);
+    labelRenderer.domElement.style.position = "absolute";
+    labelRenderer.domElement.style.top = "10vh";
+    viewer.appendChild(labelRenderer.domElement);
+
+    labelDiv = document.createElement("div");
+    labelDiv.className = "label";
+    labelDiv.style.color = "blue";
+    labelObject = new CSS2DObject(labelDiv);
+    labelObject.visible = false;
+    scene.add(labelObject);
+
+    controls = new OrbitControls(camera, labelRenderer.domElement);
+    controls.enableDamping = true;
+
+    window.addEventListener("resize", onWindowResize);
+
+    raycaster = new THREE.Raycaster();
+
+    document.addEventListener("mousemove", onPointerMove);
+
+    detectClicOnObject();
 };
+
 
 const detectClicOnObject = (object) => {
     const delta = 6;
@@ -94,7 +142,6 @@ const detectClicOnObject = (object) => {
 };
 
 const convertJsonToObject = (json) => {
-    const bodyGroup = new THREE.Group();
 
     json.faces.bodies.forEach((body) => {
         // Faces
@@ -146,81 +193,22 @@ const convertJsonToObject = (json) => {
                 const faceMesh = new THREE.Mesh(faceGeometry, material2);
                 faceMesh.name = faces.id;
 
+                allMesh.push(faceMesh);
+
                 bodyGroup.add(faceMesh);
 
-                faceMesh.layers.enableAll();
+                //faceMesh.layers.enableAll();
 
-                // const faceDiv = document.createElement( 'div' );
-                // faceDiv.className = 'label';
-                // faceDiv.textContent = faces.id;
-                // faceDiv.style.backgroundColor = 'blue';
-                //
-                // //
-                //
-                // faceMesh.geometry.computeBoundingBox();
-                //
-                // const boundingBox = faceMesh.geometry.boundingBox;
-                //
-                // const position = new THREE.Vector3();
-                // position.subVectors( boundingBox.max, boundingBox.min );
-                // position.multiplyScalar( 0.5 );
-                // position.add( boundingBox.min );
-                //
-                // position.applyMatrix4( faceMesh.matrixWorld );
-                //
-                // //
-                //
-                // const faceLabel = new CSS2DObject( faceDiv );
-                // faceLabel.position.set( position.x, position.y, position.z );
-                // faceLabel.center.set( 0, 0 );
-                // faceMesh.add( faceLabel );
-                // faceLabel.layers.set( 0 );
             });
         }
     });
 
     scene.add(bodyGroup);
 
-    //
-
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(width, heigth);
-    renderer.setAnimationLoop(animate);
-    viewer.appendChild(renderer.domElement);
-
-    labelRenderer = new CSS2DRenderer();
-    labelRenderer.setSize(width, heigth);
-    labelRenderer.domElement.style.position = "absolute";
-    labelRenderer.domElement.style.top = "10vh";
-    viewer.appendChild(labelRenderer.domElement);
-
-    labelDiv = document.createElement("div");
-    labelDiv.className = "label";
-    labelDiv.style.color = "blue";
-    labelObject = new CSS2DObject(labelDiv);
-    labelObject.visible = false;
-    scene.add(labelObject);
-
-    controls = new OrbitControls(camera, labelRenderer.domElement);
-    controls.enableDamping = true;
 
     //
 
     fitCameraToCenteredObject(camera, bodyGroup, 2, controls);
-
-    window.addEventListener("resize", onWindowResize);
-
-    raycaster = new THREE.Raycaster();
-
-    document.addEventListener("mousemove", onPointerMove);
-
-
-    function onPointerMove(event) {
-        pointer.x = ((event.clientX - viewerLeft) / width) * 2 - 1;
-        pointer.y = -((event.clientY - viewerTop) / heigth) * 2 + 1;
-    }
-
-    detectClicOnObject();
 };
 
 function onWindowResize() {
@@ -234,6 +222,11 @@ function onWindowResize() {
 
     renderer.setSize(width, heigth);
     labelRenderer.setSize(width, heigth);
+}
+
+function onPointerMove(event) {
+    pointer.x = ((event.clientX - viewerLeft) / width) * 2 - 1;
+    pointer.y = -((event.clientY - viewerTop) / heigth) * 2 + 1;
 }
 
 //
