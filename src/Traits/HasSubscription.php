@@ -2,7 +2,6 @@
 
 namespace Tolery\AiCad\Traits;
 
-use Illuminate\Support\Collection;
 use Tolery\AiCad\Models\SubscriptionProduct;
 
 trait HasSubscription
