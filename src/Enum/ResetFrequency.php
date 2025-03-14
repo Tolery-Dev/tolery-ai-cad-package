@@ -1,6 +1,6 @@
 <?php
 
-namespace Tolery\AiCad\Enums;
+namespace Tolery\AiCad\Enum;
 
 enum ResetFrequency: string
 {

@@ -8,7 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Tolery\AiCad\Contracts\Limit as LimitContract;
-use Tolery\AiCad\Enums\ResetFrequency;
+use Tolery\AiCad\Enum\ResetFrequency;
 use Tolery\AiCad\Exceptions\InvalidLimitResetFrequencyValue;
 use Tolery\AiCad\Exceptions\LimitAlreadyExists;
 use Tolery\AiCad\Exceptions\LimitDoesNotExist;
