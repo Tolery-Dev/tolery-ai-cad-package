@@ -11,8 +11,10 @@ return new class extends Migration
         Schema::create(config('ai-cad.usage-limiter.tables.limits'), function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->foreignId('subscription_product_id');
             $table->string('plan')->nullable();
             $table->decimal('allowed_amount', 11, 4);
+            $table->string('allowed_amount_unit')->nullable();
             $table->string('reset_frequency')->nullable();
             $table->timestamps();
             $table->softDeletes();

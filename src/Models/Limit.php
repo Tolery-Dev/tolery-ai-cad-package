@@ -37,14 +37,20 @@ class Limit extends Model implements LimitContract
     {
         parent::__construct($attributes);
 
-        $this->table = config('limit.tables.limits') ?: parent::getTable();
+        $this->table = config('ai-cad.usage-limiter.tables.limits') ?: parent::getTable();
     }
 
+    /**
+     * @throws LimitAlreadyExists
+     */
     public static function create(array $data): LimitContract
     {
         return static::findOrCreate($data, true);
     }
 
+    /**
+     * @throws LimitAlreadyExists
+     */
     public static function findOrCreate(array $data, bool $throw = false): LimitContract
     {
         $data = static::validateArgs($data);
@@ -75,7 +81,7 @@ class Limit extends Model implements LimitContract
         if (
             Arr::has($data, ['reset_frequency']) &&
             filled($data['reset_frequency']) &&
-            array_search($data['reset_frequency'], static::$resetFrequencyPossibleValues) === false
+            !in_array($data['reset_frequency'], static::$resetFrequencyPossibleValues)
         ) {
             throw new InvalidLimitResetFrequencyValue;
         }
@@ -87,6 +93,9 @@ class Limit extends Model implements LimitContract
         return $data;
     }
 
+    /**
+     * @throws LimitDoesNotExist
+     */
     public static function findByName(string|LimitContract $name, ?string $plan = null): LimitContract
     {
         if (is_object($name)) {
@@ -102,6 +111,9 @@ class Limit extends Model implements LimitContract
         return $limit;
     }
 
+    /**
+     * @throws LimitDoesNotExist
+     */
     public static function findById(int|LimitContract $id): LimitContract
     {
         if (is_object($id)) {

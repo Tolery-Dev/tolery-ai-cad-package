@@ -21,7 +21,7 @@ return [
         ],
         'cache' => [
             'expiration_time' => \DateInterval::createFromDateString('24 hours'),
-            'key' => 'nabilhassen.limits.cache',
+            'key' => 'tolery.limits.cache',
             'store' => 'default',
         ],
     ],

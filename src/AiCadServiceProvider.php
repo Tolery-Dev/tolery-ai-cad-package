@@ -16,6 +16,7 @@ use Tolery\AiCad\Commands\ResetCache;
 use Tolery\AiCad\Commands\ResetLimitUsages;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Models\Limit;
+use Tolery\AiCad\Contracts\Limit as LimitContract;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
@@ -51,6 +52,8 @@ class AiCadServiceProvider extends PackageServiceProvider
                 return false;
             }
         });
+
+       $this->app->bind(LimitContract::class, Limit::class);
     }
 
     protected function registerLivewireComponents(): self
