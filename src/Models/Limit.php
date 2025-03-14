@@ -50,6 +50,7 @@ class Limit extends Model implements LimitContract
         }
 
         static::query()->where('id', $limit->id)->update($data);
+
         return $limit;
     }
 
