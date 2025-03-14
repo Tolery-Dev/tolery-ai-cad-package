@@ -8,6 +8,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Tolery\AiCad\Contracts\Limit as LimitContract;
+use Tolery\AiCad\Enums\ResetFrequency;
 use Tolery\AiCad\Exceptions\InvalidLimitResetFrequencyValue;
 use Tolery\AiCad\Exceptions\LimitAlreadyExists;
 use Tolery\AiCad\Exceptions\LimitDoesNotExist;
@@ -19,19 +20,6 @@ class Limit extends Model implements LimitContract
     use RefreshCache, SoftDeletes;
 
     protected $guarded = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-    protected static array $resetFrequencyPossibleValues = [
-        'every second',
-        'every minute',
-        'every hour',
-        'every day',
-        'every week',
-        'every two weeks',
-        'every month',
-        'every quarter',
-        'every six months',
-        'every year',
-    ];
 
     public function __construct(array $attributes = [])
     {
@@ -81,7 +69,7 @@ class Limit extends Model implements LimitContract
         if (
             Arr::has($data, ['reset_frequency']) &&
             filled($data['reset_frequency']) &&
-            ! in_array($data['reset_frequency'], static::$resetFrequencyPossibleValues)
+            ! in_array($data['reset_frequency'], ResetFrequency::values())
         ) {
             throw new InvalidLimitResetFrequencyValue;
         }
@@ -153,6 +141,6 @@ class Limit extends Model implements LimitContract
 
     public function getResetFrequencyOptions(): Collection
     {
-        return collect(static::$resetFrequencyPossibleValues);
+        return collect(ResetFrequency::values());
     }
 }
