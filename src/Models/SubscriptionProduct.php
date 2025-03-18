@@ -3,6 +3,7 @@
 namespace Tolery\AiCad\Models;
 
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,7 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property string $description
  * @property int $price
  * @property bool $active
+ * @property int $files_allowed
  * @property string $stripe_id
  * @property string $stripe_price_id
  */
@@ -47,6 +49,7 @@ class SubscriptionProduct extends Model
             'name' => $this->name,
             'active' => $this->active,
             'description' => $this->description,
+            'files_allowed' => $this->files_allowed,
             'tax_code' => 'txcd_10103101', // Logiciel en tant que service (SaaS), téléchargement électronique, usage professionnel
             'shippable' => false,
         ];
@@ -78,5 +81,10 @@ class SubscriptionProduct extends Model
     protected static function newFactory(): SubscriptionProductFactory
     {
         return SubscriptionProductFactory::new();
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('active', true)->orderBy('price', 'asc');
     }
 }
