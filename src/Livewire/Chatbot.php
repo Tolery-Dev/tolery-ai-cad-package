@@ -37,6 +37,10 @@ class Chatbot extends Component
 
     public ?string $objectToConfigId = null;
 
+    public bool $edgesShow = false;
+
+    public string $edgesColor = '#ffffff';
+
     public function mount(): void
     {
         if (! $this->chat) {
@@ -53,10 +57,27 @@ class Chatbot extends Component
         $this->chatMessages = $this->chat->messages;
         $this->lastTimeAnswer = $this->chat->messages->isEmpty() ? now() : $this->chat->messages->last()->created_at;
 
-        $objToDisplay = $this->chat->messages->isEmpty() ? null : $this->chat->messages->last()->getJSONEdgeUrl();
+        $objToDisplay = $this->chat->messages->isEmpty() ?
+            null
+            :
+            $this->chat->messages
+                ->whereNotNull('ai_json_edge_path')
+                ->last()
+                ->getJSONEdgeUrl();
+
         if ($objToDisplay) {
             $this->dispatch('jsonLoaded', jsonPath: $objToDisplay);
         }
+    }
+
+    public function updatedEdgesShow($value)
+    {
+        $this->dispatch('toggleShowEdges', show: $value);
+    }
+
+    public function updatedEdgesColor($value)
+    {
+        $this->dispatch('updatedEdgeColor', color: $value);
     }
 
     public function submitEntry(): void

@@ -6,6 +6,9 @@ let camera, scene, renderer, labelRenderer, controls, raycaster, INTERSECTED, in
 
 let labelDiv, labelObject
 
+//Variables pour l'affichage des contours de la piéce
+let edgesShow, edgesColor, edgesLines = []
+
 const pointer = new THREE.Vector2()
 
 let allMesh = []
@@ -19,16 +22,30 @@ Livewire.on('jsonLoaded', function ({ jsonPath }) {
         scene.remove(mesh)
         mesh.geometry.dispose()
         mesh.material.dispose()
-        console.log('mesh removed', mesh.name)
     })
 
     allMesh = []
+    edgesLines = []
     bodyGroup = new THREE.Group()
 
     // fetch json
     fetch(jsonPath)
         .then((response) => response.json())
         .then((json) => convertJsonToObject(json))
+})
+
+Livewire.on('toggleShowEdges', function ({show}) {
+    edgesLines.forEach(l => {
+        localStorage.setItem('tolery-viewer-edges-show', show )
+        l.visible = show
+    });
+})
+
+Livewire.on('updatedEdgeColor', function ({color} ) {
+    edgesLines.forEach(l => {
+        localStorage.setItem('tolery-viewer-edges-color', color )
+        l.material.color.set(color)
+    });
 })
 
 const init3dViewer = () => {
@@ -90,7 +107,18 @@ const init3dViewer = () => {
     document.addEventListener('mousemove', onPointerMove)
 
     detectClicOnObject()
+
+    // On récupére ces paramétre depuis le localStorage
+    edgesShow = localStorage.getItem('tolery-viewer-edges-show') === 'true'
+    edgesColor = localStorage.getItem('tolery-viewer-edges-color') || '#ffffff'
 }
+
+Livewire.hook('component.init', ({ component, cleanup }) => {
+    if(component.name === 'chatbot') {
+        component.$wire.$set('edgesShow', edgesShow)
+        component.$wire.$set('edgesColor', edgesColor)
+    }
+})
 
 const detectClicOnObject = (object) => {
     const delta = 6
@@ -166,8 +194,16 @@ const convertJsonToObject = (json) => {
 
                 bodyGroup.add(faceMesh)
 
-                //faceMesh.layers.enableAll();
+                // Affichage des contours, masqué par defaut
+                const edges = new THREE.EdgesGeometry( faceGeometry, 10 );
+                const lines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: edgesColor}) );
+                scene.add( lines );
+                edgesLines.push(lines)
+
             })
+            edgesLines.forEach(l => {
+                l.visible = edgesShow
+            });
         }
     })
 
@@ -201,7 +237,7 @@ function onPointerMove(event) {
 function animate() {
     raycaster.setFromCamera(pointer, camera)
 
-    intersects = raycaster.intersectObjects(scene.children, true)
+    intersects = raycaster.intersectObjects(bodyGroup.children, true)
 
     if (intersects.length > 0) {
         if (INTERSECTED != intersects[0].object) {

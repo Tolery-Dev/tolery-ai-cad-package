@@ -36,5 +36,16 @@
         @else
             <livewire:chat-config :chat="$chat"/>
         @endif
+
+
+        <flux:separator class="my-6" text="Configuration de l'affichage" />
+
+        <div class="space-y-6">
+            <flux:switch wire:model.live="edgesShow" label="Afficher les contours" />
+
+            @if($edgesShow)
+                <flux:input wire:model.live="edgesColor" label="Couleurs des contours" type="color" />
+            @endif
+        </div>
     </div>
 </div>
