@@ -35,7 +35,7 @@ class GetAICADResponse implements ShouldQueue
         $args = [
             'image_path' => $this->pdfUrl ?? '',
             'message' => $this->message,
-            'material_choice' => $this->chat->material_family?->value ?? MaterialFamily::STEEL->value,
+            'material_choice' => $this->chat->material_family->value ?? MaterialFamily::STEEL->value,
             'part_file_name' => $objName,
             'export_format' => 'obj',
         ];

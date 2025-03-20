@@ -2,6 +2,8 @@
 
 namespace Tolery\AiCad\Enum;
 
+use Illuminate\Support\Carbon;
+
 enum ResetFrequency: string
 {
     case EVERY_SECOND = 'every second';
@@ -21,5 +23,21 @@ enum ResetFrequency: string
     public static function values(): array
     {
         return array_column(self::cases(), 'value');
+    }
+
+    public function addTime(Carbon $date): Carbon
+    {
+        return match ($this) {
+            self::EVERY_SECOND => $date->addSecond(),
+            self::EVERY_MINUTE => $date->addMinute(),
+            self::EVERY_HOUR => $date->addHour(),
+            self::EVERY_DAY => $date->addDay(),
+            self::EVERY_WEEK => $date->addWeek(),
+            self::EVERY_TWO_WEEKS => $date->addWeeks(2),
+            self::EVERY_MONTH => $date->addMonth(),
+            self::EVERY_QUARTER => $date->addQuarter(),
+            self::EVERY_SIX_MONTHS => $date->addMonths(6),
+            self::EVERY_YEAR => $date->addYear()
+        };
     }
 }

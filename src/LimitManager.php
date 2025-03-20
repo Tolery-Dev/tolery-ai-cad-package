@@ -6,8 +6,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
-use Tolery\AiCad\Contracts\Limit;
+use Tolery\AiCad\Enum\ResetFrequency;
 use Tolery\AiCad\Exceptions\InvalidLimitResetFrequencyValue;
+use Tolery\AiCad\Models\Limit;
 
 /**
  * @see https://nabilhassen.com/laravel-usage-limiter-manage-rate-and-usage-limits
@@ -62,18 +63,7 @@ class LimitManager
 
         $lastReset = Carbon::parse($lastReset);
 
-        return match ($limitResetFrequency) {
-            'every second' => $lastReset->addSecond(),
-            'every minute' => $lastReset->addMinute(),
-            'every hour' => $lastReset->addHour(),
-            'every day' => $lastReset->addDay(),
-            'every week' => $lastReset->addWeek(),
-            'every two weeks' => $lastReset->addWeeks(2),
-            'every month' => $lastReset->addMonth(),
-            'every quarter' => $lastReset->addQuarter(),
-            'every six months' => $lastReset->addMonths(6),
-            'every year' => $lastReset->addYear(),
-        };
+        return ResetFrequency::from($limitResetFrequency)->addTime($lastReset);
     }
 
     public function loadLimits(): void

@@ -49,7 +49,7 @@ class SubscriptionProduct extends Model
             'name' => $this->name,
             'active' => $this->active,
             'description' => $this->description,
-            'files_allowed' => $this->files_allowed,
+            'metadata' => ['files_allowed' => $this->files_allowed],
             'tax_code' => 'txcd_10103101', // Logiciel en tant que service (SaaS), téléchargement électronique, usage professionnel
             'shippable' => false,
         ];

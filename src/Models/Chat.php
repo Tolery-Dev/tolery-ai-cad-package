@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Tolery\AiCad\Enum\MaterialFamily;
 
 /**
- * @property string $session_id
- * @property string $name
- * @property MaterialFamily $material_family
- * @property Carbon $created_at
- * @property Carbon $updated_at
+ * @property string|null $session_id
+ * @property string|null $name
+ * @property MaterialFamily|null $material_family
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Chat extends Model
 {
@@ -25,7 +25,7 @@ class Chat extends Model
 
     /**
      * @var array{
-     *     'material_family': '\Tolery\AiCad\Enum\MaterialFamily'
+     *     'material_family': 'Tolery\AiCad\Enum\MaterialFamily'
      * }
      */
     protected $casts = [
@@ -37,7 +37,7 @@ class Chat extends Model
      */
     public function team(): BelongsTo
     {
-        return $this->belongsTo(config('ai-cad.chat_team_model'));
+        return $this->belongsTo(config('ai-cad.chat_team_model')); // @phpstan-ignore-line
     }
 
     /**
@@ -45,7 +45,7 @@ class Chat extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(config('ai-cad.chat_user_model'));
+        return $this->belongsTo(config('ai-cad.chat_user_model')); // @phpstan-ignore-line
     }
 
     /**

@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Throwable;
 use Tolery\AiCad\Contracts\Limit as LimitContract;
+use Tolery\AiCad\Exceptions\LimitDoesNotExist;
 use Tolery\AiCad\Exceptions\LimitNotSetOnModel;
 use Tolery\AiCad\Exceptions\UsedAmountShouldBePositiveIntAndLessThanAllowedAmount;
 use Tolery\AiCad\LimitManager;
@@ -17,7 +19,7 @@ trait HasLimits
 {
     protected static function bootHasLimits(): void
     {
-        static::resolveRelationUsing(static::getLimitsRelationship(), function (Model $model) {
+        static::resolveRelationUsing(self::getLimitsRelationship(), function (Model $model) {
             return $model
                 ->morphToMany(
                     Limit::class,
@@ -31,9 +33,13 @@ trait HasLimits
         });
     }
 
+    /**
+     * @throws Throwable
+     * @throws LimitDoesNotExist
+     */
     public function setLimit(string|LimitContract $name, ?string $plan = null, float|int $usedAmount = 0.0): bool
     {
-        $limit = app(LimitContract::class)::findByName($name, $plan);
+        $limit = app(Limit::class)::findByName($name, $plan);
 
         if ($this->isLimitSet($limit)) {
             return true;
@@ -63,13 +69,19 @@ trait HasLimits
         return true;
     }
 
+    /**
+     * @throws LimitDoesNotExist
+     */
     public function isLimitSet(string|LimitContract $name, ?string $plan = null): bool
     {
-        $limit = app(LimitContract::class)::findByName($name, $plan);
+        $limit = app(Limit::class)::findByName($name, $plan);
 
         return $this->getModelLimits()->where('name', $limit->name)->isNotEmpty();
     }
 
+    /**
+     * @throws LimitNotSetOnModel
+     */
     public function unsetLimit(string|LimitContract $name, ?string $plan = null): bool
     {
         $limit = $this->getModelLimit($name, $plan);
@@ -81,7 +93,12 @@ trait HasLimits
         return true;
     }
 
-    public function useLimit(string|LimitContract $name, ?string $plan = null, float|int $amount = 1.0): bool
+    /**
+     * @throws UsedAmountShouldBePositiveIntAndLessThanAllowedAmount
+     * @throws LimitNotSetOnModel
+     * @throws LimitDoesNotExist
+     */
+    public function useLimit(string|Limit $name, ?string $plan = null, float|int $amount = 1.0): bool
     {
         $limit = $this->getModelLimit($name, $plan);
 
@@ -162,9 +179,13 @@ trait HasLimits
         return $limit->allowed_amount - $limit->pivot->used_amount;
     }
 
-    public function getModelLimit(string|LimitContract $name, ?string $plan = null): LimitContract
+    /**
+     * @throws LimitDoesNotExist
+     * @throws LimitNotSetOnModel
+     */
+    public function getModelLimit(string|LimitContract $name, ?string $plan = null): Limit
     {
-        $limit = app(LimitContract::class)::findByName($name, $plan);
+        $limit = app(Limit::class)::findByName($name, $plan);
 
         $modelLimit = $this->getModelLimits()->firstWhere('id', $limit->id);
 
@@ -177,7 +198,7 @@ trait HasLimits
 
     public function getModelLimits(): Collection
     {
-        $relationshipName = static::getLimitsRelationship();
+        $relationshipName = self::getLimitsRelationship();
 
         $this->loadMissing($relationshipName);
 
@@ -186,14 +207,14 @@ trait HasLimits
 
     public function limitsRelationship(): MorphToMany
     {
-        $relationshipName = static::getLimitsRelationship();
+        $relationshipName = self::getLimitsRelationship();
 
         return $this->$relationshipName();
     }
 
     public function unloadLimitsRelationship(): void
     {
-        $relationshipName = static::getLimitsRelationship();
+        $relationshipName = self::getLimitsRelationship();
 
         $this->unsetRelation($relationshipName);
     }
@@ -203,13 +224,13 @@ trait HasLimits
         return config('ai-cad.usage-limiter.relationship');
     }
 
-    public function limitUsageReport(string|LimitContract|null $name = null, ?string $plan = null): array
+    public function limitUsageReport(string|Limit|null $name = null, ?string $plan = null): array
     {
         $modelLimits = ! is_null($name) ? collect([$this->getModelLimit($name, $plan)]) : $this->getModelLimits();
 
         return
         $modelLimits
-            ->mapWithKeys(function (LimitContract $modelLimit) {
+            ->mapWithKeys(function (Limit $modelLimit) {
                 return [
                     $modelLimit->name => [
                         'allowed_amount' => $modelLimit->allowed_amount,
