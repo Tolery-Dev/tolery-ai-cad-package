@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
@@ -10,11 +11,22 @@ use InvalidArgumentException;
 use Tolery\AiCad\Contracts\Limit as LimitContract;
 use Tolery\AiCad\Enum\ResetFrequency;
 use Tolery\AiCad\Exceptions\InvalidLimitResetFrequencyValue;
-use Tolery\AiCad\Exceptions\LimitAlreadyExists;
 use Tolery\AiCad\Exceptions\LimitDoesNotExist;
 use Tolery\AiCad\LimitManager;
 use Tolery\AiCad\Traits\RefreshCache;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string|null $plan
+ * @property int $allowed_amount
+ * @property string|null $allowed_amount_unit
+ * @property string|null $reset_frequency
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ * @property ?HasLimit $pivot
+ */
 class Limit extends Model implements LimitContract
 {
     use RefreshCache, SoftDeletes;
@@ -28,17 +40,11 @@ class Limit extends Model implements LimitContract
         $this->table = config('ai-cad.usage-limiter.tables.limits') ?: parent::getTable();
     }
 
-    /**
-     * @throws LimitAlreadyExists
-     */
     public static function create(array $data): LimitContract
     {
         return static::updateOrCreate($data, true);
     }
 
-    /**
-     * @throws LimitAlreadyExists
-     */
     public static function updateOrCreate(array $data, bool $throw = false): LimitContract
     {
         $data = static::validateArgs($data);
@@ -82,7 +88,7 @@ class Limit extends Model implements LimitContract
     /**
      * @throws LimitDoesNotExist
      */
-    public static function findByName(string|LimitContract $name, ?string $plan = null): LimitContract
+    public static function findByName(string|Limit $name, ?string $plan = null): Limit
     {
         if (is_object($name)) {
             return $name;
@@ -109,7 +115,7 @@ class Limit extends Model implements LimitContract
         $limit = app(LimitManager::class)->getLimit(compact('id'));
 
         if (! $limit) {
-            throw new LimitDoesNotExist($id);
+            throw new LimitDoesNotExist((string) $id);
         }
 
         return $limit;
