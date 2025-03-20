@@ -118,7 +118,7 @@ class Chatbot extends Component
 
     public function render(): View
     {
-        return view('ai-cad::livewire.chatbot');
+        return view('ai-cad::livewire.chatbot'); // @phpstan-ignore-line
     }
 
     private function getAPIResponse(): void
