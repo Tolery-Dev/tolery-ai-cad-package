@@ -31,7 +31,7 @@ class AiCadServiceProvider extends PackageServiceProvider
         $package
             ->name('ai-cad')
             ->hasConfigFile('ai-cad')
-            ->hasViews()
+            ->hasViews('ai-cad')
             ->discoversMigrations()
             ->runsMigrations()
             ->hasCommands([
