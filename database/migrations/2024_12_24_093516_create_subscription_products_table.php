@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('stripe_id')->nullable();
             $table->string('stripe_price_id')->nullable();
             $table->integer('price');
+            $table->string('frequency')->default('monthly');
             $table->timestamps();
         });
     }

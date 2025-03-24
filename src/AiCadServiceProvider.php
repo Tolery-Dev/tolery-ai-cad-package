@@ -8,16 +8,9 @@ use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\AiCadCommand;
-use Tolery\AiCad\Commands\CreateLimit;
-use Tolery\AiCad\Commands\DeleteLimit;
-use Tolery\AiCad\Commands\ListLimits;
-use Tolery\AiCad\Commands\ResetCache;
-use Tolery\AiCad\Commands\ResetLimitUsages;
-use Tolery\AiCad\Contracts\Limit as LimitContract;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Models\ChatTeam;
-use Tolery\AiCad\Models\Limit;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
@@ -36,17 +29,10 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->runsMigrations()
             ->hasCommands([
                 AiCadCommand::class,
-                CreateLimit::class,
-                DeleteLimit::class,
-                ListLimits::class,
-                ResetLimitUsages::class,
-                ResetCache::class,
             ]);
 
         $this->registerLivewireComponents()
             ->registerBladeDirective();
-
-        $this->app->bind(LimitContract::class, Limit::class);
     }
 
     protected function registerLivewireComponents(): self
@@ -62,9 +48,16 @@ class AiCadServiceProvider extends PackageServiceProvider
     protected function registerBladeDirective(): self
     {
         $this->callAfterResolving(BladeCompiler::class, function () {
-            Blade::if('limit', function (ChatTeam $model, string|Limit $name, ?string $plan = null): bool {
+            Blade::if('subscribed', function (): bool {
                 try {
-                    return $model->hasEnoughLimit($name, $plan);
+                    return auth()->user()->team->subscribed();
+                } catch (\Throwable $th) {
+                    return false;
+                }
+            });
+            Blade::if('hasLimit', function (): bool {
+                try {
+                    return auth()->user()->team->limits()->exists();
                 } catch (\Throwable $th) {
                     return false;
                 }
