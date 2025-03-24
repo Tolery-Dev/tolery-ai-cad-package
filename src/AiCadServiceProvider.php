@@ -10,6 +10,7 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\AiCadCommand;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
+use Tolery\AiCad\Models\ChatUser;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
@@ -49,14 +50,18 @@ class AiCadServiceProvider extends PackageServiceProvider
         $this->callAfterResolving(BladeCompiler::class, function () {
             Blade::if('subscribed', function (): bool {
                 try {
-                    return auth()->user()->team->subscribed();
+                    /** @var ChatUser $user */
+                    $user = auth()->user();
+                    return $user->team->subscribed();
                 } catch (\Throwable $th) {
                     return false;
                 }
             });
             Blade::if('hasLimit', function (): bool {
                 try {
-                    return auth()->user()->team->limits()->exists();
+                    /** @var ChatUser $user */
+                    $user = auth()->user();
+                    return $user->team->limits()->exists();
                 } catch (\Throwable $th) {
                     return false;
                 }
