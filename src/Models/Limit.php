@@ -8,8 +8,8 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $used_amount
- * @property Carbon|null $last_reset
- * @property Carbon|null $next_reset
+ * @property Carbon|null $start_date
+ * @property Carbon|null $end_date
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

@@ -22,8 +22,8 @@ return new class extends Migration
                 ->cascadeOnUpdate();
 
             $table->decimal('used_amount', 11, 4);
-            $table->dateTime('last_reset')->nullable();
-            $table->dateTime('next_reset')->nullable();
+            $table->dateTime('start_date')->nullable();
+            $table->dateTime('end_date')->nullable();
             $table->timestamps();
         });
     }
