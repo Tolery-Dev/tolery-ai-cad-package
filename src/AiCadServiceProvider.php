@@ -52,6 +52,7 @@ class AiCadServiceProvider extends PackageServiceProvider
                 try {
                     /** @var ChatUser $user */
                     $user = auth()->user();
+
                     return $user->team->subscribed();
                 } catch (\Throwable $th) {
                     return false;
@@ -61,6 +62,7 @@ class AiCadServiceProvider extends PackageServiceProvider
                 try {
                     /** @var ChatUser $user */
                     $user = auth()->user();
+
                     return $user->team->limits()->exists();
                 } catch (\Throwable $th) {
                     return false;
