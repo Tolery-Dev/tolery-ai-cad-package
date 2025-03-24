@@ -25,11 +25,6 @@ return new class extends Migration
             $table->dateTime('last_reset')->nullable();
             $table->dateTime('next_reset')->nullable();
             $table->timestamps();
-
-            $table->unique([
-                'team_id',
-                'subscription_product_id',
-            ]);
         });
     }
 
