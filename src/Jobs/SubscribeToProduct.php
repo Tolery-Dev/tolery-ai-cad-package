@@ -2,26 +2,18 @@
 
 namespace Tolery\AiCad\Jobs;
 
-use App\Models\Team;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Support\Str;
 use Laravel\Cashier\Exceptions\IncompletePayment;
 use Throwable;
-use Tolery\AiCad\Exceptions\LimitDoesNotExist;
 use Tolery\AiCad\Models\ChatTeam;
-use Tolery\AiCad\Models\Limit;
 use Tolery\AiCad\Models\SubscriptionProduct;
 
 class SubscribeToProduct implements ShouldQueue
 {
-
     use Dispatchable;
 
-    public function __construct(public ChatTeam $team, public SubscriptionProduct $product, public string $paymentMethodId)
-    {
-    }
-
+    public function __construct(public ChatTeam $team, public SubscriptionProduct $product, public string $paymentMethodId) {}
 
     /**
      * @throws Throwable
@@ -35,7 +27,7 @@ class SubscribeToProduct implements ShouldQueue
             $subscription = $this->team->subscription();
             $product = $this->team->getSubscriptionProduct();
 
-            if($product){
+            if ($product) {
                 $this->team->unsetLimit();
             }
 

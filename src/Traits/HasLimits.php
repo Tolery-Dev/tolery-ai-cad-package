@@ -5,7 +5,6 @@ namespace Tolery\AiCad\Traits;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Throwable;
-use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\Limit;
 
 trait HasLimits
@@ -22,14 +21,14 @@ trait HasLimits
     {
         $product = $this->getSubscriptionProduct();
 
-        if($product){
+        if ($product) {
 
             DB::transaction(function () use ($product, $usedAmount) {
 
                 $limit = new Limit([
                     'used_amount' => $usedAmount,
                     'last_reset' => now(),
-                    'next_reset' => $product->frequency->addTime(now())
+                    'next_reset' => $product->frequency->addTime(now()),
                 ]);
                 $limit->product()->associate($product);
                 $limit->team()->associate($this);
@@ -42,10 +41,8 @@ trait HasLimits
         return false;
     }
 
-
     public function unsetLimit(): void
     {
         $this->limits()->delete();
     }
-
 }

@@ -12,8 +12,8 @@ trait HasSubscription
 
         $product =
          SubscriptionProduct::query()
-            ->where('stripe_id', $productId)
-            ->first();
+             ->where('stripe_id', $productId)
+             ->first();
 
         return $product;
     }

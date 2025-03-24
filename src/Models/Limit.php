@@ -13,8 +13,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-class Limit extends Model {
-
+class Limit extends Model
+{
     protected $table = 'subscription_has_limits';
 
     /**

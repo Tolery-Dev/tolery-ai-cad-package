@@ -10,7 +10,6 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\AiCadCommand;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
-use Tolery\AiCad\Models\ChatTeam;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
