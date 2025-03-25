@@ -3,8 +3,8 @@
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
 use Tolery\AiCad\Jobs\LimitRenew;
 use Tolery\AiCad\Models\Limit;
-use function Pest\Laravel\artisan;
 
+use function Pest\Laravel\artisan;
 
 test('0 subscription to be renewed', function () {
 
@@ -16,7 +16,6 @@ test('0 subscription to be renewed', function () {
         ->expectsOutput('0 subscriptions will be renewed')
         ->assertExitCode(0);
 });
-
 
 test('subscriptions to be renewed', function () {
 

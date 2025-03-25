@@ -20,7 +20,7 @@ class LimitsAutoRenewal extends Command
 
         $this->comment("{$limits->count()} subscriptions will be renewed");
 
-        $limits->each( fn( Limit $limit ) => LimitRenew::dispatch($limit));
+        $limits->each(fn (Limit $limit) => LimitRenew::dispatch($limit));
 
         return self::SUCCESS;
     }

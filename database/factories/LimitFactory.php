@@ -4,7 +4,6 @@ namespace Tolery\AiCad\Database\Factories;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Database\Eloquent\Model;
 use Mockery;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\Limit;
@@ -12,13 +11,11 @@ use Tolery\AiCad\Models\SubscriptionProduct;
 
 class LimitFactory extends Factory
 {
-
     protected $model = Limit::class;
-    /**
-     */
+
     public function definition(): array
     {
-        $startDate = CarbonImmutable::instance( $this->faker->dateTimeBetween('-1 year', '+ 1 year'));
+        $startDate = CarbonImmutable::instance($this->faker->dateTimeBetween('-1 year', '+ 1 year'));
         $endDate = $startDate->addMonth();
 
         $team = Mockery::mock(ChatTeam::class);
@@ -36,7 +33,7 @@ class LimitFactory extends Factory
     public function past(): LimitFactory
     {
         return $this->state(function (array $attributes) {
-            $startDate = CarbonImmutable::instance( $this->faker->dateTimeBetween('-1 year','- 1 month'))->subDay();
+            $startDate = CarbonImmutable::instance($this->faker->dateTimeBetween('-1 year', '- 1 month'))->subDay();
             $endDate = $startDate->addMonth();
 
             return [
@@ -49,7 +46,7 @@ class LimitFactory extends Factory
     public function current(): LimitFactory
     {
         return $this->state(function (array $attributes) {
-            $startDate = CarbonImmutable::instance( $this->faker->dateTimeBetween('-1 month','now'))->addDay();
+            $startDate = CarbonImmutable::instance($this->faker->dateTimeBetween('-1 month', 'now'))->addDay();
             $endDate = $startDate->addMonth();
 
             return [

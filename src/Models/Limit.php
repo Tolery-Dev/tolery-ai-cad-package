@@ -16,10 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Limit extends Model
 {
-
     use HasFactory;
-    protected $table = 'subscription_has_limits';
 
+    protected $table = 'subscription_has_limits';
 
     /**
      * @return array{

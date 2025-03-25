@@ -12,7 +12,6 @@ class LimitRenew implements ShouldQueue
 
     public function __construct(public Limit $limit) {}
 
-
     public function handle(): void
     {
         // créer une nouvelle limite à partir de l'ancienne

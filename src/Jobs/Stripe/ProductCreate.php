@@ -27,7 +27,7 @@ class ProductCreate implements ShouldQueue
      */
     public function handle(): void
     {
-        if(!$this->subscriptionProduct->stripe_id){
+        if (! $this->subscriptionProduct->stripe_id) {
 
             $product = Cashier::stripe()->products->create($this->subscriptionProduct->toStripeObject());
 

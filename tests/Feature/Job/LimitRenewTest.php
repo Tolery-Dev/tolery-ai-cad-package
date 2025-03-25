@@ -2,9 +2,10 @@
 
 use Tolery\AiCad\Jobs\LimitRenew;
 use Tolery\AiCad\Models\Limit;
+
 use function Pest\Laravel\assertDatabaseCount;
 
-test('limit renew', function(){
+test('limit renew', function () {
 
     $limit = Limit::factory()
         ->past()
@@ -14,7 +15,7 @@ test('limit renew', function(){
 
     $limitRenewJob->handle();
 
-    assertDatabaseCount( 'subscription_has_limits', 2);
+    assertDatabaseCount('subscription_has_limits', 2);
 
     $newLimite = Limit::query()->whereTodayOrAfter('end_date')->first();
 

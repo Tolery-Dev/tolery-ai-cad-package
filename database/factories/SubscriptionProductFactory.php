@@ -23,7 +23,7 @@ class SubscriptionProductFactory extends Factory
             'files_allowed' => $this->faker->numberBetween(10, 50),
             'description' => $this->faker->text(),
             'stripe_id' => $this->faker->word(),
-            'frequency' => $this->faker->randomElement( ResetFrequency::cases()),
+            'frequency' => $this->faker->randomElement(ResetFrequency::cases()),
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ];
