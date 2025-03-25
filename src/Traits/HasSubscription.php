@@ -6,8 +6,12 @@ use Tolery\AiCad\Models\SubscriptionProduct;
 
 trait HasSubscription
 {
-    public function getSubscriptionProduct($team): SubscriptionProduct
+    public function getSubscriptionProduct(): ?SubscriptionProduct
     {
-        return SubscriptionProduct::whereStripePriceId($team->subscription()->items->first()->stripe_price)->first();
+        $productId = $this->subscription()->items()->first()->stripe_product; // @phpstan-ignore-line
+
+        return SubscriptionProduct::query()
+            ->where('stripe_id', $productId)
+            ->first();
     }
 }

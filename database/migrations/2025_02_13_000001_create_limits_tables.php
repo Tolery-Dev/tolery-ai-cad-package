@@ -8,47 +8,28 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create(config('ai-cad.usage-limiter.tables.limits'), function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->foreignId('subscription_product_id');
-            $table->string('plan')->nullable();
-            $table->decimal('allowed_amount', 11, 4);
-            $table->string('allowed_amount_unit')->nullable();
-            $table->string('reset_frequency')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-
-            $table->unique(['name', 'plan']);
-        });
-
         Schema::create(config('ai-cad.usage-limiter.tables.model_has_limits'), function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId(config('ai-cad.usage-limiter.columns.limit_pivot_key'))
-                ->nullable()
-                ->references('id')
-                ->on(config('ai-cad.usage-limiter.tables.limits'))
+            $table->foreignId('subscription_product_id')
+                ->constrained()
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
 
-            $table->morphs('model');
-            $table->decimal('used_amount', 11, 4);
-            $table->dateTime('last_reset')->nullable();
-            $table->dateTime('next_reset')->nullable();
-            $table->timestamps();
+            $table->foreignId('team_id')
+                ->constrained()
+                ->cascadeOnDelete()
+                ->cascadeOnUpdate();
 
-            $table->unique([
-                'model_type',
-                'model_id',
-                config('ai-cad.usage-limiter.columns.limit_pivot_key'),
-            ]);
+            $table->decimal('used_amount', 11, 4);
+            $table->dateTime('start_date')->nullable();
+            $table->dateTime('end_date')->nullable();
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
         Schema::dropIfExists(config('ai-cad.usage-limiter.tables.model_has_limits'));
-        Schema::dropIfExists(config('ai-cad.usage-limiter.tables.limits'));
     }
 };
