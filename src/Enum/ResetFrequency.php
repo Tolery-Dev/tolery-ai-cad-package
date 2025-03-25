@@ -2,7 +2,9 @@
 
 namespace Tolery\AiCad\Enum;
 
-use Illuminate\Support\Carbon;
+
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 
 enum ResetFrequency: string
 {
@@ -17,7 +19,7 @@ enum ResetFrequency: string
         return array_column(self::cases(), 'value');
     }
 
-    public function addTime(Carbon $date): Carbon
+    public function addTime(Carbon|CarbonImmutable $date): Carbon|CarbonImmutable
     {
         return match ($this) {
             self::MONTHLY => $date->addMonth(),

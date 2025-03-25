@@ -2,12 +2,14 @@
 
 namespace Tolery\AiCad;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Compilers\BladeCompiler;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\AiCadCommand;
+use Tolery\AiCad\Commands\LimitsAutoRenewal;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Models\ChatUser;
@@ -29,10 +31,13 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->runsMigrations()
             ->hasCommands([
                 AiCadCommand::class,
+                LimitsAutoRenewal::class,
             ]);
 
-        $this->registerLivewireComponents()
-            ->registerBladeDirective();
+        $this
+            ->registerLivewireComponents()
+            ->registerBladeDirective()
+            ->scheduleCommandes();
     }
 
     protected function registerLivewireComponents(): self
@@ -68,6 +73,15 @@ class AiCadServiceProvider extends PackageServiceProvider
                     return false;
                 }
             });
+        });
+
+        return $this;
+    }
+
+    protected function scheduleCommandes(): static
+    {
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
+            $schedule->command(LimitsAutoRenewal::class)->dailyAt('01:00');
         });
 
         return $this;

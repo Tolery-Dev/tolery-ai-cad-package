@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -15,7 +16,24 @@ use Illuminate\Support\Carbon;
  */
 class Limit extends Model
 {
+
+    use HasFactory;
     protected $table = 'subscription_has_limits';
+
+
+    /**
+     * @return array{
+     *      'start_date': 'datetime',
+     *      'end_date': 'datetime',
+     * }
+     */
+    public function casts(): array
+    {
+        return [
+            'start_date' => 'datetime',
+            'end_date' => 'datetime',
+        ];
+    }
 
     /**
      * @return BelongsTo<SubscriptionProduct, $this>

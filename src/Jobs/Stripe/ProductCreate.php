@@ -27,18 +27,21 @@ class ProductCreate implements ShouldQueue
      */
     public function handle(): void
     {
-        $product = Cashier::stripe()->products->create($this->subscriptionProduct->toStripeObject());
+        if(!$this->subscriptionProduct->stripe_id){
 
-        $price = Cashier::stripe()->prices->create([
-            ...$this->subscriptionProduct->toStripePriceObject(),
-            'product' => $product->id,
-        ]);
+            $product = Cashier::stripe()->products->create($this->subscriptionProduct->toStripeObject());
 
-        Cashier::stripe()->products->update($product->id, ['default_price' => $price->id]);
+            $price = Cashier::stripe()->prices->create([
+                ...$this->subscriptionProduct->toStripePriceObject(),
+                'product' => $product->id,
+            ]);
 
-        $this->subscriptionProduct->updateQuietly([
-            'stripe_id' => $product->id,
-            'stripe_price_id' => $price->id,
-        ]);
+            Cashier::stripe()->products->update($product->id, ['default_price' => $price->id]);
+
+            $this->subscriptionProduct->updateQuietly([
+                'stripe_id' => $product->id,
+                'stripe_price_id' => $price->id,
+            ]);
+        }
     }
 }
