@@ -2,9 +2,9 @@
 
 namespace Tolery\AiCad\Database\Factories;
 
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 use Mockery;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\Limit;
@@ -15,7 +15,6 @@ class LimitFactory extends Factory
 
     protected $model = Limit::class;
     /**
-     * @throws \DateMalformedStringException
      */
     public function definition(): array
     {
