@@ -8,21 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('teams')) {
-            Schema::create('teams', function (Blueprint $table) {
-                $table->id();
-                $table->timestamps();
-            });
-        }
-
-        if (! Schema::hasTable('users')) {
-            Schema::create('users', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('team_id')->index()->constrained()->cascadeOnDelete();
-                $table->timestamps();
-            });
-        }
-
         Schema::create('chats', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();

@@ -14,11 +14,17 @@ class LimitRenew implements ShouldQueue
 
     public function handle(): void
     {
-        // créer une nouvelle limite à partir de l'ancienne
-        $newLimit = $this->limit->replicate();
 
-        $newLimit->start_date = now();
-        $newLimit->end_date = $this->limit->product->frequency->addTime(now());
-        $newLimit->save();
+        // On vérifie que l'abonnement est encore valable
+        $team = $this->limit->team;
+
+        if( $team->subscribed() ){
+            // créer une nouvelle limite à partir de l'ancienne
+            $newLimit = $this->limit->replicate();
+
+            $newLimit->start_date = now();
+            $newLimit->end_date = $this->limit->product->frequency->addTime(now());
+            $newLimit->save();
+        }
     }
 }

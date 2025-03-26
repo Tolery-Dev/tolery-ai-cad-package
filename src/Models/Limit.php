@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Carbon|null $end_date
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property ChatTeam|null $team
  */
 class Limit extends Model
 {
@@ -47,6 +48,6 @@ class Limit extends Model
      */
     public function team(): BelongsTo
     {
-        return $this->belongsTo(config('ai-cad.chat_team_model')); // @phpstan-ignore-line
+        return $this->belongsTo(ChatTeam::class);
     }
 }

@@ -5,6 +5,7 @@ namespace Tolery\AiCad;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Compilers\BladeCompiler;
+use Laravel\Cashier\Cashier;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -12,6 +13,7 @@ use Tolery\AiCad\Commands\AiCadCommand;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
+use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\ChatUser;
 
 class AiCadServiceProvider extends PackageServiceProvider
@@ -33,6 +35,8 @@ class AiCadServiceProvider extends PackageServiceProvider
                 AiCadCommand::class,
                 LimitsAutoRenewal::class,
             ]);
+
+        Cashier::useCustomerModel(ChatTeam::class);
 
         $this
             ->registerLivewireComponents()
