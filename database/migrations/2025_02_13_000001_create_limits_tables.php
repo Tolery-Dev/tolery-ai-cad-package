@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create(config('ai-cad.usage-limiter.tables.model_has_limits'), function (Blueprint $table) {
+        Schema::create(config('ai-cad.usage-limiter.tables.model_has_limits', 'subscription_has_limits'), function (Blueprint $table) {
             $table->id();
 
             $table->foreignId('subscription_product_id')

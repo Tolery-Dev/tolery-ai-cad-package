@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 use Tolery\AiCad\Models\Chat;
 
+/**
+ * @extends Factory<Chat>
+ */
 class ChatFactory extends Factory
 {
     protected $model = Chat::class;
