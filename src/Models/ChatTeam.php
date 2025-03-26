@@ -4,7 +4,6 @@ namespace Tolery\AiCad\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use Laravel\Cashier\Billable;
 use Tolery\AiCad\Traits\HasLimits;
 use Tolery\AiCad\Traits\HasSubscription;

@@ -7,7 +7,6 @@ use Illuminate\Foundation\Auth\User;
 
 class ChatUser extends User
 {
-
     protected $table = 'users';
 
     /**

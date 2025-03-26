@@ -10,7 +10,6 @@ use Tolery\AiCad\Models\ChatTeam;
  */
 class ChatTeamFactory extends Factory
 {
-
     protected $model = ChatTeam::class;
 
     public function definition(): array

@@ -1,16 +1,18 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
     public function up(): void
     {
 
-        if (!Schema::hasTable('teams')) {
+        if (! Schema::hasTable('teams')) {
             Schema::create('teams', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
@@ -18,7 +20,7 @@ return new class extends Migration {
             });
         }
 
-        if (!Schema::hasTable('users')) {
+        if (! Schema::hasTable('users')) {
             Schema::create('users', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('team_id')->index()->constrained()->cascadeOnDelete();
@@ -26,7 +28,7 @@ return new class extends Migration {
             });
         }
 
-        if (!Schema::hasColumn('users', 'team_id')) {
+        if (! Schema::hasColumn('users', 'team_id')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->foreignId('team_id')->index()->constrained()->cascadeOnDelete();
             });

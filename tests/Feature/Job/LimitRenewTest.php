@@ -29,7 +29,6 @@ test('limit renew', function () {
     assert($newLimite->start_date->isToday());
 });
 
-
 test('dont renew limit for unsubscribe team', function () {
 
     $team = ChatTeam::factory()->create();
@@ -44,7 +43,6 @@ test('dont renew limit for unsubscribe team', function () {
         ->create([
             'team_id' => $team->id,
         ]);
-
 
     $limitRenewJob = new LimitRenew($limit);
 

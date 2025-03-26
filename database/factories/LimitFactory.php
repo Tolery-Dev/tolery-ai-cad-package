@@ -20,7 +20,6 @@ class LimitFactory extends Factory
         $startDate = CarbonImmutable::instance($this->faker->dateTimeBetween('-1 year', '+ 1 year'));
         $endDate = $startDate->addMonth();
 
-
         return [
             'subscription_product_id' => SubscriptionProduct::factory(),
             'team_id' => ChatTeam::factory(),

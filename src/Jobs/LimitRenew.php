@@ -18,7 +18,7 @@ class LimitRenew implements ShouldQueue
         // On vérifie que l'abonnement est encore valable
         $team = $this->limit->team;
 
-        if( $team->subscribed() ){
+        if ($team->subscribed()) {
             // créer une nouvelle limite à partir de l'ancienne
             $newLimit = $this->limit->replicate();
 
