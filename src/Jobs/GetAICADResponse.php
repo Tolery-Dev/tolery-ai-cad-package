@@ -45,41 +45,42 @@ class GetAICADResponse implements ShouldQueue
         }
 
         $response = Http::timeout(60)
-            ->post(config('ai-cad.api-url').'/image_chat_to_cad', $args);
+            ->post(config('ai-cad.api-url').'/chat_to_cad', $args);
 
         Log::info('ai-cad response : '.$response->body());
 
         if ($response->successful()) {
             $chatResponse = json_decode($response->body());
             if (! $this->chat->session_id) {
-                $this->chat->session_id = $chatResponse->response->session_id;
+                $this->chat->session_id = $chatResponse->session_id;
                 $this->chat->save();
             }
 
             $objPath = null;
             $jsonEdgePath = null;
 
-            if ($chatResponse->response->obj_export) {
+            if ($chatResponse->obj_export) {
 
-                $objPath = $this->unzipObjFile($chatResponse->response->obj_export->link, $objName);
+                $objPath = $this->unzipObjFile($chatResponse->obj_export, $objName);
 
             } else {
                 Log::info('Pas encore de fichier à télécharger');
             }
 
-            if ($chatResponse->response->tessellated_export) {
+            if ($chatResponse->tessellated_export) {
 
                 $jsonEdgePath = $this->chat->getStorageFolder().'/'.$objName.'.json';
-                Storage::put($jsonEdgePath, json_encode($chatResponse->response->tessellated_export));
+                Storage::put($jsonEdgePath, json_encode($chatResponse->tessellated_export));
 
             } else {
                 Log::info('Pas encore de fichier à télécharger');
             }
 
             $this->chat->messages()->create([
-                'message' => $chatResponse->response->chat_response,
+                'message' => $chatResponse->chat_response,
                 'ai_cad_path' => $objPath,
                 'ai_json_edge_path' => $jsonEdgePath,
+                'edge_object_map_id' => $chatResponse->attribute_and_transientid_map,
             ]);
         } else {
             $this->chat->messages()->create([

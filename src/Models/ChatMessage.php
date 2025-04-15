@@ -3,6 +3,7 @@
 namespace Tolery\AiCad\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\File;
@@ -18,6 +19,13 @@ use Illuminate\Support\Facades\Storage;
 class ChatMessage extends Model
 {
     protected $guarded = [];
+
+    public function casts(): array
+    {
+        return [
+            'edge_object_map_id' => AsCollection::class,
+        ];
+    }
 
     /**
      * @return BelongsTo<ChatUser, $this>
