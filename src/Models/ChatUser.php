@@ -5,10 +5,15 @@ namespace Tolery\AiCad\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User;
 
-abstract class ChatUser extends User
+class ChatUser extends User
 {
+    protected $table = 'users';
+
     /**
      * @return BelongsTo<ChatTeam, $this>
      */
-    abstract public function team(): BelongsTo;
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(ChatTeam::class);
+    }
 }

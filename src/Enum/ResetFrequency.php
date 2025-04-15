@@ -2,7 +2,7 @@
 
 namespace Tolery\AiCad\Enum;
 
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
 
 enum ResetFrequency: string
 {

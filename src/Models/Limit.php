@@ -2,9 +2,10 @@
 
 namespace Tolery\AiCad\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * @property int $used_amount
@@ -12,10 +13,27 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $end_date
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property ChatTeam|null $team
  */
 class Limit extends Model
 {
+    use HasFactory;
+
     protected $table = 'subscription_has_limits';
+
+    /**
+     * @return array{
+     *      'start_date': 'datetime',
+     *      'end_date': 'datetime',
+     * }
+     */
+    public function casts(): array
+    {
+        return [
+            'start_date' => 'datetime',
+            'end_date' => 'datetime',
+        ];
+    }
 
     /**
      * @return BelongsTo<SubscriptionProduct, $this>
@@ -30,6 +48,6 @@ class Limit extends Model
      */
     public function team(): BelongsTo
     {
-        return $this->belongsTo(config('ai-cad.chat_team_model')); // @phpstan-ignore-line
+        return $this->belongsTo(ChatTeam::class);
     }
 }
