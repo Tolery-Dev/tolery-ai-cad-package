@@ -152,15 +152,15 @@ class Chatbot extends Component
             $message = $this->chatMessages->whereNotNull('ai_json_edge_path')->last();
             $edge_object_map_id = $message->edge_object_map_id;
 
-            $map = $edge_object_map_id->first( fn(array $edge_object_map) => $edge_object_map[0] === $objectId);
+            $map = $edge_object_map_id->first(fn (array $edge_object_map) => $edge_object_map[0] === $objectId);
 
             $objectIdMap = $map[1];
 
             if (Str::contains($this->entry, $prefix)) {
-                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', $prefix.$objectId. '(' .$objectIdMap . ')', $this->entry);
+                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', $prefix.$objectId.'('.$objectIdMap.')', $this->entry);
 
             } else {
-                $this->entry = $this->entry.' '.$prefix.$objectId. '(' .$objectIdMap . ')';
+                $this->entry = $this->entry.' '.$prefix.$objectId.'('.$objectIdMap.')';
             }
         }
 
