@@ -14,6 +14,7 @@ use Log;
 use Storage;
 use Tolery\AiCad\Jobs\GetAICADResponse;
 use Tolery\AiCad\Models\Chat;
+use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
 
 class Chatbot extends Component
@@ -22,6 +23,9 @@ class Chatbot extends Component
 
     public ?Chat $chat = null;
 
+    /**
+     * @var Collection<ChatMessage>
+     */
     public Collection $chatMessages;
 
     public ?string $errorMessage = null;
@@ -62,11 +66,10 @@ class Chatbot extends Component
             :
             $this->chat->messages
                 ->whereNotNull('ai_json_edge_path')
-                ->last()
-                ->getJSONEdgeUrl();
+                ->last();
 
         if ($objToDisplay) {
-            $this->dispatch('jsonLoaded', jsonPath: $objToDisplay);
+            $this->dispatch('jsonLoaded', jsonPath: $objToDisplay->getJSONEdgeUrl());
         }
     }
 
@@ -145,11 +148,19 @@ class Chatbot extends Component
             }
         } else {
 
+            // récupére sont id grace a edge_object_map_id
+            $message = $this->chatMessages->whereNotNull('ai_json_edge_path')->last();
+            $edge_object_map_id = $message->edge_object_map_id;
+
+            $map = $edge_object_map_id->first(fn (array $edge_object_map) => $edge_object_map[0] === $objectId);
+
+            $objectIdMap = $map[1];
+
             if (Str::contains($this->entry, $prefix)) {
-                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', $prefix.$objectId, $this->entry);
+                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', $prefix.$objectId.'('.$objectIdMap.')', $this->entry);
 
             } else {
-                $this->entry = $this->entry.' '.$prefix.$objectId;
+                $this->entry = $this->entry.' '.$prefix.$objectId.'('.$objectIdMap.')';
             }
         }
 
