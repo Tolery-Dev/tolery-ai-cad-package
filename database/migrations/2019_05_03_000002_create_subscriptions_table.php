@@ -25,7 +25,7 @@ return new class extends Migration
                 $table->timestamp('ends_at')->nullable();
                 $table->timestamps();
 
-                $table->index(['user_id', 'stripe_status']);
+                $table->index(['team_id', 'stripe_status']);
             });
         }
     }
