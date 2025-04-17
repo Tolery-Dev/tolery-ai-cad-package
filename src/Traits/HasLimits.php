@@ -27,8 +27,8 @@ trait HasLimits
 
                 $limit = new Limit([
                     'used_amount' => $usedAmount,
-                    'last_reset' => now(),
-                    'next_reset' => $product->frequency->addTime(now()),
+                    'start_date' => now(),
+                    'end_date' => $product->frequency->addTime(now()),
                 ]);
                 $limit->product()->associate($product);
                 $limit->team()->associate($this);
