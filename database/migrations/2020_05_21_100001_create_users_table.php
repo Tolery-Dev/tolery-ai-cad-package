@@ -11,7 +11,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-
         if (! Schema::hasTable('teams')) {
             Schema::create('teams', function (Blueprint $table) {
                 $table->id();
@@ -23,14 +22,14 @@ return new class extends Migration
         if (! Schema::hasTable('users')) {
             Schema::create('users', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('team_id')->index()->constrained()->cascadeOnDelete();
+                $table->foreignId('team_id')->index()->nullable()->constrained()->cascadeOnDelete();
                 $table->timestamps();
             });
         }
 
         if (! Schema::hasColumn('users', 'team_id')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->foreignId('team_id')->index()->constrained()->cascadeOnDelete();
+                $table->foreignId('team_id')->index()->nullable()->constrained()->cascadeOnDelete();
             });
         }
     }
