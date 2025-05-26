@@ -32,19 +32,19 @@ class SubscribeToProduct implements ShouldQueue
             }
 
             // Mettre à jour le moyen de paiement pour l'abonnement
-            if($this->paymentMethodId){
+            if ($this->paymentMethodId) {
                 $subscription->updateStripeSubscription([
-                    'default_payment_method' => $this->paymentMethodId
+                    'default_payment_method' => $this->paymentMethodId,
                 ]);
             }
 
-            if($this->product){
+            if ($this->product) {
                 $subscription->swap($this->product->stripe_price_id);
             }
 
         } else {
 
-            if($this->product && $this->paymentMethodId){
+            if ($this->product && $this->paymentMethodId) {
                 $this->team->newSubscription(
                     'default', $this->product->stripe_price_id
                 )->create($this->paymentMethodId);
