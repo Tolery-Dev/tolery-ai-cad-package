@@ -13,7 +13,7 @@ class SubscribeToProduct implements ShouldQueue
 {
     use Dispatchable;
 
-    public function __construct(public ChatTeam $team, public SubscriptionProduct $product, public string $paymentMethodId) {}
+    public function __construct(public ChatTeam $team, public ?SubscriptionProduct $product, public ?string $paymentMethodId) {}
 
     /**
      * @throws Throwable
@@ -21,7 +21,7 @@ class SubscribeToProduct implements ShouldQueue
      */
     public function handle(): void
     {
-        // Si il y a déja un abonnement ont le met a jours sur le nouveau prix et le nouveau produit
+        // Si il y a déja un abonnement ont le met a jours sur le nouveau prix et le nouveau produit voir le moyen de paiement
         if ($this->team->subscribed()) {
 
             $subscription = $this->team->subscription();
@@ -31,13 +31,24 @@ class SubscribeToProduct implements ShouldQueue
                 $this->team->unsetLimit();
             }
 
-            $subscription->swap($this->product->stripe_price_id);
+            // Mettre à jour le moyen de paiement pour l'abonnement
+            if($this->paymentMethodId){
+                $subscription->updateStripeSubscription([
+                    'default_payment_method' => $this->paymentMethodId
+                ]);
+            }
+
+            if($this->product){
+                $subscription->swap($this->product->stripe_price_id);
+            }
 
         } else {
 
-            $this->team->newSubscription(
-                'default', $this->product->stripe_price_id
-            )->create($this->paymentMethodId);
+            if($this->product && $this->paymentMethodId){
+                $this->team->newSubscription(
+                    'default', $this->product->stripe_price_id
+                )->create($this->paymentMethodId);
+            }
 
         }
 
