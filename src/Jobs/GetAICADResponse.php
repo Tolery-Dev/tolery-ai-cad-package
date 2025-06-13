@@ -10,10 +10,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Spatie\TemporaryDirectory\Exceptions\PathAlreadyExists;
-use Spatie\TemporaryDirectory\TemporaryDirectory;
 use Tolery\AiCad\Enum\MaterialFamily;
 use Tolery\AiCad\Models\Chat;
-use ZipArchive;
 
 class GetAICADResponse implements ShouldQueue
 {
@@ -107,10 +105,10 @@ class GetAICADResponse implements ShouldQueue
                 Storage::put($objPath, $response->body());
                 Log::info('ai-cad download file successful');
             } else {
-                Log::error('Failed to download OBJ file: ' . $response->status());
+                Log::error('Failed to download OBJ file: '.$response->status());
             }
         } catch (\Exception $e) {
-            Log::error('Error downloading OBJ file: ' . $e->getMessage());
+            Log::error('Error downloading OBJ file: '.$e->getMessage());
         }
 
         return $objPath;
