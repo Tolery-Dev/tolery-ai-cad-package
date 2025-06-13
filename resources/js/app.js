@@ -2,6 +2,8 @@ import * as THREE from 'three'
 
 import { CSS2DObject, CSS2DRenderer, FlakesTexture, OrbitControls, RGBELoader } from 'three/addons'
 
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+
 let camera, scene, renderer, labelRenderer, controls, raycaster, INTERSECTED, intersects, width, heigth, viewer, viewerLeft, viewerTop
 
 let labelDiv, labelObject
@@ -14,7 +16,9 @@ const pointer = new THREE.Vector2()
 let allMesh = []
 let bodyGroup = new THREE.Group()
 
-Livewire.on('jsonLoaded', function ({ jsonPath }) {
+const loader = new OBJLoader();
+
+Livewire.on('jsonLoaded', function ({ objPath }) {
     // On supprime tout ce qu'il y a avant
     scene.remove(bodyGroup)
 
@@ -28,10 +32,31 @@ Livewire.on('jsonLoaded', function ({ jsonPath }) {
     edgesLines = []
     bodyGroup = new THREE.Group()
 
-    // fetch json
-    fetch(jsonPath)
-        .then((response) => response.json())
-        .then((json) => convertJsonToObject(json))
+// load a resource
+    loader.load(
+        // resource URL
+        objPath,
+        // called when resource is loaded
+        function ( object ) {
+
+            scene.add( object );
+
+            fitCameraToCenteredObject(camera, object, 0, controls)
+
+        },
+        // called when loading is in progress
+        function ( xhr ) {
+
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+        },
+        // called when loading has errors
+        function ( error ) {
+
+            console.log( 'An error happened' );
+
+        }
+    );
 })
 
 Livewire.on('toggleShowEdges', function ({show}) {
@@ -70,7 +95,7 @@ const init3dViewer = () => {
 
     // point light
 
-    const light = new THREE.PointLight(0xffffff, 3, 0, 0)
+    const light = new THREE.PointLight(0xffffff, 1, 0, 0)
     camera.add(light)
 
     // helper
@@ -89,13 +114,13 @@ const init3dViewer = () => {
     labelRenderer.domElement.style.position = 'absolute'
     labelRenderer.domElement.style.top = '10vh'
     viewer.appendChild(labelRenderer.domElement)
-
-    labelDiv = document.createElement('div')
-    labelDiv.className = 'label'
-    labelDiv.style.color = 'blue'
-    labelObject = new CSS2DObject(labelDiv)
-    labelObject.visible = false
-    scene.add(labelObject)
+    //
+    // labelDiv = document.createElement('div')
+    // labelDiv.className = 'label'
+    // labelDiv.style.color = 'blue'
+    // labelObject = new CSS2DObject(labelDiv)
+    // labelObject.visible = false
+    // scene.add(labelObject)
 
     controls = new OrbitControls(camera, labelRenderer.domElement)
     controls.enableDamping = true
@@ -106,7 +131,7 @@ const init3dViewer = () => {
 
     document.addEventListener('mousemove', onPointerMove)
 
-    detectClicOnObject()
+    //detectClicOnObject()
 
     // On récupére ces paramétre depuis le localStorage
     edgesShow = localStorage.getItem('tolery-viewer-edges-show') === 'true'

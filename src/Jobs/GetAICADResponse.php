@@ -10,10 +10,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Spatie\TemporaryDirectory\Exceptions\PathAlreadyExists;
-use Spatie\TemporaryDirectory\TemporaryDirectory;
 use Tolery\AiCad\Enum\MaterialFamily;
 use Tolery\AiCad\Models\Chat;
-use ZipArchive;
 
 class GetAICADResponse implements ShouldQueue
 {
@@ -45,7 +43,7 @@ class GetAICADResponse implements ShouldQueue
         }
 
         $response = Http::timeout(60)
-            ->post(config('ai-cad.api-url').'/chat_to_cad', $args);
+            ->post(config('ai-cad.api-url').'/chat_to_cad/', $args);
 
         Log::info('ai-cad response : '.$response->body());
 
@@ -61,7 +59,7 @@ class GetAICADResponse implements ShouldQueue
 
             if ($chatResponse->obj_export) {
 
-                $objPath = $this->unzipObjFile($chatResponse->obj_export, $objName);
+                $objPath = $this->downloadObjFile($chatResponse->obj_export, $objName);
 
             } else {
                 Log::info('Pas encore de fichier à télécharger');
@@ -92,42 +90,26 @@ class GetAICADResponse implements ShouldQueue
     }
 
     /**
-     * @throws PathAlreadyExists
+     * Download OBJ file directly from URL and store it in the app's Storage
      */
-    private function unzipObjFile(string $objUrl, string $objName): string
+    private function downloadObjFile(string $objUrl, string $objName): string
     {
-
-        $tmpDir = (new TemporaryDirectory)
-            ->deleteWhenDestroyed()
-            ->force()
-            ->create();
-
-        $tmpFile = "chat-{$this->chat->id}.zip";
-        $tmpPath = $tmpDir->path($tmpFile);
-
-        try {
-            Http::withBasicAuth(config('ai-cad.onshape.access-key'), config('ai-cad.onshape.secret-key'))
-                ->sink($tmpPath)
-                ->get($objUrl);
-
-        } catch (\Exception $e) {
-            Log::error($e->getMessage());
-        }
-
-        Log::info('ai-cad download file');
-
-        $unzipPath = $tmpDir->path("chat-{$this->chat->id}");
-        $zip = new ZipArchive;
-        $zip->open($tmpPath);
-        $zip->extractTo($unzipPath);
-        $zip->close();
-
         $objPath = $this->chat->getStorageFolder().'/'.$objName.'.obj';
 
-        Storage::put(
-            $objPath,
-            File::get($unzipPath.'/Part Studio 1.obj')
-        );
+        try {
+            // Download the OBJ file directly from the URL
+            $response = Http::get($objUrl);
+
+            if ($response->successful()) {
+                // Store the downloaded content directly in the app's Storage
+                Storage::put($objPath, $response->body());
+                Log::info('ai-cad download file successful');
+            } else {
+                Log::error('Failed to download OBJ file: '.$response->status());
+            }
+        } catch (\Exception $e) {
+            Log::error('Error downloading OBJ file: '.$e->getMessage());
+        }
 
         return $objPath;
     }
