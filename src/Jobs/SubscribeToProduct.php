@@ -52,6 +52,6 @@ class SubscribeToProduct implements ShouldQueue
 
         }
 
-        $this->team->setLimit();
+        $this->team->refresh()->setLimit();
     }
 }

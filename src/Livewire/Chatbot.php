@@ -65,11 +65,11 @@ class Chatbot extends Component
             null
             :
             $this->chat->messages
-                ->whereNotNull('ai_json_edge_path')
+                ->whereNotNull('ai_cad_path')
                 ->last();
 
         if ($objToDisplay) {
-            $this->dispatch('jsonLoaded', jsonPath: $objToDisplay->getJSONEdgeUrl());
+            $this->dispatch('jsonLoaded', objPath: $objToDisplay->getObjUrl());
         }
     }
 
@@ -111,8 +111,8 @@ class Chatbot extends Component
         if ($lastAnswer && $lastAnswer->created_at > $this->lastTimeAnswer) {
             $this->chatMessages = $this->chat->messages()->get();
             $this->lastTimeAnswer = $lastAnswer->created_at;
-            if ($objToDisplay = $lastAnswer->getJSONEdgeUrl()) {
-                $this->dispatch('jsonLoaded', jsonPath: $objToDisplay);
+            if ($objToDisplay = $lastAnswer->getObjUrl()) {
+                $this->dispatch('jsonLoaded', objPath: $objToDisplay);
             }
 
             $this->waitingForAnswer = false;

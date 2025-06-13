@@ -2,7 +2,7 @@
 
 // config for Tolery/AiCad
 return [
-    'api-url' => env('AI_CAD_API_URL', 'https://preprod-ai-cad.cleverapps.io'),
+    'api-url' => env('AI_CAD_API_URL', 'https://tolery-dfm-docker-api.cleverapps.io/api-production'),
     'chat_user_model' => 'App\Models\User',
     'chat_team_model' => 'App\Models\Team',
     'onshape' => [
