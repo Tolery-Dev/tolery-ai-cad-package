@@ -43,7 +43,7 @@ class GetAICADResponse implements ShouldQueue
         }
 
         $response = Http::timeout(60)
-            ->post(config('ai-cad.api-url').'/chat_to_cad/', $args);
+            ->post(config('ai-cad.api-url').'/chat_to_cad', $args);
 
         Log::info('ai-cad response : '.$response->body());
 
