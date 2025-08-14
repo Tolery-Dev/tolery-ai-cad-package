@@ -1,382 +1,242 @@
 import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
-import { CSS2DObject, CSS2DRenderer, FlakesTexture, OrbitControls, RGBELoader } from 'three/addons'
-
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-
-let camera, scene, renderer, labelRenderer, controls, raycaster, INTERSECTED, intersects, width, heigth, viewer, viewerLeft, viewerTop
-
-let labelDiv, labelObject
-
-//Variables pour l'affichage des contours de la piéce
-let edgesShow, edgesColor, edgesLines = []
-
+// variables globales du viewer
+let scene, camera, renderer, controls, raycaster
+let bodyGroup = new THREE.Group()
+let allMeshes = []              // stocke les meshes des faces
+let edgesLines = []             // stocke les segments d’arêtes
+let intersects = []             // intersections raycaster lors du survol
+let edgesShow = false           // visibilité des arêtes
+let edgesColor = '#ffffff'      // couleur des arêtes
 const pointer = new THREE.Vector2()
 
-let allMesh = []
-let bodyGroup = new THREE.Group()
+// récupère l’élément <div id="viewer"> pour y attacher le renderer
+const viewer = document.getElementById('viewer')
 
-const loader = new OBJLoader();
-
-Livewire.on('jsonLoaded', function ({ objPath }) {
-    // On supprime tout ce qu'il y a avant
-    scene.remove(bodyGroup)
-
-    allMesh.forEach((mesh) => {
-        scene.remove(mesh)
-        mesh.geometry.dispose()
-        mesh.material.dispose()
-    })
-
-    allMesh = []
-    edgesLines = []
-    bodyGroup = new THREE.Group()
-
-// load a resource
-    loader.load(
-        // resource URL
-        objPath,
-        // called when resource is loaded
-        function ( object ) {
-
-            scene.add( object );
-
-            fitCameraToCenteredObject(camera, object, 0, controls)
-
-        },
-        // called when loading is in progress
-        function ( xhr ) {
-
-            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-
-        },
-        // called when loading has errors
-        function ( error ) {
-
-            console.log( 'An error happened' );
-
-        }
-    );
-})
-
-Livewire.on('toggleShowEdges', function ({show}) {
-    edgesLines.forEach(l => {
-        localStorage.setItem('tolery-viewer-edges-show', show )
-        l.visible = show
-    });
-})
-
-Livewire.on('updatedEdgeColor', function ({color} ) {
-    edgesLines.forEach(l => {
-        localStorage.setItem('tolery-viewer-edges-color', color )
-        l.material.color.set(color)
-    });
-})
-
-const init3dViewer = () => {
-    width = viewer.offsetWidth
-    heigth = viewer.offsetHeight
-    viewerLeft = viewer.getBoundingClientRect().left
-    viewerTop = viewer.getBoundingClientRect().top
-
-    renderer = new THREE.WebGLRenderer({ antialias: true })
-
+// --- Initialisation du viewer 3D ---
+function init() {
+    // scène, caméra, renderer
     scene = new THREE.Scene()
     scene.background = new THREE.Color(0xffffff)
 
-    // camera
+    const width = viewer.clientWidth
+    const height = viewer.clientHeight
+    camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
+    camera.position.z = 5
 
-    camera = new THREE.PerspectiveCamera(27, width / heigth, 0.001, 100)
-    scene.add(camera)
-
-    // ambient light
-
-    scene.add(new THREE.AmbientLight(0x666666))
-
-    // point light
-
-    const light = new THREE.PointLight(0xffffff, 1, 0, 0)
-    camera.add(light)
-
-    // helper
-
-    //scene.add( new THREE.AxesHelper( 20 ) );
-
-    //
-
+    renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setPixelRatio(window.devicePixelRatio)
-    renderer.setSize(width, heigth)
-    renderer.setAnimationLoop(animate)
+    renderer.setSize(width, height)
     viewer.appendChild(renderer.domElement)
 
-    labelRenderer = new CSS2DRenderer()
-    labelRenderer.setSize(width, heigth)
-    labelRenderer.domElement.style.position = 'absolute'
-    labelRenderer.domElement.style.top = '10vh'
-    viewer.appendChild(labelRenderer.domElement)
-    //
-    // labelDiv = document.createElement('div')
-    // labelDiv.className = 'label'
-    // labelDiv.style.color = 'blue'
-    // labelObject = new CSS2DObject(labelDiv)
-    // labelObject.visible = false
-    // scene.add(labelObject)
-
-    controls = new OrbitControls(camera, labelRenderer.domElement)
+    controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
-
-    window.addEventListener('resize', onWindowResize)
 
     raycaster = new THREE.Raycaster()
 
-    document.addEventListener('mousemove', onPointerMove)
+    // événements pour mise à jour du pointeur et gestion du clic
+    window.addEventListener('resize', onWindowResize)
+    viewer.addEventListener('mousemove', onPointerMove)
+    viewer.addEventListener('mousedown', onMouseDown)
+    viewer.addEventListener('mouseup', onMouseUp)
 
-    //detectClicOnObject()
-
-    // On récupére ces paramétre depuis le localStorage
-    edgesShow = localStorage.getItem('tolery-viewer-edges-show') === 'true'
-    edgesColor = localStorage.getItem('tolery-viewer-edges-color') || '#ffffff'
+    animate()
 }
 
-Livewire.hook('component.init', ({ component, cleanup }) => {
-    if(component.name === 'chatbot') {
-        component.$wire.$set('edgesShow', edgesShow)
-        component.$wire.$set('edgesColor', edgesColor)
+// --- Boucle de rendu ---
+function animate() {
+    requestAnimationFrame(animate)
+
+    // met à jour le raycaster
+    raycaster.setFromCamera(pointer, camera)
+    intersects = raycaster.intersectObjects(bodyGroup.children, true)
+
+    // met à jour la couleur de toutes les faces à gris, puis passe la face survolée en rouge
+    bodyGroup.children.forEach((mesh) => {
+        mesh.material.color.set(0xb2b2b2)
+    })
+    if (intersects.length > 0) {
+        intersects[0].object.material.color.set(0xff0000)
     }
-})
 
-const detectClicOnObject = (object) => {
-    const delta = 6
-    let startX
-    let startY
-
-    window.addEventListener('mousedown', function (event) {
-        startX = event.pageX
-        startY = event.pageY
-    })
-
-    window.addEventListener('mouseup', function (event) {
-        const diffX = Math.abs(event.pageX - startX)
-        const diffY = Math.abs(event.pageY - startY)
-
-        if (diffX < delta && diffY < delta) {
-            if (intersects.length === 0) {
-                if (event.target.matches('#viewer *')) {
-                    Livewire.dispatch('chatObjectClick', { objectId: null })
-                }
-            } else {
-                intersects.forEach((hit) => {
-                    Livewire.dispatch('chatObjectClick', { objectId: hit.object.name })
-                    console.log(hit.object.name)
-                })
-            }
-        }
-    })
+    controls.update()
+    renderer.render(scene, camera)
 }
 
-const convertJsonToObject = (json) => {
-    json.faces.bodies.forEach((body) => {
-        // Faces
-        if (body.faces) {
-            body.faces.forEach((faces, index) => {
-                // On marque chaque face
-                const faceGeometry = new THREE.BufferGeometry()
+// --- Gestion du redimensionnement ---
+function onWindowResize() {
+    const width = viewer.clientWidth
+    const height = viewer.clientHeight
+    camera.aspect = width / height
+    camera.updateProjectionMatrix()
+    renderer.setSize(width, height)
+}
 
-                const faceVertices = []
-                const faceNormals = []
+// --- Mise à jour du pointeur (NDC) ---
+function onPointerMove(event) {
+    const rect = viewer.getBoundingClientRect()
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+}
 
-                faces.facets.forEach((facet) => {
-                    if (facet.indices) {
-                        facet.indices.forEach((indice) => {
-                            //indices.push(Math.round(indice.x * 10000 ), Math.round(indice.y * 10000 ),Math.round( indice.z * 10000 ));
-                        })
-                    }
-
-                    if (facet.vertices) {
-                        faceNormals.push(facet.normal.x, facet.normal.y, facet.normal.z)
-
-                        facet.vertices.forEach((vertex) => {
-                            faceVertices.push(vertex.x, vertex.y, vertex.z)
-                        })
-                    }
-                })
-
-                const material2 = new THREE.MeshBasicMaterial({ color: 0xb2b2b2 })
-
-                const meshMaterial = new THREE.MeshLambertMaterial({
-                    color: 0xffffff,
-                    opacity: 0.5,
-                    //transparent: true
-                })
-
-                faceGeometry.setAttribute('position', new THREE.Float32BufferAttribute(faceVertices, 3))
-                faceGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(faceNormals, 3))
-
-                const faceMesh = new THREE.Mesh(faceGeometry, material2)
-                faceMesh.name = faces.id
-
-                allMesh.push(faceMesh)
-
-                bodyGroup.add(faceMesh)
-
-                // Affichage des contours, masqué par defaut
-                const edges = new THREE.EdgesGeometry( faceGeometry, 10 );
-                const lines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: edgesColor}) );
-                scene.add( lines );
-                edgesLines.push(lines)
-
+// variables temporaires pour détecter le clic (clic = souris immobile)
+let startX, startY
+function onMouseDown(event) {
+    startX = event.pageX
+    startY = event.pageY
+}
+function onMouseUp(event) {
+    const delta = 6
+    const diffX = Math.abs(event.pageX - startX)
+    const diffY = Math.abs(event.pageY - startY)
+    if (diffX < delta && diffY < delta) {
+        if (intersects.length === 0) {
+            // clic en dehors de la pièce
+            Livewire.dispatch('chatObjectClick', { objectId: null })
+        } else {
+            // clic sur des faces, on envoie l’ID de chaque face sélectionnée
+            intersects.forEach((hit) => {
+                Livewire.dispatch('chatObjectClick', { objectId: hit.object.name })
             })
-            edgesLines.forEach(l => {
-                l.visible = edgesShow
-            });
+        }
+    }
+}
+
+// --- Ajuste la caméra pour contenir l’objet ---
+function fitCameraToObject(object, offset = 2) {
+    const box = new THREE.Box3().setFromObject(object)
+    const size = new THREE.Vector3()
+    const center = new THREE.Vector3()
+    box.getSize(size)
+    box.getCenter(center)
+
+    const maxDim = Math.max(size.x, size.y, size.z)
+    const fov = THREE.MathUtils.degToRad(camera.fov)
+    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * offset
+
+    camera.position.set(center.x, center.y, cameraZ)
+    camera.lookAt(center)
+
+    camera.far = cameraZ * 4
+    camera.updateProjectionMatrix()
+}
+
+// --- Chargement d’un fichier JSON contenant les faces et arêtes ---
+async function loadJsonEdges(jsonPath) {
+    const response = await fetch(jsonPath)
+    const json = await response.json()
+
+    // on vide la scène
+    scene.remove(bodyGroup)
+    allMeshes.forEach(mesh => {
+        mesh.geometry.dispose()
+        mesh.material.dispose()
+    })
+    edgesLines.forEach(line => {
+        scene.remove(line)
+        line.geometry.dispose()
+        line.material.dispose()
+    })
+    bodyGroup = new THREE.Group()
+    allMeshes = []
+    edgesLines = []
+
+    // on crée les faces et les arêtes à partir du JSON
+    json.faces.bodies.forEach(body => {
+        if (body.faces) {
+            body.faces.forEach(face => {
+                const vertices = []
+                const normals = []
+
+                face.facets.forEach(facet => {
+                    if (facet.vertices) {
+                        facet.vertices.forEach(vertex => {
+                            vertices.push(vertex.x, vertex.y, vertex.z)
+                        })
+                        const n = facet.normal
+                        normals.push(n.x, n.y, n.z)
+                    }
+                })
+
+                const geometry = new THREE.BufferGeometry()
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+
+                // matériau gris par défaut
+                const material = new THREE.MeshLambertMaterial({ color: 0xb2b2b2 })
+
+                const mesh = new THREE.Mesh(geometry, material)
+                mesh.name = face.id
+                bodyGroup.add(mesh)
+                allMeshes.push(mesh)
+
+                // création des lignes d’arêtes
+                const edges = new THREE.EdgesGeometry(geometry)
+                const lineMaterial = new THREE.LineBasicMaterial({ color: edgesColor })
+                const line = new THREE.LineSegments(edges, lineMaterial)
+                line.visible = edgesShow
+                scene.add(line)
+                edgesLines.push(line)
+            })
         }
     })
 
     scene.add(bodyGroup)
-
-    //
-
-    fitCameraToCenteredObject(camera, bodyGroup, 2, controls)
+    fitCameraToObject(bodyGroup, 2)
 }
 
-function onWindowResize() {
-    width = viewer.offsetWidth
-    heigth = viewer.offsetHeight
-    viewerLeft = viewer.getBoundingClientRect().left
-    viewerTop = viewer.getBoundingClientRect().top
-
-    camera.aspect = width / heigth
-    camera.updateProjectionMatrix()
-
-    renderer.setSize(width, heigth)
-    labelRenderer.setSize(width, heigth)
-}
-
-function onPointerMove(event) {
-    pointer.x = ((event.clientX - viewerLeft) / width) * 2 - 1
-    pointer.y = -((event.clientY - viewerTop) / heigth) * 2 + 1
-}
-
-//
-
-function animate() {
-    raycaster.setFromCamera(pointer, camera)
-
-    intersects = raycaster.intersectObjects(bodyGroup.children, true)
-
-    if (intersects.length > 0) {
-        if (INTERSECTED != intersects[0].object) {
-            if (INTERSECTED) INTERSECTED.material.color.setHex(INTERSECTED.currentHex)
-
-            INTERSECTED = intersects[0].object
-            INTERSECTED.currentHex = INTERSECTED.material.color.getHex()
-            INTERSECTED.material.color.setHex(0xff0000)
-
-            // Setup label
-            labelObject.visible = true
-            labelDiv.textContent = INTERSECTED.name
-
-            // On affiche le labelObject aux bonnes coordonnées par rapport à l'object INTERSECTED
-            const boundingBox = new THREE.Box3().setFromObject(INTERSECTED)
-
-            // Obtenir les limites (min : coin bas gauche ; max : coin haut droit)
-            const min = boundingBox.min // Coin bas gauche
-            const max = boundingBox.max // Coin haut droit
-
-            // Déterminer le coin haut gauche (min.x, max.y)
-            const topLeftCorner = new THREE.Vector3(min.x, max.y, min.z) // Garder le "z" du bas-gauche (min.z)
-
-            // Positionner le label au coin haut gauche
-            labelObject.position.set(topLeftCorner.x, topLeftCorner.y, topLeftCorner.z)
+// --- (Optionnel) Chargement d’un fichier OBJ classique ---
+function loadObj(objPath) {
+    const loader = new THREE.OBJLoader()
+    loader.load(
+        objPath,
+        (object) => {
+            scene.remove(bodyGroup)
+            bodyGroup = object
+            scene.add(object)
+            fitCameraToObject(object, 2)
+        },
+        undefined,
+        (error) => {
+            console.error('Error loading OBJ:', error)
         }
-    } else {
-        if (INTERSECTED) {
-            INTERSECTED.material.color.setHex(INTERSECTED.currentHex)
-            labelObject.visible = false
-            labelDiv.textContent = ''
-        }
-
-        INTERSECTED = null
-    }
-
-    controls.update()
-
-    renderer.render(scene, camera)
-    labelRenderer.render(scene, camera)
+    )
 }
 
-const fitCameraToCenteredObject = function (camera, object, offset, orbitControls) {
-    const boundingBox = new THREE.Box3()
-    boundingBox.setFromObject(object)
-
-    var middle = new THREE.Vector3()
-    var size = new THREE.Vector3()
-    boundingBox.getSize(size)
-
-    // figure out how to fit the box in the view:
-    // 1. figure out horizontal FOV (on non-1.0 aspects)
-    // 2. figure out distance from the object in X and Y planes
-    // 3. select the max distance (to fit both sides in)
-    //
-    // The reason is as follows:
-    //
-    // Imagine a bounding box (BB) is centered at (0,0,0).
-    // Camera has vertical FOV (camera.fov) and horizontal FOV
-    // (camera.fov scaled by aspect, see fovh below)
-    //
-    // Therefore if you want to put the entire object into the field of view,
-    // you have to compute the distance as: z/2 (half of Z size of the BB
-    // protruding towards us) plus for both X and Y size of BB you have to
-    // figure out the distance created by the appropriate FOV.
-    //
-    // The FOV is always a triangle:
-    //
-    //  (size/2)
-    // +--------+
-    // |       /
-    // |      /
-    // |     /
-    // | F° /
-    // |   /
-    // |  /
-    // | /
-    // |/
-    //
-    // F° is half of respective FOV, so to compute the distance (the length
-    // of the straight line) one has to: `size/2 / Math.tan(F)`.
-    //
-    // FTR, from https://threejs.org/docs/#api/en/cameras/PerspectiveCamera
-    // the camera.fov is the vertical FOV.
-
-    const fov = camera.fov * (Math.PI / 180)
-    const fovh = 2 * Math.atan(Math.tan(fov / 2) * camera.aspect)
-    let dx = size.z / 2 + Math.abs(size.x / 2 / Math.tan(fovh / 2))
-    let dy = size.z / 2 + Math.abs(size.y / 2 / Math.tan(fov / 2))
-    let cameraZ = Math.max(dx, dy)
-
-    // offset the camera, if desired (to avoid filling the whole canvas)
-    if (offset !== undefined && offset !== 0) cameraZ *= offset
-
-    camera.position.set(0, 0, cameraZ)
-
-    // set the far plane of the camera so that it easily encompasses the whole object
-    const minZ = boundingBox.min.z
-    const cameraToFarEdge = minZ < 0 ? -minZ + cameraZ : cameraZ - minZ
-
-    camera.far = cameraToFarEdge * 3
-    camera.updateProjectionMatrix()
-
-    if (orbitControls !== undefined) {
-        // set camera to rotate around the center
-        orbitControls.target = new THREE.Vector3(0, 0, 0)
-
-        // prevent camera from zooming out far enough to create far plane cutoff
-        orbitControls.maxDistance = cameraToFarEdge * 2
+// ----------------------------------------------------------------------
+// Écouteurs Livewire : conservent les noms d’événements existants
+// ----------------------------------------------------------------------
+Livewire.on('jsonLoaded', ({ objPath }) => {
+    // compatibilité avec l’ancienne logique OBJ : on peut ignorer ou charger un OBJ
+    if (objPath) {
+        loadObj(objPath)
     }
-}
+})
 
+Livewire.on('jsonEdgesLoaded', ({ jsonPath }) => {
+    if (jsonPath) {
+        loadJsonEdges(jsonPath)
+    }
+})
+
+Livewire.on('toggleShowEdges', ({ show }) => {
+    edgesShow = show
+    edgesLines.forEach(line => {
+        line.visible = show
+    })
+})
+
+Livewire.on('updatedEdgeColor', ({ color }) => {
+    edgesColor = color
+    edgesLines.forEach(line => {
+        line.material.color.set(color)
+    })
+})
+
+// ----------------------------------------------------------------------
 viewer = document.getElementById('viewer')
 
 if (viewer) {
-    init3dViewer()
+    init()
 }

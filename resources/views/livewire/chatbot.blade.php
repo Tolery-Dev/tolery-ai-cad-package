@@ -1,6 +1,5 @@
 <div class="chatbot grid grid-cols-3 overflow-hidden h-full">
     <div class="chatbot__message_list flex flex-col overflow-hidden">
-
         <div class="chatbot__message_list_wrapper overflow-y-auto p-6">
 
             @foreach($chatMessages as $message)
@@ -23,6 +22,7 @@
         </div>
         <div id="chatbot-anchor"></div>
     </div>
+
     <div class="chatbot__viewer">
         <div id="viewer" style="width: 100%; height: 100%;" wire:ignore>
         </div>
@@ -34,7 +34,7 @@
         @if($objectToConfigId)
             Object {{$objectToConfigId}}
         @else
-            <livewire:chat-config :chat="$chat"/>
+            <livewire:chat-config :$chat />
         @endif
 
 

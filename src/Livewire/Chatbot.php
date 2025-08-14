@@ -69,7 +69,14 @@ class Chatbot extends Component
                 ->last();
 
         if ($objToDisplay) {
+            // OBJ pour l'affichage “classique”
             $this->dispatch('jsonLoaded', objPath: $objToDisplay->getObjUrl());
+
+            // JSON tessellé pour la sélection de faces
+            $jsonUrl = $objToDisplay->getJSONEdgeUrl();
+            if ($jsonUrl) {
+                $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
+            }
         }
     }
 
@@ -113,6 +120,11 @@ class Chatbot extends Component
             $this->lastTimeAnswer = $lastAnswer->created_at;
             if ($objToDisplay = $lastAnswer->getObjUrl()) {
                 $this->dispatch('jsonLoaded', objPath: $objToDisplay);
+            }
+            // transmettre le JSON généré pour les arêtes/faces
+            $jsonUrl = $lastAnswer->getJSONEdgeUrl();
+            if ($jsonUrl) {
+                $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
             }
 
             $this->waitingForAnswer = false;
