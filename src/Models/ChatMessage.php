@@ -10,15 +10,23 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
 /**
+ * @property string $role
  * @property string $message
- * @property string $ai_cad_path
- * @property string $ai_json_edge_path
+ * @property string|null $ai_cad_path
+ * @property string|null $ai_json_edge_path
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
 class ChatMessage extends Model
 {
+    public const ROLE_USER = 'user';
+    public const ROLE_ASSISTANT = 'assistant';
+
     protected $guarded = [];
+
+    protected $attributes = [
+        'role' => self::ROLE_USER,
+    ];
 
     public function casts(): array
     {

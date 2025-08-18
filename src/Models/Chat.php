@@ -12,6 +12,8 @@ use Tolery\AiCad\Enum\MaterialFamily;
 
 /**
  * @property string|null $session_id
+ * @property int $user_id
+ * @property int $team_id
  * @property string|null $name
  * @property MaterialFamily|null $material_family
  * @property Carbon|null $created_at
