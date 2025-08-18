@@ -10,6 +10,6 @@ return [
     ],
     'api' => [
         'base_url' => env('AI_CAD_API_URL', 'https://tolery-dfm-docker-api.cleverapps.io/api-production'), // exemple
-        'key'      => env('AICAD_API_KEY'),
+        'key' => env('AICAD_API_KEY'),
     ],
 ];

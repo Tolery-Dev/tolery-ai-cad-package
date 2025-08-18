@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
 class ChatMessage extends Model
 {
     public const ROLE_USER = 'user';
+
     public const ROLE_ASSISTANT = 'assistant';
 
     protected $guarded = [];

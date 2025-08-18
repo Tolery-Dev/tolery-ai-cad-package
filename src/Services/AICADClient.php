@@ -1,4 +1,5 @@
 <?php
+
 namespace Tolery\AiCad\Services;
 
 use Generator;
@@ -12,7 +13,7 @@ readonly class AICADClient
 {
     public function __construct(
         private ?string $baseUrl = null,
-        private ?string $apiKey  = null,
+        private ?string $apiKey = null,
     ) {}
 
     /** POST /cad/chat_to_cad — one-shot (fallback non-stream) */
@@ -21,7 +22,7 @@ readonly class AICADClient
         $res = $this->http($timeoutSec)->post(
             $this->endpoint('/cad/chat_to_cad'),
             [
-                'messages'   => $messages,           // [['role'=>'user','content'=>'...'], ...]
+                'messages' => $messages,           // [['role'=>'user','content'=>'...'], ...]
                 'project_id' => $projectId,
                 // 'stream'   => false  // suivant le swagger si supporté
             ]
@@ -29,9 +30,9 @@ readonly class AICADClient
 
         return [
             'assistant_message' => (string) (Arr::get($res, 'assistant_message') ?? Arr::get($res, 'message', '')),
-            'json_edges_url'    => Arr::get($res, 'json_edges_url') ?? Arr::get($res, 'json_edges'),
-            'ui'                => Arr::get($res, 'ui', []),
-            'meta'              => Arr::get($res, 'meta', []),
+            'json_edges_url' => Arr::get($res, 'json_edges_url') ?? Arr::get($res, 'json_edges'),
+            'ui' => Arr::get($res, 'ui', []),
+            'meta' => Arr::get($res, 'meta', []),
         ];
     }
 
@@ -41,6 +42,7 @@ readonly class AICADClient
      *  - ['type'=>'delta','data'=>string]
      *  - ['type'=>'json_edges','url'=>string]
      *  - ['type'=>'result','assistant_message'=>string,'json_edges_url'=>?string]
+     *
      * @throws ConnectionException
      */
     public function chatToCadStream(array $messages, ?string $projectId = null, int $timeoutSec = 60): Generator
@@ -48,18 +50,22 @@ readonly class AICADClient
         $resp = $this->http($timeoutSec)
             ->withOptions(['stream' => true])
             ->post($this->endpoint('/cad/chat_to_cad'), [
-                'messages'   => $messages,
+                'messages' => $messages,
                 'project_id' => $projectId,
-                'stream'     => true,
+                'stream' => true,
             ]);
 
-        $psr  = $resp->toPsrResponse();
+        $psr = $resp->toPsrResponse();
         $body = $psr->getBody();
         $buffer = '';
 
-        while (!$body->eof()) {
+        while (! $body->eof()) {
             $chunk = $body->read(8192);
-            if ($chunk === '') { usleep(10_000); continue; }
+            if ($chunk === '') {
+                usleep(10_000);
+
+                continue;
+            }
             $buffer .= $chunk;
 
             // Mode SSE: lignes "data: {...}\n\n"
@@ -69,14 +75,22 @@ readonly class AICADClient
 
                 foreach (explode("\n", $packet) as $line) {
                     $line = ltrim($line);
-                    if ($line === '' || Str::startsWith($line, ':')) continue;
-                    if (!Str::startsWith($line, 'data:')) continue;
+                    if ($line === '' || Str::startsWith($line, ':')) {
+                        continue;
+                    }
+                    if (! Str::startsWith($line, 'data:')) {
+                        continue;
+                    }
 
                     $json = trim(substr($line, 5));
-                    if ($json === '' || $json === '[DONE]') continue;
+                    if ($json === '' || $json === '[DONE]') {
+                        continue;
+                    }
 
                     $payload = json_decode($json, true);
-                    if (!is_array($payload)) continue;
+                    if (! is_array($payload)) {
+                        continue;
+                    }
 
                     if (isset($payload['delta'])) {
                         yield ['type' => 'delta', 'data' => (string) $payload['delta']];
@@ -86,9 +100,9 @@ readonly class AICADClient
                     }
                     if (isset($payload['assistant_message']) || isset($payload['done'])) {
                         yield [
-                            'type'              => 'result',
+                            'type' => 'result',
                             'assistant_message' => (string) ($payload['assistant_message'] ?? ''),
-                            'json_edges_url'    => $payload['json_edges_url'] ?? null,
+                            'json_edges_url' => $payload['json_edges_url'] ?? null,
                         ];
                     }
                 }
@@ -98,10 +112,14 @@ readonly class AICADClient
             while (($nl = strpos($buffer, "\n")) !== false) {
                 $line = trim(substr($buffer, 0, $nl));
                 $buffer = substr($buffer, $nl + 1);
-                if ($line === '' || $line === '[DONE]') continue;
+                if ($line === '' || $line === '[DONE]') {
+                    continue;
+                }
 
                 $payload = json_decode($line, true);
-                if (!is_array($payload)) continue;
+                if (! is_array($payload)) {
+                    continue;
+                }
 
                 if (isset($payload['delta'])) {
                     yield ['type' => 'delta', 'data' => (string) $payload['delta']];
@@ -111,9 +129,9 @@ readonly class AICADClient
                 }
                 if (isset($payload['assistant_message']) || isset($payload['done'])) {
                     yield [
-                        'type'              => 'result',
+                        'type' => 'result',
                         'assistant_message' => (string) ($payload['assistant_message'] ?? ''),
-                        'json_edges_url'    => $payload['json_edges_url'] ?? null,
+                        'json_edges_url' => $payload['json_edges_url'] ?? null,
                     ];
                 }
             }
@@ -125,9 +143,9 @@ readonly class AICADClient
             $payload = json_decode($rest, true);
             if (is_array($payload)) {
                 yield [
-                    'type'              => 'result',
+                    'type' => 'result',
                     'assistant_message' => (string) ($payload['assistant_message'] ?? $payload['message'] ?? ''),
-                    'json_edges_url'    => $payload['json_edges_url'] ?? $payload['json_edges'] ?? null,
+                    'json_edges_url' => $payload['json_edges_url'] ?? $payload['json_edges'] ?? null,
                 ];
             }
         }
@@ -138,13 +156,16 @@ readonly class AICADClient
     {
         $req = Http::timeout($timeoutSec)->acceptJson();
         $key = $this->apiKey ?? config('ai-cad.api.key') ?? env('AICAD_API_KEY');
-        if ($key) $req = $req->withToken($key);
+        if ($key) {
+            $req = $req->withToken($key);
+        }
+
         return $req;
     }
 
     protected function endpoint(string $path): string
     {
-        return rtrim($this->baseUrl(), '/') . '/' . ltrim($path, '/');
+        return rtrim($this->baseUrl(), '/').'/'.ltrim($path, '/');
     }
 
     protected function baseUrl(): string
