@@ -1,382 +1,380 @@
+// resources/js/app.js
 import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js'
+import { OutlinePass }    from 'three/addons/postprocessing/OutlinePass.js'
 
-import { CSS2DObject, CSS2DRenderer, FlakesTexture, OrbitControls, RGBELoader } from 'three/addons'
+// ---------- État global ----------
+let scene, camera, renderer, controls, raycaster
+let composer, renderPass, hoverOutlinePass, selectOutlinePass
 
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+let bodyGroup = new THREE.Group()
+let allMeshes = []
+let mainEdgesLine = null
 
-let camera, scene, renderer, labelRenderer, controls, raycaster, INTERSECTED, intersects, width, heigth, viewer, viewerLeft, viewerTop
+let selectedGid = null
+let hoveredGid  = null
 
-let labelDiv, labelObject
-
-//Variables pour l'affichage des contours de la piéce
-let edgesShow, edgesColor, edgesLines = []
-
+let intersects = []
 const pointer = new THREE.Vector2()
 
-let allMesh = []
-let bodyGroup = new THREE.Group()
+// UI / options
+let edgesShow = true
+let edgesColor = '#000000'
+let edgeThresholdDeg = 45
 
-const loader = new OBJLoader();
+// couleurs dynamiques
+let hoverColorHex  = '#2d6cff'  // par défaut bleu
+let selectColorHex = '#ff3b3b'  // par défaut rouge
 
-Livewire.on('jsonLoaded', function ({ objPath }) {
-    // On supprime tout ce qu'il y a avant
-    scene.remove(bodyGroup)
+const BASE_COLOR = 0xb2b2b2
 
-    allMesh.forEach((mesh) => {
-        scene.remove(mesh)
-        mesh.geometry.dispose()
-        mesh.material.dispose()
-    })
+// Heuristique (ajuste selon l’échelle du JSON)
+const ANGLE_TOL = 2 * Math.PI / 180
+const DIST_TOL  = 0.05
+const VERT_TOL  = 1e-3
 
-    allMesh = []
-    edgesLines = []
-    bodyGroup = new THREE.Group()
+const viewer = document.getElementById('viewer')
 
-// load a resource
-    loader.load(
-        // resource URL
-        objPath,
-        // called when resource is loaded
-        function ( object ) {
-
-            scene.add( object );
-
-            fitCameraToCenteredObject(camera, object, 0, controls)
-
-        },
-        // called when loading is in progress
-        function ( xhr ) {
-
-            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
-
-        },
-        // called when loading has errors
-        function ( error ) {
-
-            console.log( 'An error happened' );
-
-        }
-    );
-})
-
-Livewire.on('toggleShowEdges', function ({show}) {
-    edgesLines.forEach(l => {
-        localStorage.setItem('tolery-viewer-edges-show', show )
-        l.visible = show
-    });
-})
-
-Livewire.on('updatedEdgeColor', function ({color} ) {
-    edgesLines.forEach(l => {
-        localStorage.setItem('tolery-viewer-edges-color', color )
-        l.material.color.set(color)
-    });
-})
-
-const init3dViewer = () => {
-    width = viewer.offsetWidth
-    heigth = viewer.offsetHeight
-    viewerLeft = viewer.getBoundingClientRect().left
-    viewerTop = viewer.getBoundingClientRect().top
-
-    renderer = new THREE.WebGLRenderer({ antialias: true })
-
-    scene = new THREE.Scene()
-    scene.background = new THREE.Color(0xffffff)
-
-    // camera
-
-    camera = new THREE.PerspectiveCamera(27, width / heigth, 0.001, 100)
-    scene.add(camera)
-
-    // ambient light
-
-    scene.add(new THREE.AmbientLight(0x666666))
-
-    // point light
-
-    const light = new THREE.PointLight(0xffffff, 1, 0, 0)
-    camera.add(light)
-
-    // helper
-
-    //scene.add( new THREE.AxesHelper( 20 ) );
-
-    //
-
-    renderer.setPixelRatio(window.devicePixelRatio)
-    renderer.setSize(width, heigth)
-    renderer.setAnimationLoop(animate)
-    viewer.appendChild(renderer.domElement)
-
-    labelRenderer = new CSS2DRenderer()
-    labelRenderer.setSize(width, heigth)
-    labelRenderer.domElement.style.position = 'absolute'
-    labelRenderer.domElement.style.top = '10vh'
-    viewer.appendChild(labelRenderer.domElement)
-    //
-    // labelDiv = document.createElement('div')
-    // labelDiv.className = 'label'
-    // labelDiv.style.color = 'blue'
-    // labelObject = new CSS2DObject(labelDiv)
-    // labelObject.visible = false
-    // scene.add(labelObject)
-
-    controls = new OrbitControls(camera, labelRenderer.domElement)
-    controls.enableDamping = true
-
-    window.addEventListener('resize', onWindowResize)
-
-    raycaster = new THREE.Raycaster()
-
-    document.addEventListener('mousemove', onPointerMove)
-
-    //detectClicOnObject()
-
-    // On récupére ces paramétre depuis le localStorage
-    edgesShow = localStorage.getItem('tolery-viewer-edges-show') === 'true'
-    edgesColor = localStorage.getItem('tolery-viewer-edges-color') || '#ffffff'
+// ---------- Utils heuristique ----------
+function norm(v){ const n=v.length(); return n>0 ? v.multiplyScalar(1/n) : v }
+function angleBetween(n1, n2){ return Math.acos(THREE.MathUtils.clamp(n1.dot(n2), -1, 1)) }
+function planeFromTriangle(a,b,c){
+  const n = new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a))
+  norm(n)
+  const d = -n.dot(a)
+  return { n, d }
 }
+function pointPlaneDistance(n, d, p){ return Math.abs(n.dot(p)+d) / n.length() }
+function vKey(x,y,z){ return `${(x/ VERT_TOL|0)},${(y/ VERT_TOL|0)},${(z/ VERT_TOL|0)}` }
 
-Livewire.hook('component.init', ({ component, cleanup }) => {
-    if(component.name === 'chatbot') {
-        component.$wire.$set('edgesShow', edgesShow)
-        component.$wire.$set('edgesColor', edgesColor)
+// Grouping heuristique
+function buildFaceGroups() {
+  const infos = allMeshes.map((mesh, idx) => {
+    const pos = mesh.geometry.getAttribute('position')
+    const a = new THREE.Vector3(pos.getX(0), pos.getY(0), pos.getZ(0))
+    const b = new THREE.Vector3(pos.getX(1), pos.getY(1), pos.getZ(1))
+    const c = new THREE.Vector3(pos.getX(2), pos.getY(2), pos.getZ(2))
+    const { n, d } = planeFromTriangle(a,b,c)
+    const keys = new Set()
+    for (let i=0;i<pos.count;i++){
+      keys.add(vKey(pos.getX(i), pos.getY(i), pos.getZ(i)))
     }
-})
+    return { n, d, keys, idx }
+  })
 
-const detectClicOnObject = (object) => {
-    const delta = 6
-    let startX
-    let startY
+  const adj = Array(infos.length).fill(0).map(()=>[])
+  for (let i=0;i<infos.length;i++){
+    const ii = infos[i]
+    for (let j=i+1;j<infos.length;j++){
+      const jj = infos[j]
+      if (angleBetween(ii.n, jj.n) > ANGLE_TOL) continue
+      const sampleKey = jj.keys.values().next().value
+      const [sx,sy,sz] = sampleKey.split(',').map(k => parseInt(k)*VERT_TOL)
+      const p = new THREE.Vector3(sx,sy,sz)
+      if (pointPlaneDistance(ii.n, ii.d, p) > DIST_TOL) continue
+      let shared = 0
+      for (const k of jj.keys){ if (ii.keys.has(k)) { shared++; if (shared>=2) break } }
+      if (shared>=2){ adj[i].push(j); adj[j].push(i) }
+    }
+  }
 
-    window.addEventListener('mousedown', function (event) {
-        startX = event.pageX
-        startY = event.pageY
-    })
+  const groupIdOf = Array(infos.length).fill(-1)
+  let gid = 0
+  for (let i=0;i<infos.length;i++){
+    if (groupIdOf[i] !== -1) continue
+    const q=[i]; groupIdOf[i]=gid
+    while(q.length){
+      const u=q.shift()
+      for(const v of adj[u]){
+        if (groupIdOf[v]===-1){ groupIdOf[v]=gid; q.push(v) }
+      }
+    }
+    gid++
+  }
 
-    window.addEventListener('mouseup', function (event) {
-        const diffX = Math.abs(event.pageX - startX)
-        const diffY = Math.abs(event.pageY - startY)
-
-        if (diffX < delta && diffY < delta) {
-            if (intersects.length === 0) {
-                if (event.target.matches('#viewer *')) {
-                    Livewire.dispatch('chatObjectClick', { objectId: null })
-                }
-            } else {
-                intersects.forEach((hit) => {
-                    Livewire.dispatch('chatObjectClick', { objectId: hit.object.name })
-                    console.log(hit.object.name)
-                })
-            }
-        }
-    })
+  for (let i=0;i<infos.length;i++){
+    allMeshes[infos[i].idx].userData.groupId = groupIdOf[i]
+  }
 }
 
-const convertJsonToObject = (json) => {
-    json.faces.bodies.forEach((body) => {
-        // Faces
-        if (body.faces) {
-            body.faces.forEach((faces, index) => {
-                // On marque chaque face
-                const faceGeometry = new THREE.BufferGeometry()
+// ---------- Init ----------
+function init() {
+  scene = new THREE.Scene()
+  scene.background = new THREE.Color(0xffffff)
 
-                const faceVertices = []
-                const faceNormals = []
+  const width = viewer.clientWidth
+  const height = viewer.clientHeight
 
-                faces.facets.forEach((facet) => {
-                    if (facet.indices) {
-                        facet.indices.forEach((indice) => {
-                            //indices.push(Math.round(indice.x * 10000 ), Math.round(indice.y * 10000 ),Math.round( indice.z * 10000 ));
-                        })
-                    }
+  camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000)
+  camera.position.set(0, 0, 5)
 
-                    if (facet.vertices) {
-                        faceNormals.push(facet.normal.x, facet.normal.y, facet.normal.z)
+  renderer = new THREE.WebGLRenderer({ antialias: true })
+  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setSize(width, height)
+  viewer.appendChild(renderer.domElement)
 
-                        facet.vertices.forEach((vertex) => {
-                            faceVertices.push(vertex.x, vertex.y, vertex.z)
-                        })
-                    }
-                })
+  controls = new OrbitControls(camera, renderer.domElement)
+  controls.enableDamping = true
 
-                const material2 = new THREE.MeshBasicMaterial({ color: 0xb2b2b2 })
+  raycaster = new THREE.Raycaster()
 
-                const meshMaterial = new THREE.MeshLambertMaterial({
-                    color: 0xffffff,
-                    opacity: 0.5,
-                    //transparent: true
-                })
+  composer = new EffectComposer(renderer)
+  renderPass = new RenderPass(scene, camera)
+  composer.addPass(renderPass)
 
-                faceGeometry.setAttribute('position', new THREE.Float32BufferAttribute(faceVertices, 3))
-                faceGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(faceNormals, 3))
+  hoverOutlinePass = new OutlinePass(new THREE.Vector2(width, height), scene, camera)
+  hoverOutlinePass.edgeStrength = 2.0
+  hoverOutlinePass.edgeThickness = 1.0
+  hoverOutlinePass.pulsePeriod = 0
+  hoverOutlinePass.visibleEdgeColor.set(hoverColorHex)
+  hoverOutlinePass.hiddenEdgeColor.set(hoverColorHex)
+  composer.addPass(hoverOutlinePass)
 
-                const faceMesh = new THREE.Mesh(faceGeometry, material2)
-                faceMesh.name = faces.id
+  selectOutlinePass = new OutlinePass(new THREE.Vector2(width, height), scene, camera)
+  selectOutlinePass.edgeStrength = 3.5
+  selectOutlinePass.edgeThickness = 2.0
+  selectOutlinePass.pulsePeriod = 0
+  selectOutlinePass.visibleEdgeColor.set(selectColorHex)
+  selectOutlinePass.hiddenEdgeColor.set(selectColorHex)
+  composer.addPass(selectOutlinePass)
 
-                allMesh.push(faceMesh)
+  window.addEventListener('resize', onWindowResize)
+  viewer.addEventListener('mousemove', onPointerMove)
+  viewer.addEventListener('mousedown', onMouseDown)
+  viewer.addEventListener('mouseup', onMouseUp)
 
-                bodyGroup.add(faceMesh)
-
-                // Affichage des contours, masqué par defaut
-                const edges = new THREE.EdgesGeometry( faceGeometry, 10 );
-                const lines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: edgesColor}) );
-                scene.add( lines );
-                edgesLines.push(lines)
-
-            })
-            edgesLines.forEach(l => {
-                l.visible = edgesShow
-            });
-        }
-    })
-
-    scene.add(bodyGroup)
-
-    //
-
-    fitCameraToCenteredObject(camera, bodyGroup, 2, controls)
+  animate()
 }
 
-function onWindowResize() {
-    width = viewer.offsetWidth
-    heigth = viewer.offsetHeight
-    viewerLeft = viewer.getBoundingClientRect().left
-    viewerTop = viewer.getBoundingClientRect().top
-
-    camera.aspect = width / heigth
-    camera.updateProjectionMatrix()
-
-    renderer.setSize(width, heigth)
-    labelRenderer.setSize(width, heigth)
-}
-
-function onPointerMove(event) {
-    pointer.x = ((event.clientX - viewerLeft) / width) * 2 - 1
-    pointer.y = -((event.clientY - viewerTop) / heigth) * 2 + 1
-}
-
-//
-
+// ---------- Render loop ----------
 function animate() {
-    raycaster.setFromCamera(pointer, camera)
+  requestAnimationFrame(animate)
 
-    intersects = raycaster.intersectObjects(bodyGroup.children, true)
+  raycaster.setFromCamera(pointer, camera)
+  intersects = raycaster.intersectObjects(bodyGroup.children, true)
+  const hit = intersects.length > 0 ? intersects[0].object : null
+  hoveredGid = hit ? (hit.userData.groupId ?? null) : null
 
-    if (intersects.length > 0) {
-        if (INTERSECTED != intersects[0].object) {
-            if (INTERSECTED) INTERSECTED.material.color.setHex(INTERSECTED.currentHex)
+  for (const m of allMeshes) m.material.color.set(BASE_COLOR)
 
-            INTERSECTED = intersects[0].object
-            INTERSECTED.currentHex = INTERSECTED.material.color.getHex()
-            INTERSECTED.material.color.setHex(0xff0000)
+  if (selectedGid !== null){
+    for (const m of allMeshes) if (m.userData.groupId === selectedGid) m.material.color.set(selectColorHex)
+  } else if (hoveredGid !== null){
+    for (const m of allMeshes) if (m.userData.groupId === hoveredGid) m.material.color.set(hoverColorHex)
+  }
 
-            // Setup label
-            labelObject.visible = true
-            labelDiv.textContent = INTERSECTED.name
+  const repHover  = (selectedGid===null && hoveredGid!==null) ? allMeshes.find(m => m.userData.groupId===hoveredGid) : null
+  const repSelect = (selectedGid!==null) ? allMeshes.find(m => m.userData.groupId===selectedGid) : null
+  selectOutlinePass.selectedObjects = repSelect ? [repSelect] : []
+  hoverOutlinePass .selectedObjects = (!repSelect && repHover) ? [repHover] : []
 
-            // On affiche le labelObject aux bonnes coordonnées par rapport à l'object INTERSECTED
-            const boundingBox = new THREE.Box3().setFromObject(INTERSECTED)
+  controls.update()
+  composer.render()
+}
 
-            // Obtenir les limites (min : coin bas gauche ; max : coin haut droit)
-            const min = boundingBox.min // Coin bas gauche
-            const max = boundingBox.max // Coin haut droit
+// ---------- Resize ----------
+function onWindowResize() {
+  const width = viewer.clientWidth
+  const height = viewer.clientHeight
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
+  renderer.setSize(width, height)
+  composer.setSize(width, height)
+  hoverOutlinePass.setSize(width, height)
+  selectOutlinePass.setSize(width, height)
+}
 
-            // Déterminer le coin haut gauche (min.x, max.y)
-            const topLeftCorner = new THREE.Vector3(min.x, max.y, min.z) // Garder le "z" du bas-gauche (min.z)
+// ---------- Pointer / Click ----------
+function onPointerMove(e) {
+  const rect = viewer.getBoundingClientRect()
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+}
+let startX, startY
+function onMouseDown(e){ startX = e.pageX; startY = e.pageY }
+function onMouseUp(e){
+  const delta = 6
+  const isClick = Math.abs(e.pageX - startX) < delta && Math.abs(e.pageY - startY) < delta
+  if (!isClick) return
 
-            // Positionner le label au coin haut gauche
-            labelObject.position.set(topLeftCorner.x, topLeftCorner.y, topLeftCorner.z)
+  raycaster.setFromCamera(pointer, camera)
+  const hits = raycaster.intersectObjects(bodyGroup.children, true)
+
+  if (hits.length === 0){
+    selectedGid = null
+    Livewire.dispatch('chatObjectClick', { objectId: null })
+    return
+  }
+
+  const gid = hits[0].object.userData.groupId ?? null
+  selectedGid = gid
+  Livewire.dispatch('chatObjectClick', { objectId: gid })
+}
+
+// ---------- Fit caméra + pivot ----------
+function fitCameraToObject(object, offset = 2) {
+  const box = new THREE.Box3().setFromObject(object)
+  const size = new THREE.Vector3()
+  const center = new THREE.Vector3()
+  box.getSize(size)
+  box.getCenter(center)
+
+  const maxDim = Math.max(size.x, size.y, size.z)
+  const fov = THREE.MathUtils.degToRad(camera.fov)
+  const cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * offset
+
+  camera.position.set(center.x, center.y, cameraZ)
+  camera.lookAt(center)
+  camera.far = cameraZ * 4
+  camera.updateProjectionMatrix()
+
+  controls.target.copy(center)
+  controls.update()
+}
+
+// ---------- Arêtes principales ----------
+function buildPrincipalEdges() {
+  if (mainEdgesLine) {
+    scene.remove(mainEdgesLine)
+    mainEdgesLine.geometry.dispose()
+    mainEdgesLine.material.dispose()
+    mainEdgesLine = null
+  }
+  if (allMeshes.length === 0) return
+
+  const geoms = []
+  for (const m of allMeshes) {
+    const g = m.geometry.clone()
+    if (!g.attributes.normal || g.attributes.normal.count === 0) g.computeVertexNormals()
+    geoms.push(g)
+  }
+  const merged = mergeGeometries(geoms, false)
+  if (!merged.attributes.normal || merged.attributes.normal.count === 0) merged.computeVertexNormals()
+
+  const edgesGeo = new THREE.EdgesGeometry(merged, edgeThresholdDeg)
+  const edgesMat = new THREE.LineBasicMaterial({ color: edgesColor })
+  mainEdgesLine = new THREE.LineSegments(edgesGeo, edgesMat)
+  mainEdgesLine.visible = edgesShow
+  scene.add(mainEdgesLine)
+}
+
+// ---------- Chargement JSON ----------
+async function loadJsonEdges(jsonPath) {
+  const res = await fetch(jsonPath)
+  const json = await res.json()
+
+  scene.remove(bodyGroup)
+  for (const m of allMeshes) { m.geometry.dispose(); m.material.dispose() }
+  if (mainEdgesLine) {
+    scene.remove(mainEdgesLine)
+    mainEdgesLine.geometry.dispose()
+    mainEdgesLine.material.dispose()
+    mainEdgesLine = null
+  }
+  selectedGid = null
+  hoveredGid  = null
+  allMeshes = []
+  bodyGroup = new THREE.Group()
+
+  json.faces?.bodies?.forEach(body => {
+    body.faces?.forEach(face => {
+      face.facets?.forEach(facet => {
+        const tri = facet.vertices ?? []
+        if (tri.length < 3) return
+
+        const verts = []
+        tri.forEach(v => verts.push(v.x, v.y, v.z))
+
+        const geom = new THREE.BufferGeometry()
+        geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
+
+        if (facet.normal){
+          const n = facet.normal
+          const triCount = Math.floor(tri.length / 3)
+          const norms = []
+          for (let i=0;i<triCount;i++) norms.push(n.x, n.y, n.z)
+          if (norms.length === verts.length) {
+            geom.setAttribute('normal', new THREE.Float32BufferAttribute(norms, 3))
+          } else {
+            geom.computeVertexNormals()
+          }
+        } else {
+          geom.computeVertexNormals()
         }
-    } else {
-        if (INTERSECTED) {
-            INTERSECTED.material.color.setHex(INTERSECTED.currentHex)
-            labelObject.visible = false
-            labelDiv.textContent = ''
-        }
 
-        INTERSECTED = null
-    }
+        const mat = new THREE.MeshBasicMaterial({ color: BASE_COLOR })
+        const mesh = new THREE.Mesh(geom, mat)
+        bodyGroup.add(mesh)
+        allMeshes.push(mesh)
+      })
+    })
+  })
 
-    controls.update()
+  scene.add(bodyGroup)
+  fitCameraToObject(bodyGroup, 2)
 
-    renderer.render(scene, camera)
-    labelRenderer.render(scene, camera)
+  buildFaceGroups()
+  buildPrincipalEdges()
 }
 
-const fitCameraToCenteredObject = function (camera, object, offset, orbitControls) {
-    const boundingBox = new THREE.Box3()
-    boundingBox.setFromObject(object)
+// recentrer
+window.addEventListener('viewer-fit', () => {
+  if (bodyGroup) fitCameraToObject(bodyGroup, 2)
+})
 
-    var middle = new THREE.Vector3()
-    var size = new THREE.Vector3()
-    boundingBox.getSize(size)
+// snapshot
+window.addEventListener('viewer-snapshot', () => {
+  // simple snapshot base64 (tu peux envoyer à Livewire si besoin)
+  const dataURL = renderer.domElement.toDataURL('image/png')
+  // exemple: ouvrir dans un nouvel onglet
+  const w = window.open()
+  w.document.write('<iframe src="' + dataURL + '" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>')
+})
 
-    // figure out how to fit the box in the view:
-    // 1. figure out horizontal FOV (on non-1.0 aspects)
-    // 2. figure out distance from the object in X and Y planes
-    // 3. select the max distance (to fit both sides in)
-    //
-    // The reason is as follows:
-    //
-    // Imagine a bounding box (BB) is centered at (0,0,0).
-    // Camera has vertical FOV (camera.fov) and horizontal FOV
-    // (camera.fov scaled by aspect, see fovh below)
-    //
-    // Therefore if you want to put the entire object into the field of view,
-    // you have to compute the distance as: z/2 (half of Z size of the BB
-    // protruding towards us) plus for both X and Y size of BB you have to
-    // figure out the distance created by the appropriate FOV.
-    //
-    // The FOV is always a triangle:
-    //
-    //  (size/2)
-    // +--------+
-    // |       /
-    // |      /
-    // |     /
-    // | F° /
-    // |   /
-    // |  /
-    // | /
-    // |/
-    //
-    // F° is half of respective FOV, so to compute the distance (the length
-    // of the straight line) one has to: `size/2 / Math.tan(F)`.
-    //
-    // FTR, from https://threejs.org/docs/#api/en/cameras/PerspectiveCamera
-    // the camera.fov is the vertical FOV.
+// ---------- Livewire ----------
+Livewire.on('jsonLoaded', () => {
+  // OBJ ignoré volontairement
+})
 
-    const fov = camera.fov * (Math.PI / 180)
-    const fovh = 2 * Math.atan(Math.tan(fov / 2) * camera.aspect)
-    let dx = size.z / 2 + Math.abs(size.x / 2 / Math.tan(fovh / 2))
-    let dy = size.z / 2 + Math.abs(size.y / 2 / Math.tan(fov / 2))
-    let cameraZ = Math.max(dx, dy)
+Livewire.on('jsonEdgesLoaded', ({ jsonPath }) => {
+  if (jsonPath) loadJsonEdges(jsonPath)
+})
 
-    // offset the camera, if desired (to avoid filling the whole canvas)
-    if (offset !== undefined && offset !== 0) cameraZ *= offset
+Livewire.on('toggleShowEdges', ({ show, threshold = null }) => {
+  edgesShow = !!show
+  if (threshold !== null && typeof threshold === 'number') {
+    edgeThresholdDeg = threshold
+    buildPrincipalEdges()
+  }
+  if (mainEdgesLine) mainEdgesLine.visible = edgesShow
+})
 
-    camera.position.set(0, 0, cameraZ)
+Livewire.on('updatedEdgeColor', ({ color }) => {
+  if (typeof color === 'string' && color.length) {
+    edgesColor = color
+    if (mainEdgesLine) mainEdgesLine.material.color.set(color)
+  }
+})
 
-    // set the far plane of the camera so that it easily encompasses the whole object
-    const minZ = boundingBox.min.z
-    const cameraToFarEdge = minZ < 0 ? -minZ + cameraZ : cameraZ - minZ
+// === Nouveaux events ===
+Livewire.on('updatedHoverColor', ({ color }) => {
+  if (typeof color === 'string' && color.length) {
+    hoverColorHex = color
+    hoverOutlinePass.visibleEdgeColor.set(color)
+    hoverOutlinePass.hiddenEdgeColor.set(color)
+  }
+})
 
-    camera.far = cameraToFarEdge * 3
-    camera.updateProjectionMatrix()
+Livewire.on('updatedSelectColor', ({ color }) => {
+  if (typeof color === 'string' && color.length) {
+    selectColorHex = color
+    selectOutlinePass.visibleEdgeColor.set(color)
+    selectOutlinePass.hiddenEdgeColor.set(color)
+  }
+})
 
-    if (orbitControls !== undefined) {
-        // set camera to rotate around the center
-        orbitControls.target = new THREE.Vector3(0, 0, 0)
-
-        // prevent camera from zooming out far enough to create far plane cutoff
-        orbitControls.maxDistance = cameraToFarEdge * 2
-    }
-}
-
-viewer = document.getElementById('viewer')
-
-if (viewer) {
-    init3dViewer()
-}
+// ---------- Go ----------
+init()

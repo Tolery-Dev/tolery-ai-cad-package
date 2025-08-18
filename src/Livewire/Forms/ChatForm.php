@@ -18,7 +18,7 @@ class ChatForm extends Form
     #[Validate(['required', new Enum(MaterialFamily::class)])]
     public $materialFamily = '';
 
-    public function setChate(Chat $chat)
+    public function setChat(Chat $chat): void
     {
         $this->chat = $chat;
 
@@ -27,7 +27,7 @@ class ChatForm extends Form
         $this->materialFamily = $chat->material_family;
     }
 
-    public function update()
+    public function update(): void
     {
         $validatedValues = $this->validate();
 

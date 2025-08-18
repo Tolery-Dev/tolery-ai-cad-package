@@ -12,7 +12,7 @@ enum MaterialFamily: string
     {
         return match ($this) {
             self::STEEL => 'Acier',
-            self::ALUMINUM => 'Alluminum',
+            self::ALUMINUM => 'Aluminum',
             self::STAINLESS => 'Inox',
         };
     }
