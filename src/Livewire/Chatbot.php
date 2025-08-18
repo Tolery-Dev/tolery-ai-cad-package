@@ -2,64 +2,55 @@
 
 namespace Tolery\AiCad\Livewire;
 
-use Carbon\Carbon;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
-use Illuminate\View\View;
+use Tolery\AiCad\Services\AICADClient;
+use Illuminate\Cache\RateLimiter;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Validate;
 use Livewire\Component;
-use Livewire\WithFileUploads;
-use Log;
-use Storage;
-use Tolery\AiCad\Jobs\GetAICADResponse;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
-use Tolery\AiCad\Models\ChatUser;
+use Throwable;
 
 class Chatbot extends Component
 {
-    use WithFileUploads;
+    /** Injecté par <livewire:chatbot :$chat /> */
+    public Chat $chat;
 
-    public ?Chat $chat = null;
+    /** Données pour la vue */
+    public array $messages = [];      // [['role'=>'user|assistant','content'=>'...', 'created_at'=>iso], ...]
+    public string $message = '';
+    public bool $isProcessing = false;
 
-    /**
-     * @var Collection<ChatMessage>
-     */
-    public Collection $chatMessages;
+    /** Streaming */
+    protected ?int $streamingIndex = null; // index du message assistant courant
+    protected float $lastRefreshAt = 0.0;  // throttle des re-rendus
 
-    public ?string $errorMessage = null;
-
-    public string $entry = '';
-
-    public Carbon $lastTimeAnswer;
-
-    public bool $waitingForAnswer = false;
-
-    #[Validate('image|max:1024')] // 1MB Max
-    public $pdfFile;
-
-    public ?string $objectToConfigId = null;
-
-    public bool $edgesShow = false;
-
-    public string $edgesColor = '#ffffff';
+    /** Réglages */
+    protected int $httpTimeoutSec = 60;
+    protected int $maxRetries = 1;
+    protected int $ratePerMinute = 10;    // anti-spam
+    protected int $lockSeconds = 12;    // anti double submit
 
     public function mount(): void
     {
-        if (! $this->chat) {
+        // Si nouveau chat, on s’assure qu’il existe en base
+        if (!$this->chat->exists) {
             $chat = new Chat;
-
+            $chat->session_id = request()->session()->id();
             /** @var ChatUser $user */
             $user = auth()->user();
             $chat->team()->associate($user->team);
             $chat->user()->associate($user);
             $chat->save();
+            $chat->name ??= 'Nouvelle conversation';
+            $chat->save();
             $this->chat = $chat;
         }
 
-        $this->chatMessages = $this->chat->messages;
-        $this->lastTimeAnswer = $this->chat->messages->isEmpty() ? now() : $this->chat->messages->last()->created_at;
+        // Charge l'historique depuis la DB
+        $this->messages = $this->mapDbMessagesToArray();
 
         $objToDisplay = $this->chat->messages->isEmpty() ?
             null
@@ -90,92 +81,226 @@ class Chatbot extends Component
         $this->dispatch('updatedEdgeColor', color: $value);
     }
 
-    public function submitEntry(): void
+    public function render()
     {
-
-        $message = $this->entry;
-        // On ajoute le nouveau message a la conversation
-        $this->chat->messages()->create([
-            'message' => $message,
-            'user_id' => auth()->id(),
-        ]);
-
-        $this->waitingForAnswer = true;
-
-        // On va récupérer la réponse
-        $this->getAPIResponse();
-
-        $this->entry = '';
-        $this->chatMessages = $this->chat->messages()->get();
+        return view('ai-cad::livewire.chatbot');
     }
 
-    public function getAnswer(): void
+    protected function rules(): array
     {
-        // On va regarder si une nouvelle réponse est arrivé et la renvoyer
+        return [
+            'message' => ['required', 'string', 'min:2', 'max:5000'],
+        ];
+    }
 
-        $lastAnswer = $this->chat->messages()->whereNull('user_id')->latest()->first();
+    public function send(AICADClient $api, RateLimiter $limiter): void
+    {
+        if ($this->isProcessing) return;
+        $this->validate();
 
-        if ($lastAnswer && $lastAnswer->created_at > $this->lastTimeAnswer) {
-            $this->chatMessages = $this->chat->messages()->get();
-            $this->lastTimeAnswer = $lastAnswer->created_at;
-            if ($objToDisplay = $lastAnswer->getObjUrl()) {
-                $this->dispatch('jsonLoaded', objPath: $objToDisplay);
+
+        $rateKey = 'aicad:chat:' . ($this->chat->id ?: request()->session()->getId());
+        if ($limiter->tooManyAttempts($rateKey, $this->ratePerMinute)) {
+            $wait = $limiter->availableIn($rateKey);
+            $this->appendAssistant("Vous envoyez des messages trop vite. Réessayez dans {$wait}s.");
+            $this->dispatch('tolery-chat:append');
+            return;
+        }
+        $limiter->hit($rateKey, 60);
+
+        $lock = Cache::lock("aicad:send:chat:{$this->chat->id}", $this->lockSeconds);
+        if (!$lock->get()) return;
+
+        try {
+            $this->isProcessing = true;
+            $userText = trim($this->message);
+            $this->message = '';
+
+            // Persiste + UI
+            $mUser = $this->storeMessage('user', $userText);
+            $this->messages[] = [
+                'role'       => 'user',
+                'content'    => $userText,
+                'created_at' => Carbon::parse($mUser->created_at)->toIso8601String(),
+            ];
+            $this->dispatch('tolery-chat:append');
+
+            // Placeholder assistant
+            $mAsst = $this->storeMessage('assistant', '');
+            $this->messages[] = [
+                'role'       => 'assistant',
+                'content'    => '',
+                'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
+            ];
+            $this->streamingIndex = array_key_last($this->messages);
+            $this->lastRefreshAt  = microtime(true);
+
+            // Contexte -> messages pour l’API (les 16 derniers)
+            $apiMessages = $this->buildMessagesForApi();
+
+            // Streaming (avec retry léger)
+            $jsonUrl = null; $attempts = 0;
+            RETRY: try {
+                foreach ($api->chatToCadStream(
+                    messages: $apiMessages,
+                    projectId: (string)$this->chat->id,
+                    timeoutSec: $this->httpTimeoutSec
+                ) as $ev) {
+                    $type = $ev['type'] ?? null;
+                    if ($type === 'delta' && ($chunk = $ev['data'] ?? '') !== '') {
+                        $this->appendAssistantDelta($chunk, $mAsst);
+                    }
+                    if ($type === 'json_edges' && is_string($ev['url'] ?? null)) {
+                        $jsonUrl = $ev['url'];
+                    }
+                    if ($type === 'result') {
+                        $final = (string)($ev['assistant_message'] ?? '');
+                        if ($final !== '') $this->setAssistantFull($final, $mAsst);
+                        $jsonUrl = $ev['json_edges_url'] ?? $jsonUrl;
+                    }
+                }
+            } catch (Throwable $e) {
+                if ($attempts < $this->maxRetries) { $attempts++; goto RETRY; }
+                // fallback non-streaming “one-shot”
+                $one = $api->chatToCad(messages: $apiMessages, projectId: (string)$this->chat->id, timeoutSec: $this->httpTimeoutSec);
+                $final = (string)($one['assistant_message'] ?? '');
+                if ($final !== '') $this->setAssistantFull($final, $mAsst);
+                $jsonUrl = $one['json_edges_url'] ?? $jsonUrl;
             }
-            // transmettre le JSON généré pour les arêtes/faces
-            $jsonUrl = $lastAnswer->getJSONEdgeUrl();
-            if ($jsonUrl) {
+
+            if (is_string($jsonUrl) && $jsonUrl !== '') {
                 $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
+                $mAsst->ai_json_edge_path = $jsonUrl;
+                $mAsst->save();
             }
-
-            $this->waitingForAnswer = false;
+        } finally {
+            $this->isProcessing = false;
+            optional($lock)->release();
+            $this->dispatch('tolery-chat:append');
         }
-    }
-
-    public function render(): View
-    {
-        return view('ai-cad::livewire.chatbot'); // @phpstan-ignore-line
-    }
-
-    private function getAPIResponse(): void
-    {
-        $pdfUrl = null;
-
-        if ($this->pdfFile) {
-            $name = Str::slug($this->pdfFile->getClientOriginalName());
-            $pdfPath = $this->pdfFile->storeAs(path: $this->chat->getStorageFolder(), name: $name);
-            $pdfUrl = Storage::url($pdfPath);
-            Log::info('getAPIResponse : '.$pdfUrl);
-        }
-        GetAICADResponse::dispatch($this->chat, $this->entry, $pdfUrl);
     }
 
     #[On('chatObjectClick')]
-    public function chatObjectClick(?string $objectId)
+    public function handleObjectClick(?string $objectId = null, AICADClient $api = null): void
     {
-        $prefix = 'Objet concerné : ';
-        if (! $objectId) {
-            if (Str::contains($this->entry, $prefix)) {
-                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', '', $this->entry);
+        if (!$objectId) { $this->appendAssistant("Aucune face sélectionnée."); return; }
 
+        $this->storeMessage('user', "[Sélection de face] {$objectId}");
+        $this->messages[] = [
+            'role'       => 'user',
+            'content'    => "[Sélection de face] {$objectId}",
+            'created_at' => now()->toIso8601String(),
+        ];
+        if (!$api) return;
+
+        $this->isProcessing = true;
+        $mAsst = $this->storeMessage('assistant', '');
+        $this->messages[] = [
+            'role'       => 'assistant',
+            'content'    => '',
+            'created_at' => now()->toIso8601String(),
+        ];
+        $this->streamingIndex = array_key_last($this->messages);
+        $this->lastRefreshAt  = microtime(true);
+
+        try {
+            $apiMessages = $this->buildMessagesForApi(prefixAction: "ACTION: select_face id={$objectId}");
+            foreach ($api->chatToCadStream($apiMessages, (string)$this->chat->id, $this->httpTimeoutSec) as $ev) {
+                $type = $ev['type'] ?? null;
+                if ($type === 'delta' && ($chunk = $ev['data'] ?? '') !== '') $this->appendAssistantDelta($chunk, $mAsst);
+                if ($type === 'result') {
+                    $final = (string)($ev['assistant_message'] ?? '');
+                    if ($final !== '') $this->setAssistantFull($final, $mAsst);
+                    if ($url = ($ev['json_edges_url'] ?? null)) {
+                        $this->dispatch('jsonEdgesLoaded', jsonPath: $url);
+                        $mAsst->ai_json_edge_path = $url; $mAsst->save();
+                    }
+                }
+                if ($type === 'json_edges' && is_string($ev['url'] ?? null)) {
+                    $this->dispatch('jsonEdgesLoaded', jsonPath: $ev['url']);
+                }
             }
-        } else {
-
-            // récupére sont id grace a edge_object_map_id
-            $message = $this->chatMessages->whereNotNull('ai_json_edge_path')->last();
-            $edge_object_map_id = $message->edge_object_map_id;
-
-            $map = $edge_object_map_id->first(fn (array $edge_object_map) => $edge_object_map[0] === $objectId);
-
-            $objectIdMap = $map[1];
-
-            if (Str::contains($this->entry, $prefix)) {
-                $this->entry = preg_replace('/'.preg_quote($prefix, '/').'\S+/', $prefix.$objectId.'('.$objectIdMap.')', $this->entry);
-
-            } else {
-                $this->entry = $this->entry.' '.$prefix.$objectId.'('.$objectIdMap.')';
-            }
+        } finally {
+            $this->isProcessing = false;
+            $this->dispatch('tolery-chat:append');
         }
+    }
 
-        $this->objectToConfigId = $objectId;
+    public function resetConversation(): void
+    {
+        DB::transaction(fn() => $this->chat->messages()->delete());
+        $this->messages = [];
+        $this->appendAssistant("Conversation réinitialisée. Décrivez la pièce à générer…");
+        $this->dispatch('tolery-chat:append');
+    }
+
+    /* ----------------- Helpers ----------------- */
+
+    protected function mapDbMessagesToArray(): array
+    {
+        return $this->chat->messages()->orderBy('created_at')->get()
+            ->map(fn(ChatMessage $m) => [
+                'role'       => $m->role,
+                'content'    => (string)$m->message,
+                'created_at' => Carbon::parse($m->created_at)->toIso8601String(),
+            ])->all();
+    }
+
+    /** Prépare le payload "messages" pour l’API (16 derniers). Optionnel: préfixe "ACTION: ..."  */
+    protected function buildMessagesForApi(?string $prefixAction = null): array
+    {
+        $rows = $this->chat->messages()->orderByDesc('id')->limit(16)->get()->reverse();
+        $messages = $rows->map(fn(ChatMessage $m) => [
+            'role'    => $m->role,             // 'user' | 'assistant'
+            'content' => (string)$m->message,
+        ])->values()->all();
+
+        if ($prefixAction) {
+            $messages[] = ['role' => 'user', 'content' => $prefixAction];
+        }
+        return $messages;
+    }
+
+    protected function storeMessage(string $role, string $content): ChatMessage
+    {
+        return $this->chat->messages()->create(['role' => $role, 'message' => $content]);
+    }
+
+    protected function appendAssistant(string $text): void
+    {
+        $m = $this->storeMessage('assistant', $text);
+        $this->messages[] = [
+            'role'       => 'assistant',
+            'content'    => $text,
+            'created_at' => Carbon::parse($m->created_at)->toIso8601String(),
+        ];
+    }
+
+    protected function appendAssistantDelta(string $delta, ChatMessage $dbMessage): void
+    {
+        if ($this->streamingIndex === null) return;
+
+        $this->messages[$this->streamingIndex]['content'] .= $delta;
+        $dbMessage->message = ($dbMessage->message ?? '') . $delta;
+        $dbMessage->save();
+
+        $now = microtime(true);
+        if (($now - $this->lastRefreshAt) >= 0.10) {
+            $this->lastRefreshAt = $now;
+            $this->dispatch('tolery-chat:append');
+            $this->dispatch('$refresh');
+        }
+    }
+
+    protected function setAssistantFull(string $text, ChatMessage $dbMessage): void
+    {
+        if ($this->streamingIndex === null) return;
+
+        $this->messages[$this->streamingIndex]['content'] = $text;
+        $dbMessage->message = $text;
+        $dbMessage->save();
+
+        $this->dispatch('tolery-chat:append');
+        $this->dispatch('$refresh');
     }
 }
