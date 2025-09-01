@@ -1,12 +1,14 @@
 // resources/js/app.js
+import JsonTessellatedLoader from './JsonTessellatedLoader.js'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
-import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js'
-import { OutlinePass }    from 'three/addons/postprocessing/OutlinePass.js'
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js'
+import {mergeGeometries, mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js'
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js'
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js'
+import {OutlinePass} from 'three/addons/postprocessing/OutlinePass.js'
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js'
 
-// ---------- État global ----------
+// ---------- Globals ----------
 let scene, camera, renderer, controls, raycaster
 let composer, renderPass, hoverOutlinePass, selectOutlinePass
 
@@ -14,367 +16,722 @@ let bodyGroup = new THREE.Group()
 let allMeshes = []
 let mainEdgesLine = null
 
-let selectedGid = null
-let hoveredGid  = null
+let selectedGroupIndex = null
+let hoveredGroupIndex = null
 
-let intersects = []
 const pointer = new THREE.Vector2()
+const viewer = document.getElementById('viewer')
 
-// UI / options
+// UX/Options
 let edgesShow = true
 let edgesColor = '#000000'
 let edgeThresholdDeg = 45
 
-// couleurs dynamiques
-let hoverColorHex  = '#2d6cff'  // par défaut bleu
-let selectColorHex = '#ff3b3b'  // par défaut rouge
+let hoverColorHex = '#2d6cff'
+let selectColorHex = '#ff3b3b'
+let baseColorHex = '#9ea3a8' // matière par défaut
 
-const BASE_COLOR = 0xb2b2b2
+let dirtyRender = true
+let lastPickAt = 0
+const PICK_INTERVAL = 80 // ms
+const POINTER_EPS = 0.002
 
-// Heuristique (ajuste selon l’échelle du JSON)
-const ANGLE_TOL = 2 * Math.PI / 180
-const DIST_TOL  = 0.05
-const VERT_TOL  = 1e-3
+// Unités panneau (mm|cm)
+let currentUnit = 'mm'
 
-const viewer = document.getElementById('viewer')
+// Matériaux partagés (0=base,1=hover,2=select)
+let materialBase = null
+let materialHover = null
+let materialSelect = null
 
-// ---------- Utils heuristique ----------
-function norm(v){ const n=v.length(); return n>0 ? v.multiplyScalar(1/n) : v }
-function angleBetween(n1, n2){ return Math.acos(THREE.MathUtils.clamp(n1.dot(n2), -1, 1)) }
-function planeFromTriangle(a,b,c){
-  const n = new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a))
-  norm(n)
-  const d = -n.dot(a)
-  return { n, d }
+// ---- Mesure (2 points) ----
+let measureMode = false
+let measurePoints = []
+let measurePreviewPoint = null
+let measureLine = null
+let measureMaterial = null
+let measureLabelEl = null
+const measureColorHex = '#7c3aed'
+
+// ---------- Helpers ----------
+function toPanelUnit(meters) {
+    return currentUnit === 'mm' ? meters * 1000 : meters * 100
 }
-function pointPlaneDistance(n, d, p){ return Math.abs(n.dot(p)+d) / n.length() }
-function vKey(x,y,z){ return `${(x/ VERT_TOL|0)},${(y/ VERT_TOL|0)},${(z/ VERT_TOL|0)}` }
 
-// Grouping heuristique
-function buildFaceGroups() {
-  const infos = allMeshes.map((mesh, idx) => {
-    const pos = mesh.geometry.getAttribute('position')
-    const a = new THREE.Vector3(pos.getX(0), pos.getY(0), pos.getZ(0))
-    const b = new THREE.Vector3(pos.getX(1), pos.getY(1), pos.getZ(1))
-    const c = new THREE.Vector3(pos.getX(2), pos.getY(2), pos.getZ(2))
-    const { n, d } = planeFromTriangle(a,b,c)
-    const keys = new Set()
-    for (let i=0;i<pos.count;i++){
-      keys.add(vKey(pos.getX(i), pos.getY(i), pos.getZ(i)))
+function worldToScreen(p) {
+    const v = p.clone().project(camera)
+    return {
+        x: (v.x * 0.5 + 0.5) * viewer.clientWidth,
+        y: (-v.y * 0.5 + 0.5) * viewer.clientHeight,
     }
-    return { n, d, keys, idx }
-  })
+}
 
-  const adj = Array(infos.length).fill(0).map(()=>[])
-  for (let i=0;i<infos.length;i++){
-    const ii = infos[i]
-    for (let j=i+1;j<infos.length;j++){
-      const jj = infos[j]
-      if (angleBetween(ii.n, jj.n) > ANGLE_TOL) continue
-      const sampleKey = jj.keys.values().next().value
-      const [sx,sy,sz] = sampleKey.split(',').map(k => parseInt(k)*VERT_TOL)
-      const p = new THREE.Vector3(sx,sy,sz)
-      if (pointPlaneDistance(ii.n, ii.d, p) > DIST_TOL) continue
-      let shared = 0
-      for (const k of jj.keys){ if (ii.keys.has(k)) { shared++; if (shared>=2) break } }
-      if (shared>=2){ adj[i].push(j); adj[j].push(i) }
+function ensureMeasureMaterial() {
+    if (!measureMaterial) {
+        measureMaterial = new THREE.LineBasicMaterial({color: measureColorHex})
     }
-  }
+}
 
-  const groupIdOf = Array(infos.length).fill(-1)
-  let gid = 0
-  for (let i=0;i<infos.length;i++){
-    if (groupIdOf[i] !== -1) continue
-    const q=[i]; groupIdOf[i]=gid
-    while(q.length){
-      const u=q.shift()
-      for(const v of adj[u]){
-        if (groupIdOf[v]===-1){ groupIdOf[v]=gid; q.push(v) }
-      }
+function ensureMeasureLabel() {
+    if (!measureLabelEl) {
+        measureLabelEl = document.createElement('div')
+        Object.assign(measureLabelEl.style, {
+            position: 'absolute',
+            padding: '2px 6px',
+            borderRadius: '6px',
+            background: 'rgba(124,58,237,.95)',
+            color: '#fff',
+            fontSize: '12px',
+            pointerEvents: 'none',
+            transform: 'translate(-50%, -100%)',
+            whiteSpace: 'nowrap',
+        })
+        viewer.appendChild(measureLabelEl)
     }
-    gid++
-  }
-
-  for (let i=0;i<infos.length;i++){
-    allMeshes[infos[i].idx].userData.groupId = groupIdOf[i]
-  }
 }
 
-// ---------- Init ----------
-function init() {
-  scene = new THREE.Scene()
-  scene.background = new THREE.Color(0xffffff)
-
-  const width = viewer.clientWidth
-  const height = viewer.clientHeight
-
-  camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 2000)
-  camera.position.set(0, 0, 5)
-
-  renderer = new THREE.WebGLRenderer({ antialias: true })
-  renderer.setPixelRatio(window.devicePixelRatio)
-  renderer.setSize(width, height)
-  viewer.appendChild(renderer.domElement)
-
-  controls = new OrbitControls(camera, renderer.domElement)
-  controls.enableDamping = true
-
-  raycaster = new THREE.Raycaster()
-
-  composer = new EffectComposer(renderer)
-  renderPass = new RenderPass(scene, camera)
-  composer.addPass(renderPass)
-
-  hoverOutlinePass = new OutlinePass(new THREE.Vector2(width, height), scene, camera)
-  hoverOutlinePass.edgeStrength = 2.0
-  hoverOutlinePass.edgeThickness = 1.0
-  hoverOutlinePass.pulsePeriod = 0
-  hoverOutlinePass.visibleEdgeColor.set(hoverColorHex)
-  hoverOutlinePass.hiddenEdgeColor.set(hoverColorHex)
-  composer.addPass(hoverOutlinePass)
-
-  selectOutlinePass = new OutlinePass(new THREE.Vector2(width, height), scene, camera)
-  selectOutlinePass.edgeStrength = 3.5
-  selectOutlinePass.edgeThickness = 2.0
-  selectOutlinePass.pulsePeriod = 0
-  selectOutlinePass.visibleEdgeColor.set(selectColorHex)
-  selectOutlinePass.hiddenEdgeColor.set(selectColorHex)
-  composer.addPass(selectOutlinePass)
-
-  window.addEventListener('resize', onWindowResize)
-  viewer.addEventListener('mousemove', onPointerMove)
-  viewer.addEventListener('mousedown', onMouseDown)
-  viewer.addEventListener('mouseup', onMouseUp)
-
-  animate()
+function setMeasureMode(enabled) {
+    enabled = !!enabled
+    if (enabled === measureMode) return
+    measureMode = enabled
+    if (!enabled) resetMeasure()
+    viewer.style.cursor = enabled ? 'crosshair' : 'default'
+    dirtyRender = true
 }
 
-// ---------- Render loop ----------
-function animate() {
-  requestAnimationFrame(animate)
-
-  raycaster.setFromCamera(pointer, camera)
-  intersects = raycaster.intersectObjects(bodyGroup.children, true)
-  const hit = intersects.length > 0 ? intersects[0].object : null
-  hoveredGid = hit ? (hit.userData.groupId ?? null) : null
-
-  for (const m of allMeshes) m.material.color.set(BASE_COLOR)
-
-  if (selectedGid !== null){
-    for (const m of allMeshes) if (m.userData.groupId === selectedGid) m.material.color.set(selectColorHex)
-  } else if (hoveredGid !== null){
-    for (const m of allMeshes) if (m.userData.groupId === hoveredGid) m.material.color.set(hoverColorHex)
-  }
-
-  const repHover  = (selectedGid===null && hoveredGid!==null) ? allMeshes.find(m => m.userData.groupId===hoveredGid) : null
-  const repSelect = (selectedGid!==null) ? allMeshes.find(m => m.userData.groupId===selectedGid) : null
-  selectOutlinePass.selectedObjects = repSelect ? [repSelect] : []
-  hoverOutlinePass .selectedObjects = (!repSelect && repHover) ? [repHover] : []
-
-  controls.update()
-  composer.render()
+function resetMeasure() {
+    measurePoints = []
+    measurePreviewPoint = null
+    if (measureLine) {
+        scene.remove(measureLine)
+        measureLine.geometry?.dispose()
+        measureLine = null
+    }
+    if (measureLabelEl?.parentElement) measureLabelEl.parentElement.removeChild(measureLabelEl)
+    measureLabelEl = null
+    dirtyRender = true
 }
 
-// ---------- Resize ----------
-function onWindowResize() {
-  const width = viewer.clientWidth
-  const height = viewer.clientHeight
-  camera.aspect = width / height
-  camera.updateProjectionMatrix()
-  renderer.setSize(width, height)
-  composer.setSize(width, height)
-  hoverOutlinePass.setSize(width, height)
-  selectOutlinePass.setSize(width, height)
+function updateMeasureLabel(p1, p2) {
+    if (!p1 || !p2) {
+        if (measureLabelEl) measureLabelEl.style.display = 'none'
+        return
+    }
+    ensureMeasureLabel()
+    const mid = p1.clone().add(p2).multiplyScalar(0.5)
+    const screen = worldToScreen(mid)
+    const dist = toPanelUnit(p1.distanceTo(p2))
+    measureLabelEl.textContent = `${dist.toFixed(2)} ${currentUnit}`
+    measureLabelEl.style.left = `${screen.x}px`
+    measureLabelEl.style.top = `${screen.y}px`
+    measureLabelEl.style.display = 'block'
 }
 
-// ---------- Pointer / Click ----------
-function onPointerMove(e) {
-  const rect = viewer.getBoundingClientRect()
-  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
-}
-let startX, startY
-function onMouseDown(e){ startX = e.pageX; startY = e.pageY }
-function onMouseUp(e){
-  const delta = 6
-  const isClick = Math.abs(e.pageX - startX) < delta && Math.abs(e.pageY - startY) < delta
-  if (!isClick) return
-
-  raycaster.setFromCamera(pointer, camera)
-  const hits = raycaster.intersectObjects(bodyGroup.children, true)
-
-  if (hits.length === 0){
-    selectedGid = null
-    Livewire.dispatch('chatObjectClick', { objectId: null })
-    return
-  }
-
-  const gid = hits[0].object.userData.groupId ?? null
-  selectedGid = gid
-  Livewire.dispatch('chatObjectClick', { objectId: gid })
-}
-
-// ---------- Fit caméra + pivot ----------
-function fitCameraToObject(object, offset = 2) {
-  const box = new THREE.Box3().setFromObject(object)
-  const size = new THREE.Vector3()
-  const center = new THREE.Vector3()
-  box.getSize(size)
-  box.getCenter(center)
-
-  const maxDim = Math.max(size.x, size.y, size.z)
-  const fov = THREE.MathUtils.degToRad(camera.fov)
-  const cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * offset
-
-  camera.position.set(center.x, center.y, cameraZ)
-  camera.lookAt(center)
-  camera.far = cameraZ * 4
-  camera.updateProjectionMatrix()
-
-  controls.target.copy(center)
-  controls.update()
-}
-
-// ---------- Arêtes principales ----------
-function buildPrincipalEdges() {
-  if (mainEdgesLine) {
-    scene.remove(mainEdgesLine)
-    mainEdgesLine.geometry.dispose()
-    mainEdgesLine.material.dispose()
-    mainEdgesLine = null
-  }
-  if (allMeshes.length === 0) return
-
-  const geoms = []
-  for (const m of allMeshes) {
-    const g = m.geometry.clone()
-    if (!g.attributes.normal || g.attributes.normal.count === 0) g.computeVertexNormals()
-    geoms.push(g)
-  }
-  const merged = mergeGeometries(geoms, false)
-  if (!merged.attributes.normal || merged.attributes.normal.count === 0) merged.computeVertexNormals()
-
-  const edgesGeo = new THREE.EdgesGeometry(merged, edgeThresholdDeg)
-  const edgesMat = new THREE.LineBasicMaterial({ color: edgesColor })
-  mainEdgesLine = new THREE.LineSegments(edgesGeo, edgesMat)
-  mainEdgesLine.visible = edgesShow
-  scene.add(mainEdgesLine)
-}
-
-// ---------- Chargement JSON ----------
-async function loadJsonEdges(jsonPath) {
-  const res = await fetch(jsonPath)
-  const json = await res.json()
-
-  scene.remove(bodyGroup)
-  for (const m of allMeshes) { m.geometry.dispose(); m.material.dispose() }
-  if (mainEdgesLine) {
-    scene.remove(mainEdgesLine)
-    mainEdgesLine.geometry.dispose()
-    mainEdgesLine.material.dispose()
-    mainEdgesLine = null
-  }
-  selectedGid = null
-  hoveredGid  = null
-  allMeshes = []
-  bodyGroup = new THREE.Group()
-
-  json.faces?.bodies?.forEach(body => {
-    body.faces?.forEach(face => {
-      face.facets?.forEach(facet => {
-        const tri = facet.vertices ?? []
-        if (tri.length < 3) return
-
-        const verts = []
-        tri.forEach(v => verts.push(v.x, v.y, v.z))
-
-        const geom = new THREE.BufferGeometry()
-        geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
-
-        if (facet.normal){
-          const n = facet.normal
-          const triCount = Math.floor(tri.length / 3)
-          const norms = []
-          for (let i=0;i<triCount;i++) norms.push(n.x, n.y, n.z)
-          if (norms.length === verts.length) {
-            geom.setAttribute('normal', new THREE.Float32BufferAttribute(norms, 3))
-          } else {
-            geom.computeVertexNormals()
-          }
-        } else {
-          geom.computeVertexNormals()
+function updateMeasureVisual() {
+    if (!measureMode) return
+    const p1 = measurePoints[0] || null
+    const p2 = (measurePoints.length >= 2) ? measurePoints[1] : (measurePreviewPoint || null)
+    if (!p1 || !p2) {
+        updateMeasureLabel(null, null)
+        if (measureLine) {
+            scene.remove(measureLine)
+            measureLine.geometry?.dispose()
+            measureLine = null
         }
-
-        const mat = new THREE.MeshBasicMaterial({ color: BASE_COLOR })
-        const mesh = new THREE.Mesh(geom, mat)
-        bodyGroup.add(mesh)
-        allMeshes.push(mesh)
-      })
-    })
-  })
-
-  scene.add(bodyGroup)
-  fitCameraToObject(bodyGroup, 2)
-
-  buildFaceGroups()
-  buildPrincipalEdges()
+        return
+    }
+    ensureMeasureMaterial()
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.Float32BufferAttribute([p1.x, p1.y, p1.z, p2.x, p2.y, p2.z], 3))
+    if (!measureLine) {
+        measureLine = new THREE.Line(geo, measureMaterial)
+        scene.add(measureLine)
+    } else {
+        measureLine.geometry.dispose()
+        measureLine.geometry = geo
+    }
+    updateMeasureLabel(p1, p2)
+    dirtyRender = true
 }
 
-// recentrer
-window.addEventListener('viewer-fit', () => {
-  if (bodyGroup) fitCameraToObject(bodyGroup, 2)
-})
+// ---------- Scene ----------
+function init() {
+    scene = new THREE.Scene()
+    scene.background = new THREE.Color(0xffffff)
 
-// snapshot
-window.addEventListener('viewer-snapshot', () => {
-  // simple snapshot base64 (tu peux envoyer à Livewire si besoin)
-  const dataURL = renderer.domElement.toDataURL('image/png')
-  // exemple: ouvrir dans un nouvel onglet
-  const w = window.open()
-  w.document.write('<iframe src="' + dataURL + '" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>')
-})
+    const w = viewer.clientWidth
+    const h = viewer.clientHeight
 
-// ---------- Livewire ----------
-Livewire.on('jsonLoaded', () => {
-  // OBJ ignoré volontairement
-})
+    camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 4000)
+    camera.position.set(0, 0, 5)
 
-Livewire.on('jsonEdgesLoaded', ({ jsonPath }) => {
-  if (jsonPath) loadJsonEdges(jsonPath)
-})
+    renderer = new THREE.WebGLRenderer({antialias: true, powerPreference: 'high-performance'})
+    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setSize(w, h)
+    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.8
+    renderer.setClearColor(0xf5f5f7, 1)
+    viewer.appendChild(renderer.domElement)
 
-Livewire.on('toggleShowEdges', ({ show, threshold = null }) => {
-  edgesShow = !!show
-  if (threshold !== null && typeof threshold === 'number') {
-    edgeThresholdDeg = threshold
+    // Env lighting (propre/soft) + ambient
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+
+    const amb = new THREE.AmbientLight(0xffffff, 0.8)
+    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    key.position.set(2.5, 3.0, 4.0)
+    const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+    fill.position.set(-3.0, 1.5, 2.0)
+    const rim = new THREE.DirectionalLight(0xffffff, 0.5);
+    rim.position.set(-2.0, 3.0, -3.0)
+    scene.add(amb, key, fill, rim)
+
+    controls = new OrbitControls(camera, renderer.domElement)
+    controls.enableDamping = true
+    controls.addEventListener('change', () => {
+        dirtyRender = true;
+        if (measureMode) updateMeasureVisual()
+    })
+
+    raycaster = new THREE.Raycaster()
+
+    composer = new EffectComposer(renderer)
+    renderPass = new RenderPass(scene, camera)
+    composer.addPass(renderPass)
+
+    hoverOutlinePass = new OutlinePass(new THREE.Vector2(w, h), scene, camera)
+    hoverOutlinePass.edgeStrength = 2.0
+    hoverOutlinePass.edgeThickness = 1.0
+    hoverOutlinePass.pulsePeriod = 0
+    hoverOutlinePass.visibleEdgeColor.set(hoverColorHex)
+    hoverOutlinePass.hiddenEdgeColor.set(hoverColorHex)
+    composer.addPass(hoverOutlinePass)
+
+    selectOutlinePass = new OutlinePass(new THREE.Vector2(w, h), scene, camera)
+    selectOutlinePass.edgeStrength = 3.5
+    selectOutlinePass.edgeThickness = 2.0
+    selectOutlinePass.pulsePeriod = 0
+    selectOutlinePass.visibleEdgeColor.set(selectColorHex)
+    selectOutlinePass.hiddenEdgeColor.set(selectColorHex)
+    composer.addPass(selectOutlinePass)
+
+    window.addEventListener('resize', onResize)
+    viewer.addEventListener('mousemove', onPointerMove)
+    viewer.addEventListener('mousedown', onMouseDown)
+    viewer.addEventListener('mouseup', onMouseUp)
+
+    animate()
+}
+
+// ---------- Fit / Edges ----------
+function fitCameraToObject(object, offset = 2) {
+    const box = new THREE.Box3().setFromObject(object)
+    const size = new THREE.Vector3()
+    const center = new THREE.Vector3()
+    box.getSize(size)
+    box.getCenter(center)
+
+    const maxDim = Math.max(size.x, size.y, size.z)
+    const fov = THREE.MathUtils.degToRad(camera.fov)
+    const camZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * offset
+
+    camera.position.set(center.x, center.y, camZ)
+    camera.lookAt(center)
+    camera.far = camZ * 4
+    camera.updateProjectionMatrix()
+    controls.target.copy(center)
+    controls.update()
+}
+
+function buildPrincipalEdges() {
+    if (mainEdgesLine) {
+        scene.remove(mainEdgesLine)
+        mainEdgesLine.geometry?.dispose()
+        mainEdgesLine.material?.dispose()
+        mainEdgesLine = null
+    }
+    if (allMeshes.length === 0) return
+
+    let merged
+    if (allMeshes.length === 1) {
+        merged = allMeshes[0].geometry.clone()
+    } else {
+        merged = mergeGeometries(allMeshes.map(m => m.geometry.clone()), false)
+    }
+    const welded = mergeVertices(merged, 1e-3)
+    if (!welded.attributes.normal?.count) welded.computeVertexNormals()
+
+    const edgesGeo = new THREE.EdgesGeometry(welded, edgeThresholdDeg)
+    const edgesMat = new THREE.LineBasicMaterial({color: edgesColor})
+    mainEdgesLine = new THREE.LineSegments(edgesGeo, edgesMat)
+    mainEdgesLine.visible = edgesShow
+    scene.add(mainEdgesLine)
+    dirtyRender = true
+}
+
+// ---------- Model stats / selection ----------
+function computeAndDispatchModelStats(meshOverride = null) {
+    const mesh = meshOverride || allMeshes[0]
+    if (!mesh?.geometry) return
+    const g = mesh.geometry
+    if (!g.boundingBox) g.computeBoundingBox()
+    const size = new THREE.Vector3()
+    g.boundingBox.getSize(size)
+    const maxmm = Math.max(size.x, size.y, size.z) * 1000
+    currentUnit = (maxmm >= 1000) ? 'cm' : 'mm'
+    const pos = g.getAttribute('position')
+    const vertices = pos ? pos.count : 0
+    const triangles = g.getIndex() ? (g.getIndex().count / 3) : Math.floor((pos ? pos.count : 0) / 3)
+    const detail = {
+        vertices,
+        triangles,
+        sizeX: toPanelUnit(size.x),
+        sizeY: toPanelUnit(size.y),
+        sizeZ: toPanelUnit(size.z),
+        unit: currentUnit,
+    }
+    window.cadLastStats = detail
+    window.dispatchEvent(new CustomEvent('cad-model-stats', {detail}))
+}
+
+// ---------- Map vendor face ids ----------
+function attachOnshapeFaceIds(mesh, json) {
+    try {
+        const bodies = json?.faces?.bodies
+        if (!mesh || !Array.isArray(mesh.geometry?.groups) || !Array.isArray(bodies) || bodies.length === 0) return
+        const ids = []
+        for (const b of bodies) {
+            if (Array.isArray(b.faces)) for (const f of b.faces) if (f && typeof f.id !== 'undefined') ids.push(f.id)
+        }
+        if (!ids.length) return
+        const faceGroups = mesh.userData.faceGroups
+        if (!Array.isArray(faceGroups)) return
+        const n = Math.min(faceGroups.length, ids.length)
+        for (let i = 0; i < n; i++) if (faceGroups[i]) faceGroups[i].id = ids[i]
+        mesh.userData.realFaceIdsByGroup = ids
+    } catch (e) {
+        console.warn('attachOnshapeFaceIds failed:', e)
+    }
+}
+
+// ---------- Load JSON (tessellated) ----------
+async function loadJsonEdges(jsonPath) {
+    resetMeasure()
+    const res = await fetch(jsonPath)
+    const json = await res.json()
+
+    // cleanup old
+    scene.remove(bodyGroup)
+    allMeshes.forEach(m => {
+        m.geometry?.dispose();
+        Array.isArray(m.material) ? m.material.forEach(mm => mm?.dispose()) : m.material?.dispose()
+    })
+    if (mainEdgesLine) {
+        scene.remove(mainEdgesLine)
+        mainEdgesLine.geometry?.dispose();
+        mainEdgesLine.material?.dispose()
+        mainEdgesLine = null
+    }
+    allMeshes = []
+    bodyGroup = new THREE.Group()
+    selectedGroupIndex = null
+    hoveredGroupIndex = null
+
+    const loader = new JsonTessellatedLoader({
+        units: 'mm',
+        recenter: true,
+        autoscale: true,
+        fixWinding: true,
+        mergeTolerance: 1e-4,
+    })
+    const {mesh} = loader.parse(json)
+
+    mesh.userData.areaByGroup = new Map()
+
+    // Matériaux (PBR) lumineux & nets
+    materialBase = new THREE.MeshPhysicalMaterial({
+        color: baseColorHex,
+        metalness: 0.2,
+        roughness: 0.35,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        envMapIntensity: 1.4,
+        side: THREE.DoubleSide,
+    })
+    materialHover = materialBase.clone();
+    materialHover.color = new THREE.Color(hoverColorHex)
+    materialSelect = materialBase.clone();
+    materialSelect.color = new THREE.Color(selectColorHex)
+
+    mesh.material = [materialBase, materialHover, materialSelect]
+    if (Array.isArray(mesh.geometry.groups)) {
+        for (const g of mesh.geometry.groups) g.materialIndex = 0
+    }
+
+    // Face ids onshape → group meta
+    attachOnshapeFaceIds(mesh, json)
+
+    bodyGroup.add(mesh)
+    allMeshes = [mesh]
+    scene.add(bodyGroup)
+
+    fitCameraToObject(bodyGroup, 2)
+    computeAndDispatchModelStats(mesh)
     buildPrincipalEdges()
-  }
-  if (mainEdgesLine) mainEdgesLine.visible = edgesShow
+    dirtyRender = true
+}
+
+// ---------- Resize / Render / Picking ----------
+function onResize() {
+    const w = viewer.clientWidth, h = viewer.clientHeight
+    camera.aspect = w / h
+    camera.updateProjectionMatrix()
+    renderer.setSize(w, h)
+    composer.setSize(w, h)
+    hoverOutlinePass.setSize(w, h)
+    selectOutlinePass.setSize(w, h)
+    if (measureMode) updateMeasureVisual()
+    dirtyRender = true
+}
+
+let startX, startY
+
+function onMouseDown(e) {
+    startX = e.pageX;
+    startY = e.pageY
+}
+
+function onPointerMove(e) {
+    const rect = viewer.getBoundingClientRect()
+    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1
+    const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1
+    if (Math.abs(nx - pointer.x) + Math.abs(ny - pointer.y) > POINTER_EPS) {
+        pointer.x = nx;
+        pointer.y = ny
+        dirtyRender = true
+        if (measureMode && measurePoints.length === 1) {
+            raycaster.setFromCamera(pointer, camera)
+            const target = allMeshes[0] || bodyGroup
+            const hits = raycaster.intersectObject(target, true)
+            measurePreviewPoint = (hits.length > 0) ? hits[0].point.clone() : null
+            updateMeasureVisual()
+        }
+    }
+}
+
+function onMouseUp(e) {
+    const delta = 6
+    const isClick = Math.abs(e.pageX - startX) < delta && Math.abs(e.pageY - startY) < delta
+    if (!isClick) return
+
+    raycaster.setFromCamera(pointer, camera)
+    const target = allMeshes[0] || bodyGroup
+    const hits = raycaster.intersectObject(target, true)
+
+    // Mode mesure: capter points puis sortir
+    if (measureMode) {
+        if (hits.length > 0) {
+            const p = hits[0].point.clone()
+            if (measurePoints.length < 2) {
+                measurePoints.push(p)
+            } else {
+                measurePoints = [p]
+            }
+            updateMeasureVisual()
+        }
+        dirtyRender = true
+        return
+    }
+
+    if (hits.length === 0) {
+        selectedGroupIndex = null
+        Livewire.dispatch('chatObjectClick', {objectId: null})
+        Livewire.dispatch('chatObjectClickReal', {objectId: null})
+        dispatchSelectionDetails(null)
+        dirtyRender = true
+        return
+    }
+
+    const h = hits[0]
+    const mesh = allMeshes[0] || h.object
+    let groupIdx = null
+    if (mesh?.geometry && Array.isArray(mesh.geometry.groups) && h.faceIndex != null) {
+        const groups = mesh.geometry.groups
+        const g = groups.find(g => h.faceIndex >= (g.start / 3) && h.faceIndex < ((g.start + g.count) / 3))
+        if (g) groupIdx = groups.indexOf(g)
+    }
+
+    selectedGroupIndex = groupIdx
+    const faceId = (mesh?.userData?.faceGroups?.[groupIdx]?.id ?? groupIdx)
+    const realId = (mesh?.userData?.realFaceIdsByGroup?.[groupIdx] ?? faceId)
+
+    Livewire.dispatch('chatObjectClick', {objectId: faceId})
+    Livewire.dispatch('chatObjectClickReal', {objectId: realId})
+    dispatchSelectionDetails(groupIdx)
+    dirtyRender = true
+}
+
+function animate() {
+    requestAnimationFrame(animate)
+
+    const now = performance.now()
+    const doPick = dirtyRender && (now - lastPickAt > PICK_INTERVAL)
+    let hit = null
+
+    if (doPick) {
+        lastPickAt = now
+        raycaster.setFromCamera(pointer, camera)
+        const target = allMeshes[0] || bodyGroup
+        const inter = raycaster.intersectObject(target, true)
+        hit = inter[0] || null
+
+        let newHoveredGroupIndex = null
+        if (hit?.object?.geometry && Array.isArray(hit.object.geometry.groups) && hit.faceIndex != null) {
+            const groups = hit.object.geometry.groups
+            const g = groups.find(g => hit.faceIndex >= (g.start / 3) && hit.faceIndex < ((g.start + g.count) / 3))
+            if (g) newHoveredGroupIndex = groups.indexOf(g)
+        }
+        if (newHoveredGroupIndex !== hoveredGroupIndex) {
+            hoveredGroupIndex = newHoveredGroupIndex
+            dirtyRender = true
+        }
+    }
+
+    // Affectation des matériaux par groupe (0 base, 1 hover, 2 select)
+    const mesh = allMeshes[0] || null
+    if (mesh?.geometry && Array.isArray(mesh.geometry.groups)) {
+        const groups = mesh.geometry.groups
+        // reset materialIndex sur groupes touchés
+        for (const g of groups) g.materialIndex = 0
+        if (selectedGroupIndex != null && groups[selectedGroupIndex]) groups[selectedGroupIndex].materialIndex = 2
+        else if (hoveredGroupIndex != null && groups[hoveredGroupIndex]) groups[hoveredGroupIndex].materialIndex = 1
+        mesh.material = [materialBase, materialHover, materialSelect]
+        mesh.material.needsUpdate = true
+
+        // Outline
+        selectOutlinePass.selectedObjects = (selectedGroupIndex != null) ? [mesh] : []
+        hoverOutlinePass.selectedObjects = (selectedGroupIndex == null && hoveredGroupIndex != null) ? [mesh] : []
+    }
+
+    controls.update()
+    if (dirtyRender) {
+        composer.render()
+        dirtyRender = false
+    }
+}
+
+// Aire d'un groupe de triangles en m² (somme des |(b-a)x(c-a)| / 2)
+function computeGroupAreaM2(geometry, group, cache) {
+    if (!geometry || !group) return 0
+    // cache par index de groupe pour éviter de recalculer
+    const gid = group.__id ?? `${group.start}:${group.count}`
+    if (cache && typeof cache.get === 'function' && cache.has(gid)) return cache.get(gid)
+
+    const index = geometry.getIndex()
+    const position = geometry.getAttribute('position')
+    if (!index || !position) return 0
+
+    const start = group.start
+    const end = start + group.count
+
+    const vA = new THREE.Vector3()
+    const vB = new THREE.Vector3()
+    const vC = new THREE.Vector3()
+    const ab = new THREE.Vector3()
+    const ac = new THREE.Vector3()
+
+    let area = 0
+    for (let i = start; i < end; i += 3) {
+        const a = index.getX(i)
+        const b = index.getX(i + 1)
+        const c = index.getX(i + 2)
+
+        vA.fromBufferAttribute(position, a)
+        vB.fromBufferAttribute(position, b)
+        vC.fromBufferAttribute(position, c)
+
+        ab.subVectors(vB, vA)
+        ac.subVectors(vC, vA)
+
+        // aire du triangle = 0.5 * |ab x ac|
+        area += ab.cross(ac).length() * 0.5
+    }
+
+    if (cache && typeof cache.set === 'function') cache.set(gid, area)
+    return area
+}
+
+// Convertit une aire m² -> unité courante (mm² / cm²)
+function areaToPanelUnit(m2, unit) {
+    if (unit === 'cm') return m2 * 1e4  // 1 m² = 10 000 cm²
+    return m2 * 1e6                     // 1 m² = 1 000 000 mm²
+}
+
+function dispatchSelectionDetails(groupIdx) {
+    const mesh = allMeshes[0]
+    if (!mesh?.geometry || groupIdx == null) {
+        window.dispatchEvent(new CustomEvent('cad-selection', {detail: null}))
+        return
+    }
+    const g = mesh.geometry
+    const idx = g.getIndex()
+    const pos = g.getAttribute('position')
+    const fg = mesh.userData.faceGroups?.[groupIdx]
+    if (!idx || !pos || !fg) {
+        window.dispatchEvent(new CustomEvent('cad-selection', {detail: null}))
+        return
+    }
+    const start = Math.max(0, Math.min(idx.count, fg.start))
+    const count = Math.max(0, Math.min(idx.count - start, fg.count))
+
+    // centroïde approx. (moyenne des sommets uniques)
+    const uniq = new Set()
+    let sx = 0, sy = 0, sz = 0
+    for (let i = start; i < start + count; i++) {
+        const vi = idx.getX(i)
+        if (!uniq.has(vi)) {
+            uniq.add(vi)
+            sx += pos.getX(vi)
+            sy += pos.getY(vi)
+            sz += pos.getZ(vi)
+        }
+    }
+    const vc = uniq.size || 1
+    const centroid = {x: toPanelUnit(sx / vc), y: toPanelUnit(sy / vc), z: toPanelUnit(sz / vc)}
+
+    // --- NOUVEAU : aire en m² -> unité panneau (mm²/cm²) + cache ---
+    const areaM2 = computeGroupAreaM2(g, fg, mesh.userData.areaByGroup)
+    const areaUnit = areaToPanelUnit(areaM2, currentUnit)
+    const realId = (mesh.userData?.realFaceIdsByGroup && mesh.userData.realFaceIdsByGroup[groupIdx])
+        ? mesh.userData.realFaceIdsByGroup[groupIdx]
+        : (fg.id ?? null)
+
+    const detail = {
+        id: fg.id ?? groupIdx,
+        realFaceId: realId,
+        centroid,
+        vertexCount: vc,
+        triangles: Math.floor(count / 3),
+        area: +areaUnit.toFixed(2),           // ← aire convertie et arrondie
+        unit: currentUnit,                    // ← 'mm' ou 'cm' (donc mm² / cm²)
+    }
+
+    window.dispatchEvent(new CustomEvent('cad-selection', {detail}))
+}
+
+// ---------- Livewire bindings ----------
+Livewire.on('jsonEdgesLoaded', ({jsonPath}) => {
+    if (jsonPath) loadJsonEdges(jsonPath)
 })
 
-Livewire.on('updatedEdgeColor', ({ color }) => {
-  if (typeof color === 'string' && color.length) {
-    edgesColor = color
-    if (mainEdgesLine) mainEdgesLine.material.color.set(color)
-  }
+Livewire.on('toggleShowEdges', ({show, threshold = null}) => {
+    edgesShow = !!show
+    if (typeof threshold === 'number') {
+        edgeThresholdDeg = threshold
+        buildPrincipalEdges()
+    }
+    if (mainEdgesLine) mainEdgesLine.visible = edgesShow
+    dirtyRender = true
 })
 
-// === Nouveaux events ===
-Livewire.on('updatedHoverColor', ({ color }) => {
-  if (typeof color === 'string' && color.length) {
-    hoverColorHex = color
-    hoverOutlinePass.visibleEdgeColor.set(color)
-    hoverOutlinePass.hiddenEdgeColor.set(color)
-  }
+Livewire.on('updatedEdgeColor', ({color}) => {
+    if (typeof color === 'string' && color.length) {
+        edgesColor = color
+        if (mainEdgesLine) mainEdgesLine.material.color.set(color)
+        dirtyRender = true
+    }
 })
 
-Livewire.on('updatedSelectColor', ({ color }) => {
-  if (typeof color === 'string' && color.length) {
-    selectColorHex = color
-    selectOutlinePass.visibleEdgeColor.set(color)
-    selectOutlinePass.hiddenEdgeColor.set(color)
-  }
+Livewire.on('updatedHoverColor', ({color}) => {
+    if (typeof color === 'string' && color.length) {
+        hoverColorHex = color
+        hoverOutlinePass.visibleEdgeColor.set(color)
+        hoverOutlinePass.hiddenEdgeColor.set(color)
+        // aussi appliquer au matériau hover
+        if (materialHover) {
+            materialHover.color.set(color);
+            materialHover.needsUpdate = true
+        }
+        dirtyRender = true
+    }
 })
 
-// ---------- Go ----------
+Livewire.on('updatedSelectColor', ({color}) => {
+    if (typeof color === 'string' && color.length) {
+        selectColorHex = color
+        selectOutlinePass.visibleEdgeColor.set(color)
+        selectOutlinePass.hiddenEdgeColor.set(color)
+        if (materialSelect) {
+            materialSelect.color.set(color);
+            materialSelect.needsUpdate = true
+        }
+        dirtyRender = true
+    }
+})
+
+Livewire.on('updatedMaterialColor', ({color}) => {
+    baseColorHex = color
+    if (materialBase) {
+        materialBase.color.set(color)
+        materialBase.needsUpdate = true
+    }
+    dirtyRender = true
+})
+
+Livewire.on('updatedMaterialPreset', ({color, metalness, roughness}) => {
+    if (materialBase) {
+        if (typeof color === 'string' && color.length) materialBase.color.set(color)
+        if (Number.isFinite(metalness)) materialBase.metalness = Number(metalness)
+        if (Number.isFinite(roughness)) materialBase.roughness = Number(roughness)
+        // sync aux autres
+        if (materialHover) {
+            materialHover.metalness = materialBase.metalness;
+            materialHover.roughness = materialBase.roughness
+        }
+        if (materialSelect) {
+            materialSelect.metalness = materialBase.metalness;
+            materialSelect.roughness = materialBase.roughness
+        }
+    }
+    dirtyRender = true
+})
+
+Livewire.on('toggleWireframe', ({enabled}) => {
+    const m = allMeshes[0]
+    if (m) {
+        const mats = Array.isArray(m.material) ? m.material : [m.material]
+        mats.forEach(mat => {
+            if (mat) mat.wireframe = !!enabled
+        })
+        dirtyRender = true
+    }
+})
+
+Livewire.on('toggleMeasureMode', ({enabled}) => setMeasureMode(!!enabled))
+Livewire.on('resetMeasure', resetMeasure)
+
+window.addEventListener('viewer-fit', () => {
+    if (bodyGroup) fitCameraToObject(bodyGroup, 2);
+    dirtyRender = true
+})
+window.addEventListener('viewer-repair-normals', () => {
+    repairNormals(1e-4);
+    dirtyRender = true
+})
+
+// ---------- Normals repair ----------
+function repairNormals(threshold = 1e-3) {
+    for (const m of allMeshes) {
+        const g = m.geometry.clone()
+        let welded = mergeVertices(g, threshold)
+        welded.computeVertexNormals()
+        m.geometry.dispose()
+        m.geometry = welded
+    }
+    buildPrincipalEdges()
+    dirtyRender = true
+}
+
+// ---------- Boot ----------
 init()

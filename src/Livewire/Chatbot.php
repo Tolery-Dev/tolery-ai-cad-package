@@ -199,59 +199,67 @@ class Chatbot extends Component
     }
 
     #[On('chatObjectClick')]
-    public function handleObjectClick(?string $objectId = null, ?AICADClient $api = null): void
+    public function handleObjectClick(string|int|null $objectId = null, ?AICADClient $api = null): void
     {
-        if (! $objectId) {
-            $this->appendAssistant('Aucune face sélectionnée.');
-
-            return;
+        // Comportement attendu: ne pas envoyer automatiquement.
+        // Renseigner simplement l'ID de la pièce/face dans la zone de texte et focus l'input.
+        if ($objectId === null || $objectId === '') {
+            return; // Pas de sélection -> ne rien faire
         }
 
-        $this->storeMessage('user', "[Sélection de face] {$objectId}");
-        $this->messages[] = [
-            'role' => 'user',
-            'content' => "[Sélection de face] {$objectId}",
-            'created_at' => now()->toIso8601String(),
-        ];
-        if (! $api) {
-            return;
-        }
+        if ($api) {
+            $this->storeMessage('user', "[Sélection de face] {$objectId}");
+            $this->messages[] = [
+                'role' => 'user',
+                'content' => "[Sélection de face] {$objectId}",
+                'created_at' => now()->toIso8601String(),
+            ];
 
-        $this->isProcessing = true;
-        $mAsst = $this->storeMessage('assistant', '');
-        $this->messages[] = [
-            'role' => 'assistant',
-            'content' => '',
-            'created_at' => now()->toIso8601String(),
-        ];
-        $this->streamingIndex = array_key_last($this->messages);
-        $this->lastRefreshAt = microtime(true);
+            $this->isProcessing = true;
+            $mAsst = $this->storeMessage('assistant', '');
+            $this->messages[] = [
+                'role' => 'assistant',
+                'content' => '',
+                'created_at' => now()->toIso8601String(),
+            ];
+            $this->streamingIndex = array_key_last($this->messages);
+            $this->lastRefreshAt = microtime(true);
 
-        try {
-            $apiMessages = $this->buildMessagesForApi(prefixAction: "ACTION: select_face id={$objectId}");
-            foreach ($api->chatToCadStream($apiMessages, (string) $this->chat->id, $this->httpTimeoutSec) as $ev) {
-                $type = $ev['type'] ?? null;
-                if ($type === 'delta' && ($chunk = $ev['data'] ?? '') !== '') {
-                    $this->appendAssistantDelta($chunk, $mAsst);
-                }
-                if ($type === 'result') {
-                    $final = (string) ($ev['assistant_message'] ?? '');
-                    if ($final !== '') {
-                        $this->setAssistantFull($final, $mAsst);
+            try {
+                $apiMessages = $this->buildMessagesForApi(prefixAction: "ACTION: select_face id={$objectId}");
+                foreach ($api->chatToCadStream($apiMessages, (string) $this->chat->id, $this->httpTimeoutSec) as $ev) {
+                    $type = $ev['type'] ?? null;
+                    if ($type === 'delta' && ($chunk = $ev['data'] ?? '') !== '') {
+                        $this->appendAssistantDelta($chunk, $mAsst);
                     }
-                    if ($url = ($ev['json_edges_url'] ?? null)) {
-                        $this->dispatch('jsonEdgesLoaded', jsonPath: $url);
-                        $mAsst->ai_json_edge_path = $url;
-                        $mAsst->save();
+                    if ($type === 'result') {
+                        $final = (string) ($ev['assistant_message'] ?? '');
+                        if ($final !== '') {
+                            $this->setAssistantFull($final, $mAsst);
+                        }
+                        if ($url = ($ev['json_edges_url'] ?? null)) {
+                            $this->dispatch('jsonEdgesLoaded', jsonPath: $url);
+                            $mAsst->ai_json_edge_path = $url;
+                            $mAsst->save();
+                        }
+                    }
+                    if ($type === 'json_edges' && is_string($ev['url'] ?? null)) {
+                        $this->dispatch('jsonEdgesLoaded', jsonPath: $ev['url']);
                     }
                 }
-                if ($type === 'json_edges' && is_string($ev['url'] ?? null)) {
-                    $this->dispatch('jsonEdgesLoaded', jsonPath: $ev['url']);
-                }
+            } finally {
+                $this->isProcessing = false;
+                $this->dispatch('tolery-chat:append');
             }
-        } finally {
-            $this->isProcessing = false;
-            $this->dispatch('tolery-chat:append');
+        } else {
+            $idText = (string) $objectId;
+            // Si l'utilisateur a déjà commencé à écrire, on ajoute l'ID à la suite.
+            $this->message = trim($this->message) === ''
+                ? $idText
+                : trim($this->message . ' ' . $idText);
+
+            // Demander au front de focus le champ de saisie
+            $this->dispatch('tolery-chat:focus');
         }
     }
 

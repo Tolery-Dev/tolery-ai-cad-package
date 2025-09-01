@@ -56,7 +56,9 @@
 
                     {{-- Composer --}}
                     <footer class="border-t border-gray-100 dark:border-zinc-800 p-3">
-                        <form wire:submit.prevent="send" class="flex flex-col gap-2">
+                        <form wire:submit.prevent="send"
+                              x-on:tolery-chat:focus.window="document.getElementById('message')?.focus(); document.getElementById('message')?.select()"
+                              class="flex flex-col gap-2">
                             <div>
                                 <label for="message" class="sr-only">Votre message</label>
                                 <flux:textarea
@@ -88,7 +90,10 @@
                 <div
                     class="relative h-full rounded-xl border border-gray-200 dark:border-zinc-800 bg-white overflow-hidden shadow-sm">
                     {{-- Le canvas/WebGL prend 100% de la carte blanche --}}
-                    <div id="viewer" class="absolute inset-0 bg-white dark:bg-zinc-900"></div>
+                   <div id="viewer"
+                        wire:ignore
+                        class="h-full w-full relative rounded-2xl bg-white/70 shadow-inner">
+                    </div>
                 </div>
             </div>
         </section>
