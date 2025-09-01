@@ -256,7 +256,7 @@ class Chatbot extends Component
             // Si l'utilisateur a déjà commencé à écrire, on ajoute l'ID à la suite.
             $this->message = trim($this->message) === ''
                 ? $idText
-                : trim($this->message . ' ' . $idText);
+                : trim($this->message.' '.$idText);
 
             // Demander au front de focus le champ de saisie
             $this->dispatch('tolery-chat:focus');
