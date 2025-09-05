@@ -234,6 +234,7 @@
                 measureEnabled: false,
                 materialPreset: 'acier',
 
+                partName: '',
                 // actions
                 emitPartName() {
                     // si tu veux persister : Livewire.dispatch('updatedPartName', { name: this.partName })

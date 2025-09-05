@@ -16,41 +16,28 @@ readonly class AICADClient
         private ?string $apiKey = null,
     ) {}
 
-    /** POST /cad/chat_to_cad — one-shot (fallback non-stream) */
-    public function chatToCad(array $messages, ?string $projectId = null, int $timeoutSec = 60): array
-    {
-        $res = $this->http($timeoutSec)->post(
-            $this->endpoint('/cad/chat_to_cad'),
-            [
-                'messages' => $messages,           // [['role'=>'user','content'=>'...'], ...]
-                'project_id' => $projectId,
-                // 'stream'   => false  // suivant le swagger si supporté
-            ]
-        )->throw()->json();
-
-        return [
-            'assistant_message' => (string) (Arr::get($res, 'assistant_message') ?? Arr::get($res, 'message', '')),
-            'json_edges_url' => Arr::get($res, 'json_edges_url') ?? Arr::get($res, 'json_edges'),
-            'ui' => Arr::get($res, 'ui', []),
-            'meta' => Arr::get($res, 'meta', []),
-        ];
-    }
-
     /**
-     * POST /cad/chat_to_cad — streaming (SSE/JSONL/ndjson)
+     * POST /api/generate-cad-stream — SSE progress + final payload
+     * Events (exemples reçus):
+     *  - {"step":"analysis","status":"Analyzing user requirements...","overall_percentage":10,...}
+     *  - ...
+     *  - {"final_response":{"chat_response":"...","obj_export":"...","step_export":"...","tessellated_export":null,"attribute_and_transientid_map":null,"manufacturing_errors":[]}}
+     *
      * Yields:
-     *  - ['type'=>'delta','data'=>string]
-     *  - ['type'=>'json_edges','url'=>string]
-     *  - ['type'=>'result','assistant_message'=>string,'json_edges_url'=>?string]
+     *  - ['type'=>'progress', 'step'=>string, 'status'=>string, 'message'=>string, 'overall_percentage'=>int]
+     *  - ['type'=>'final', 'final_response'=>array{chat_response?:string,obj_export?:string,step_export?:string,tessellated_export?:?string,attribute_and_transientid_map?:?string,manufacturing_errors?:array}]
      *
      * @throws ConnectionException
      */
-    public function chatToCadStream(array $messages, ?string $projectId = null, int $timeoutSec = 60): Generator
+    public function generateCadStream(string $message, ?string $projectId = null, int $timeoutSec = 180): Generator
     {
+        $url = $this->endpoint('/api/generate-cad-stream');
+
         $resp = $this->http($timeoutSec)
+            ->withHeaders(['Accept' => 'text/event-stream'])
             ->withOptions(['stream' => true])
-            ->post($this->endpoint('/cad/chat_to_cad'), [
-                'messages' => $messages,
+            ->post($url, [
+                'message' => $message,
                 'project_id' => $projectId,
                 'stream' => true,
             ]);
@@ -63,12 +50,11 @@ readonly class AICADClient
             $chunk = $body->read(8192);
             if ($chunk === '') {
                 usleep(10_000);
-
                 continue;
             }
             $buffer .= $chunk;
 
-            // Mode SSE: lignes "data: {...}\n\n"
+            // SSE: paquets séparés par \n\n
             while (($pos = strpos($buffer, "\n\n")) !== false) {
                 $packet = substr($buffer, 0, $pos);
                 $buffer = substr($buffer, $pos + 2);
@@ -92,61 +78,30 @@ readonly class AICADClient
                         continue;
                     }
 
-                    if (isset($payload['delta'])) {
-                        yield ['type' => 'delta', 'data' => (string) $payload['delta']];
-                    }
-                    if (isset($payload['json_edges_url'])) {
-                        yield ['type' => 'json_edges', 'url' => (string) $payload['json_edges_url']];
-                    }
-                    if (isset($payload['assistant_message']) || isset($payload['done'])) {
+                    if (isset($payload['final_response'])) {
                         yield [
-                            'type' => 'result',
-                            'assistant_message' => (string) ($payload['assistant_message'] ?? ''),
-                            'json_edges_url' => $payload['json_edges_url'] ?? null,
+                            'type' => 'final',
+                            'final_response' => (array) $payload['final_response'],
+                        ];
+                        continue;
+                    }
+
+                    // Progress event
+                    $step = (string) ($payload['step'] ?? '');
+                    $status = (string) ($payload['status'] ?? '');
+                    $msg = (string) ($payload['message'] ?? '');
+                    $pct = (int) ($payload['overall_percentage'] ?? 0);
+
+                    if ($step !== '' || $status !== '' || $msg !== '') {
+                        yield [
+                            'type' => 'progress',
+                            'step' => $step,
+                            'status' => $status,
+                            'message' => $msg,
+                            'overall_percentage' => $pct,
                         ];
                     }
                 }
-            }
-
-            // Mode NDJSON / JSONL: lignes JSON terminées par \n
-            while (($nl = strpos($buffer, "\n")) !== false) {
-                $line = trim(substr($buffer, 0, $nl));
-                $buffer = substr($buffer, $nl + 1);
-                if ($line === '' || $line === '[DONE]') {
-                    continue;
-                }
-
-                $payload = json_decode($line, true);
-                if (! is_array($payload)) {
-                    continue;
-                }
-
-                if (isset($payload['delta'])) {
-                    yield ['type' => 'delta', 'data' => (string) $payload['delta']];
-                }
-                if (isset($payload['json_edges_url'])) {
-                    yield ['type' => 'json_edges', 'url' => (string) $payload['json_edges_url']];
-                }
-                if (isset($payload['assistant_message']) || isset($payload['done'])) {
-                    yield [
-                        'type' => 'result',
-                        'assistant_message' => (string) ($payload['assistant_message'] ?? ''),
-                        'json_edges_url' => $payload['json_edges_url'] ?? null,
-                    ];
-                }
-            }
-        }
-
-        // Fallback: si un JSON complet est resté en buffer
-        $rest = trim($buffer);
-        if ($rest !== '') {
-            $payload = json_decode($rest, true);
-            if (is_array($payload)) {
-                yield [
-                    'type' => 'result',
-                    'assistant_message' => (string) ($payload['assistant_message'] ?? $payload['message'] ?? ''),
-                    'json_edges_url' => $payload['json_edges_url'] ?? $payload['json_edges'] ?? null,
-                ];
             }
         }
     }
@@ -171,5 +126,46 @@ readonly class AICADClient
     protected function baseUrl(): string
     {
         return rtrim($this->baseUrl ?? config('ai-cad.api.base_url') ?? env('AICAD_BASE_URL', ''), '/');
+    }
+
+    /**
+     * Normalise l’entrée en string:
+     * - si string -> retour direct
+     * - si array -> prend le dernier élément pertinent:
+     *      * si c’est un string -> retour
+     *      * si c’est un array {content: "..."} -> content
+     *      * sinon, tente le dernier item avec 'content', sinon json_encode compact
+     */
+    private function normalizeMessage(array|string $messages): string
+    {
+        if (is_string($messages)) {
+            return $messages;
+        }
+
+        if ($messages === []) {
+            return '';
+        }
+
+        // Dernier élément
+        $last = $messages[array_key_last($messages)];
+
+        if (is_string($last)) {
+            return $last;
+        }
+
+        if (is_array($last) && array_key_exists('content', $last)) {
+            return (string) $last['content'];
+        }
+
+        // Sinon, cherche le dernier avec 'content'
+        for ($i = count($messages) - 1; $i >= 0; $i--) {
+            $m = $messages[$i];
+            if (is_array($m) && array_key_exists('content', $m)) {
+                return (string) $m['content'];
+            }
+        }
+
+        // Fallback ultime: stringifier prudemment
+        return (is_scalar($last) ? (string)$last : json_encode($last, JSON_UNESCAPED_UNICODE)) ?: '';
     }
 }

@@ -4,6 +4,7 @@ namespace Tolery\AiCad\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\AsCollection;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\File;
@@ -49,6 +50,13 @@ class ChatMessage extends Model
         return $this->ai_cad_path ?
             Storage::providesTemporaryUrls() ? Storage::temporaryUrl($this->ai_cad_path, now()->addMinutes(5)) : Storage::url($this->ai_cad_path)
             : null;
+    }
+
+    public function objUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->ai_cad_path
+        );
     }
 
     public function getObjName(): ?string

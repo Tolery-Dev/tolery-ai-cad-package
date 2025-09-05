@@ -1,13 +1,12 @@
 // resources/js/app.js
 import JsonTessellatedLoader from './JsonTessellatedLoader.js'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
-import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js'
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js'
+import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js'
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js'
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js'
+import {OutlinePass} from 'three/addons/postprocessing/OutlinePass.js'
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js'
 
 // ---------- Globals ----------
 let scene, camera, renderer, controls, raycaster
@@ -254,189 +253,21 @@ function buildPrincipalEdges() {
     }
     if (allMeshes.length === 0) return
 
-    let merged = allMeshes[0]?.geometry?.clone()
-    if (!merged) return
+    let merged
+    if (allMeshes.length === 1) {
+        merged = allMeshes[0].geometry.clone()
+    } else {
+        merged = mergeGeometries(allMeshes.map(m => m.geometry.clone()), false)
+    }
     const welded = mergeVertices(merged, 1e-3)
     if (!welded.attributes.normal?.count) welded.computeVertexNormals()
 
     const edgesGeo = new THREE.EdgesGeometry(welded, edgeThresholdDeg)
-    const edgesMat = new THREE.LineBasicMaterial({ color: edgesColor })
+    const edgesMat = new THREE.LineBasicMaterial({color: edgesColor})
     mainEdgesLine = new THREE.LineSegments(edgesGeo, edgesMat)
     mainEdgesLine.visible = edgesShow
     scene.add(mainEdgesLine)
     dirtyRender = true
-}
-// ---------- Load OBJ ----------
-/**
- * Load and normalize an OBJ mesh. We:
- *  - pick the first Mesh we find (or merge children into a single mesh),
- *  - ensure geometry has an index and groups,
- *  - map selection groups from material/OBJ groups (fallback: per-triangle groups if missing, with safety cap)
- */
-async function loadObjModel(objPath) {
-    resetMeasure();
-
-    // cleanup old
-    scene.remove(bodyGroup);
-    allMeshes.forEach(m => {
-        m.geometry?.dispose();
-        Array.isArray(m.material) ? m.material.forEach(mm => mm?.dispose()) : m.material?.dispose();
-    });
-    if (mainEdgesLine) {
-        scene.remove(mainEdgesLine);
-        mainEdgesLine.geometry?.dispose();
-        mainEdgesLine.material?.dispose();
-        mainEdgesLine = null;
-    }
-    allMeshes = [];
-    bodyGroup = new THREE.Group();
-    selectedGroupIndex = null;
-    hoveredGroupIndex = null;
-
-    // Prepare tri-state materials
-    materialBase = new THREE.MeshPhysicalMaterial({
-        color: baseColorHex,
-        metalness: 0.2,
-        roughness: 0.35,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.1,
-        envMapIntensity: 1.4,
-        side: THREE.DoubleSide,
-    });
-    materialHover = materialBase.clone();  materialHover.color  = new THREE.Color(hoverColorHex);
-    materialSelect = materialBase.clone(); materialSelect.color = new THREE.Color(selectColorHex);
-
-    const loader = new OBJLoader();
-    const root = await new Promise((resolve, reject) => {
-        loader.load(
-            objPath,
-            resolve,
-            undefined,
-            (err) => reject(err instanceof Error ? err : new Error('OBJ load error'))
-        );
-    });
-
-    // Find/merge meshes
-    const meshes = [];
-    root.traverse((child) => {
-        if (child.isMesh && child.geometry) {
-            meshes.push(child);
-        }
-    });
-    if (meshes.length === 0) {
-        console.warn('OBJ contains no mesh.');
-        return;
-    }
-
-    let mesh;
-    if (meshes.length === 1) {
-        mesh = meshes[0];
-    } else {
-        // merge children into one mesh (preserve indices)
-        const geos = meshes.map(m => {
-            // ensure index
-            const g = m.geometry.index ? m.geometry.clone() : m.geometry.toNonIndexed();
-            return g;
-        });
-        // Concatenate geometries manually preserving groups
-        // We build one big geometry and remap groups with offsets.
-        const big = new THREE.BufferGeometry();
-        // merge positions
-        let totalPos = 0, totalIdx = 0;
-        const positions = [];
-        const indices = [];
-        const groups = [];
-        geos.forEach((g) => {
-            const pos = g.getAttribute('position');
-            const idx = g.getIndex();
-            const baseVertex = totalPos / 3;
-            // positions
-            for (let i = 0; i < pos.count; i++) {
-                positions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
-            }
-            // indices
-            if (idx) {
-                const start = indices.length;
-                for (let i = 0; i < idx.count; i++) {
-                    indices.push(baseVertex + idx.getX(i));
-                }
-                const count = (indices.length - start);
-                // keep existing groups if any, else one group for this chunk
-                if (Array.isArray(g.groups) && g.groups.length) {
-                    for (const gg of g.groups) {
-                        groups.push({ start: start + gg.start, count: gg.count });
-                    }
-                } else {
-                    groups.push({ start, count });
-                }
-                totalIdx += idx.count;
-            } else {
-                // non-indexed: create indices 0..n
-                const start = indices.length;
-                for (let i = 0; i < pos.count; i++) indices.push(baseVertex + i);
-                const count = (indices.length - start);
-                groups.push({ start, count });
-                totalIdx += pos.count;
-            }
-            totalPos += pos.count * 3;
-        });
-        big.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        big.setIndex(indices);
-        big.groups = groups;
-        big.computeVertexNormals();
-
-        mesh = new THREE.Mesh(big, [materialBase, materialHover, materialSelect]);
-    }
-
-    // Normalize geometry of the chosen mesh
-    let g = mesh.geometry;
-    if (!g.index) g = g.toNonIndexed(); // ensure indexed
-    g.computeVertexNormals();
-
-    // Ensure groups for selection: use existing groups or create per-triangle groups (safety cap)
-    if (!Array.isArray(g.groups) || g.groups.length === 0) {
-        const idxCount = g.getIndex() ? g.getIndex().count : 0;
-        const MAX_GROUPS = 20000; // safety
-        const groups = [];
-        if (idxCount > 0) {
-            const triCount = Math.floor(idxCount / 3);
-            const step = Math.max(1, Math.ceil(triCount / MAX_GROUPS));
-            for (let i = 0; i < idxCount; i += 3 * step) {
-                groups.push({ start: i, count: Math.min(3 * step, idxCount - i) });
-            }
-        }
-        g.groups = groups;
-    }
-
-    // Attach our tri-state materials and face metadata
-    mesh.geometry = g;
-    mesh.material = [materialBase, materialHover, materialSelect];
-    if (Array.isArray(g.groups)) g.groups.forEach((gg) => gg.materialIndex = 0);
-
-    // Build userData.faceGroups aligned to geometry.groups
-    const faceGroups = [];
-    const realFaceIds = [];
-    if (Array.isArray(g.groups)) {
-        for (let i = 0; i < g.groups.length; i++) {
-            const gg = g.groups[i];
-            const id = `obj_group_${i}`;
-            faceGroups.push({ start: gg.start, count: gg.count, id });
-            realFaceIds.push(id);
-        }
-    }
-    mesh.userData.faceGroups = faceGroups;
-    mesh.userData.realFaceIdsByGroup = realFaceIds;
-    mesh.userData.areaByGroup = new Map();
-
-    // Add to scene
-    bodyGroup.add(mesh);
-    allMeshes = [mesh];
-    scene.add(bodyGroup);
-
-    fitCameraToObject(bodyGroup, 2);
-    computeAndDispatchModelStats(mesh);
-    buildPrincipalEdges();
-    dirtyRender = true;
 }
 
 // ---------- Model stats / selection ----------
@@ -887,10 +718,6 @@ function dispatchSelectionDetails(groupIdx) {
 // ---------- Livewire bindings ----------
 Livewire.on('jsonEdgesLoaded', ({jsonPath}) => {
     if (jsonPath) loadJsonEdges(jsonPath)
-})
-
-Livewire.on('objLoaded', ({ objPath }) => {
-    if (objPath) loadObjModel(objPath);
 })
 
 Livewire.on('toggleShowEdges', ({show, threshold = null}) => {
