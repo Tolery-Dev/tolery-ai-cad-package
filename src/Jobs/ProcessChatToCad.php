@@ -17,6 +17,7 @@ class ProcessChatToCad implements ShouldQueue
 
     /** Timeout Laravel du job (worker: --timeout=600) */
     public int $timeout = 600;
+
     public int $tries = 3;
 
     public function __construct(
@@ -24,8 +25,7 @@ class ProcessChatToCad implements ShouldQueue
         public int $assistantMessageId,
         public string $message,
         public int $timeoutSec = 180,
-    ) {
-    }
+    ) {}
 
     public function handle(AICADClient $api): void
     {
@@ -47,8 +47,9 @@ class ProcessChatToCad implements ShouldQueue
                     $step = $event['step'] ?? '';
                     $status = $event['status'] ?? ($event['message'] ?? '');
                     $pct = (int) ($event['overall_percentage'] ?? 0);
-                    $asst->message = trim(sprintf("AI thinking… [%s] %s (%d%%)", $step, $status, $pct));
+                    $asst->message = trim(sprintf('AI thinking… [%s] %s (%d%%)', $step, $status, $pct));
                     $asst->save();
+
                     continue;
                 }
 

@@ -5,7 +5,6 @@ namespace Tolery\AiCad\Services;
 use Generator;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -50,6 +49,7 @@ readonly class AICADClient
             $chunk = $body->read(8192);
             if ($chunk === '') {
                 usleep(10_000);
+
                 continue;
             }
             $buffer .= $chunk;
@@ -83,6 +83,7 @@ readonly class AICADClient
                             'type' => 'final',
                             'final_response' => (array) $payload['final_response'],
                         ];
+
                         continue;
                     }
 
@@ -166,6 +167,6 @@ readonly class AICADClient
         }
 
         // Fallback ultime: stringifier prudemment
-        return (is_scalar($last) ? (string)$last : json_encode($last, JSON_UNESCAPED_UNICODE)) ?: '';
+        return (is_scalar($last) ? (string) $last : json_encode($last, JSON_UNESCAPED_UNICODE)) ?: '';
     }
 }

@@ -55,7 +55,7 @@ class ChatMessage extends Model
     public function objUrl(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->ai_cad_path
+            get: fn () => $this->ai_cad_path
         );
     }
 

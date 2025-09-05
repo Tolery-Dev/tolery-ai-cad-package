@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Throwable;
-use Tolery\AiCad\Jobs\ProcessChatToCad;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Services\AICADClient;
@@ -202,7 +200,6 @@ class Chatbot extends Component
         $this->dispatch('tolery-chat-focus-input', faceId: (string) $objectId);
     }
 
-
     public function refreshFromDb(): void
     {
         $this->messages = $this->mapDbMessagesToArray();
@@ -289,7 +286,6 @@ class Chatbot extends Component
             $this->dispatch('jsonEdgesLoaded', jsonPath: $asst->getJSONEdgeUrl());
         }
     }
-
 
     /* ----------------- Helpers ----------------- */
 
