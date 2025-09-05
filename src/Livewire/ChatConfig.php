@@ -14,7 +14,7 @@ class ChatConfig extends Component
 
     public function mount()
     {
-        $this->form->setChate($this->chat);
+        $this->form->setChat($this->chat);
     }
 
     public function save()
