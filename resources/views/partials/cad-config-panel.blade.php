@@ -1,6 +1,6 @@
 {{-- Fenêtre volante du configurateur CAD (draggable) --}}
 <aside
-    x-data="cadFloatingPanel()"
+    x-data="cadConfigPanel()"
     :style="`transform: translate(${x}px, ${y}px)`"
     @dblclick.stop="open = !open"
     class="fixed z-40 w-[360px] max-w-[90vw]
@@ -52,146 +52,162 @@
             {{-- Nom de la pièce --}}
             <div class="space-y-2">
                 <flux:heading size="sm" level="3" class="!mb-0">Nom de la pièce</flux:heading>
-                <flux:input type="text" x-model="partName" placeholder="Ex : Plat 200x50 (S235)"
-                            @change="emitPartName()"/>
+                <flux:input
+                    type="text"
+                    wire:model.live="partName"
+                    x-model.trim="$wire.entangle('partName')"
+                    placeholder="Ex : Plat 200x50 (S235)"/>
                 <div class="text-xs text-gray-500">Utilisé pour vos notes / devis.</div>
             </div>
 
-            {{-- Actions viewer --}}
-            <section class="grid grid-cols-3 gap-2">
-                <button type="button"
-                        class="h-9 rounded-xl text-xs bg-violet-600/10 hover:bg-violet-600/20 text-violet-700 dark:text-violet-200"
-                        @click="$dispatch('viewer-fit')">
-                    Recentrer
-                </button>
-                <button type="button"
-                        class="h-9 rounded-xl text-xs bg-violet-600/10 hover:bg-violet-600/20 text-violet-700 dark:text-violet-200"
-                        @click="toggleMeasure()">
-                    <span x-text="measureEnabled ? 'Mesure : activée' : 'Mesure : désactivée'"></span>
-                </button>
-                <button type="button"
-                        class="h-9 rounded-xl text-xs bg-violet-600/10 hover:bg-violet-600/20 text-violet-700 dark:text-violet-200"
-                        @click="$dispatch('viewer-repair-normals')">
-                    Réparer
-                </button>
-            </section>
-
-            <section class="space-y-3">
-                <div class="text-sm font-medium text-gray-800 dark:text-zinc-100">Choisissez votre matériau</div>
-                <div class="grid grid-cols-3 gap-2">
-                    <label class="inline-flex items-center gap-2 text-sm">
-                        <input type="radio" name="mat" x-model="materialPreset" value="acier"
-                               @change="applyPreset()" class="h-4 w-4 text-violet-600">
-                        <span>Acier</span>
-                    </label>
-                    <label class="inline-flex items-center gap-2 text-sm">
-                        <input type="radio" name="mat" x-model="materialPreset" value="aluminium"
-                               @change="applyPreset()" class="h-4 w-4 text-violet-600">
-                        <span>Aluminum</span>
-                    </label>
-                    <label class="inline-flex items-center gap-2 text-sm">
-                        <input type="radio" name="mat" x-model="materialPreset" value="inox"
-                               @change="applyPreset()" class="h-4 w-4 text-violet-600">
-                        <span>Inox</span>
-                    </label>
+            {{-- Détails / Dimensions globales --}}
+            <div class="rounded-xl bg-violet-50/60 border border-violet-100 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm font-medium text-gray-700">Détails</div>
                 </div>
-            </section>
 
-            {{-- Détails (modèle) --}}
-        <div class="space-y-1">
-            <flux:heading size="sm" level="3" class="!mb-0">Modèle</flux:heading>
-            <div class="grid grid-cols-2 gap-x-4 text-xs">
-                <div class="text-gray-500">Dimensions</div>
-                <div class="text-right">
-                    <span x-text="model.sizeX"></span> ×
-                    <span x-text="model.sizeY"></span> ×
-                    <span x-text="model.sizeZ"></span>
-                    <span x-text="model.unit"></span>
-                </div>
-                <div class="text-gray-500">Triangles</div>
-                <div class="text-right" x-text="model.triangles ?? '—'"></div>
-            </div>
-        </div>
-
-        {{-- Détails de la face cliquée --}}
-        <div class="space-y-1">
-            <flux:heading size="sm" level="3" class="!mb-0">Face sélectionnée</flux:heading>
-            <template x-if="face">
-                <div class="grid grid-cols-2 gap-x-4 text-xs">
-                    <div class="text-gray-500">ID</div>
-                    <div class="text-right" x-text="face.realFaceId ?? face.id"></div>
-
-                    <div class="text-gray-500">Centre</div>
-                    <div class="text-right">
-                        <span x-text="face.centroid?.x ?? '—'"></span>,
-                        <span x-text="face.centroid?.y ?? '—'"></span>,
-                        <span x-text="face.centroid?.z ?? '—'"></span>
-                        <span x-text="face.unit ?? model.unit"></span>
+                <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">longueur</span>
+                        <span class="font-semibold" x-text="fmt(stats.sizeX)"></span>
                     </div>
-
-                    <div class="text-gray-500">Surface (approx.)</div>
-                    <div class="text-right" x-text="face.area ? `${face.area} ${face.unit}²` : '—'"></div>
-
-                    <div class="text-gray-500">Triangles</div>
-                    <div class="text-right" x-text="face.triangles ?? '—'"></div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">largeur</span>
+                        <span class="font-semibold" x-text="fmt(stats.sizeY)"></span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">épaisseur</span>
+                        <span class="font-semibold" x-text="fmtThickness()"></span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">hauteur</span>
+                        <span class="font-semibold" x-text="fmt(stats.sizeZ)"></span>
+                    </div>
                 </div>
-            </template>
-            <template x-if="!face">
-                <div class="text-xs text-gray-500">Cliquez sur une face pour afficher ses informations.</div>
-            </template>
-        </div>
+            </div>
 
-            <div class="flex grow flex-col justify-end items-end">
-                <flux:modal.trigger name="buy-file">
-                    <flux:button variant="filled" color="purple">Acheter la piéce</flux:button>
-                </flux:modal.trigger>
+            {{-- Afficher les contours --}}
+            <div class="flex items-center justify-between">
+                <div class="text-base font-medium text-gray-900">Afficher les contours</div>
+                <flux:switch x-model="showEdges" @change="dispatchEdges()"/>
+            </div>
 
-                <flux:modal name="buy-file" variant="flyout" class="rounded-l-xl">
-                    <div class="space-y-6">
+            <flux:separator/>
+
+            {{-- Configuration / Matière --}}
+            <div class="space-y-2">
+                <div class="text-lg font-semibold">Configuration</div>
+                <flux:field label="Type de matière">
+                    <flux:radio.group x-model="material" @change="setMaterial(material)" variant="segmented" size="sm">
+                        <flux:radio value="inox">Inox</flux:radio>
+                        <flux:radio value="aluminium">Aluminium</flux:radio>
+                        <flux:radio value="acier">Acier</flux:radio>
+                    </flux:radio.group>
+                </flux:field>
+            </div>
+
+            <flux:callout icon="information-circle" class="text-indigo-900">
+                Sélectionnez une face sur le modèle 3D pour plus d’options.
+            </flux:callout>
+
+            {{-- Outil de mesure --}}
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-base font-medium text-gray-900">Outil de mesure</div>
+                    <div class="text-xs text-gray-500">Cliquez deux points pour afficher la distance</div>
+                </div>
+                <flux:button
+                             @click="toggleMeasure()"
+                             size="sm">
+                    <span x-text="measureEnabled ? 'Désactiver' : 'Activer'"></span>
+                </flux:button>
+            </div>
+
+            <flux:separator/>
+
+            {{-- Infos de sélection --}}
+            <div class="space-y-2">
+                <div class="text-base font-semibold text-gray-900">Sélection</div>
+                <template x-if="selection">
+                    <div class="text-sm space-y-1">
                         <div>
-                            <flux:heading size="lg" level="2" class="font-bold">Acheter le fichier</flux:heading>
+                            <span class="text-gray-500">Face ID</span> :
+                            <span class="font-medium" x-text="selection.realFaceId || selection.id"></span>
                         </div>
-
-                        <div class="p-6 rounded-xl border">
-                            <div>
-
-                                <img class="w-64 h-52 p-2.5 mx-auto" src="https://placehold.co/262x201"/>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div><span class="text-gray-500">L</span> <span class="font-medium"
+                                                                            x-text="fmt(selection.bbox?.x)"></span>
                             </div>
-
-                            <div class="flex items-center space-x-6 bg-gray-100 p-6 rounded-xl text-sm">
-                                <strong>ABCDE - 2345</strong>
-                                <div>
-                                    <strong>Dimension pièce : </strong>
-                                    <span>100 x 25 x 82 x ep 4 mm</span>
-                                </div>
-                                <div>
-                                    <strong>Dimension à plat : </strong>
-                                    <span>25 x 251 mm</span>
-                                </div>
-                                <div>
-                                    <strong>Pliages : </strong>
-                                    <span>4</span>
-                                </div>
+                            <div><span class="text-gray-500">l</span> <span class="font-medium"
+                                                                            x-text="fmt(selection.bbox?.y)"></span>
+                            </div>
+                            <div><span class="text-gray-500">h</span> <span class="font-medium"
+                                                                            x-text="fmt(selection.bbox?.z)"></span>
                             </div>
                         </div>
-
-                        <div>
-                            @hasLimit
-                            @php
-                                $team = auth()->user()->team;
-                                $limit = $team->limits->first();
-                                $product = $team->getSubscriptionProduct()
-                            @endphp
-
-                            <p>Vous avec un abonement en cours</p>
-                            <p>Vous avez consommé {{ $limit->used_amount }}/ {{$product->files_allowed }}</p>
-                            @else
-                                <p>Vous n'avec pas d'abonement</p>
-                            @endif
+                        <div><span class="text-gray-500">Aire</span> : <span class="font-medium"
+                                                                             x-text="fmtArea(selection.area)"></span>
+                        </div>
+                        <div class="text-xs text-gray-500">Centroïde : <span x-text="coord(selection.centroid)"></span>
                         </div>
                     </div>
-                </flux:modal>
+                </template>
+                <template x-if="!selection">
+                    <div class="text-sm text-gray-500">Aucune face sélectionnée.</div>
+                </template>
             </div>
+
+            {{--            <div class="flex grow flex-col justify-end items-end">--}}
+            {{--                <flux:modal.trigger name="buy-file">--}}
+            {{--                    <flux:button variant="filled" color="purple">Acheter la piéce</flux:button>--}}
+            {{--                </flux:modal.trigger>--}}
+
+            {{--                <flux:modal name="buy-file" variant="flyout" class="rounded-l-xl">--}}
+            {{--                    <div class="space-y-6">--}}
+            {{--                        <div>--}}
+            {{--                            <flux:heading size="lg" level="2" class="font-bold">Acheter le fichier</flux:heading>--}}
+            {{--                        </div>--}}
+
+            {{--                        <div class="p-6 rounded-xl border">--}}
+            {{--                            <div>--}}
+
+            {{--                                <img class="w-64 h-52 p-2.5 mx-auto" src="https://placehold.co/262x201"/>--}}
+            {{--                            </div>--}}
+
+            {{--                            <div class="flex items-center space-x-6 bg-gray-100 p-6 rounded-xl text-sm">--}}
+            {{--                                <strong>ABCDE - 2345</strong>--}}
+            {{--                                <div>--}}
+            {{--                                    <strong>Dimension pièce : </strong>--}}
+            {{--                                    <span>100 x 25 x 82 x ep 4 mm</span>--}}
+            {{--                                </div>--}}
+            {{--                                <div>--}}
+            {{--                                    <strong>Dimension à plat : </strong>--}}
+            {{--                                    <span>25 x 251 mm</span>--}}
+            {{--                                </div>--}}
+            {{--                                <div>--}}
+            {{--                                    <strong>Pliages : </strong>--}}
+            {{--                                    <span>4</span>--}}
+            {{--                                </div>--}}
+            {{--                            </div>--}}
+            {{--                        </div>--}}
+
+            {{--                        <div>--}}
+            {{--                            @hasLimit--}}
+            {{--                            @php--}}
+            {{--                                $team = auth()->user()->team;--}}
+            {{--                                $limit = $team->limits->first();--}}
+            {{--                                $product = $team->getSubscriptionProduct()--}}
+            {{--                            @endphp--}}
+
+            {{--                            <p>Vous avec un abonement en cours</p>--}}
+            {{--                            <p>Vous avez consommé {{ $limit->used_amount }}/ {{$product->files_allowed }}</p>--}}
+            {{--                            @else--}}
+            {{--                                <p>Vous n'avec pas d'abonement</p>--}}
+            {{--                            @endif--}}
+            {{--                        </div>--}}
+            {{--                    </div>--}}
+            {{--                </flux:modal>--}}
+            {{--            </div>--}}
             <div class="border-t border-violet-100/60 dark:border-violet-900/40"></div>
         </div>
     </div>
@@ -199,51 +215,25 @@
 
 @once
     <script>
-        function cadFloatingPanel() {
-            const PRESETS = {
-                steel:     { color: '#9ea3a8', metalness: 0.20, roughness: 0.45 },
-                aluminum:  { color: '#bfc5ce', metalness: 0.60, roughness: 0.30 },
-                stainless: { color: '#d5d8dc', metalness: 0.35, roughness: 0.25 },
-            }
+        function cadConfigPanel() {
             return {
-                // état panneau
-                open: true,
+                // UI
+                showDetails: true,
+                measureEnabled: false,
 
+                // State alimenté par app.js (events window)
+                stats: {sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm'},
+                selection: null,
                 // position (transform translate)
                 x: 0, y: 0,
                 startX: 0, startY: 0,   // position souris au début du drag
                 baseX: 0, baseY: 0,     // position du panneau au début du drag
                 dragging: false,
 
-                // contrôles viewer (mêmes que précédemment)
-                edgesShow: true,
-                threshold: 45,
-                edgeColor: '#000000',
-                hoverColor: '#2d6cff',
-                selectColor: '#ff3b3b',
-                materialColor: '#9ea3a8',
-
-                // stats modèle + sélection
-                modelStats: { vertices: 0, triangles: 0, sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm' },
-                selectedFace: null,
-
-                // data shown
-                model: { sizeX: '—', sizeY: '—', sizeZ: '—', unit: 'mm', triangles: null },
-                face:  null,
-
-                measureEnabled: false,
-                materialPreset: 'acier',
-
-                partName: '',
-                // actions
-                emitPartName() {
-                    // si tu veux persister : Livewire.dispatch('updatedPartName', { name: this.partName })
-                },
-                applyPreset() {
-                    const p = PRESETS[this.material] || PRESETS.steel
-                    this.materialColor = p.color
-                    Livewire.dispatch('updatedMaterialPreset', p)
-                },
+                // Data
+                partName: 'Pièce 001',
+                showEdges: false,
+                material: 'inox', // inox | aluminium | acier
 
                 init() {
                     // position par défaut : coin bas-droit avec marge (si pas de state stocké)
@@ -257,42 +247,16 @@
                         this.x = window.innerWidth - w - 24
                         this.y = window.innerHeight - 320 - 24
                     }
-
-                    // stats modèle (émis par ton viewer)
-                    window.addEventListener('cad-model-stats', (e) => {
-                        const d = e.detail || {}
-                        this.model.sizeX = (d.sizeX ?? '—').toFixed ? d.sizeX.toFixed(2) : d.sizeX
-                        this.model.sizeY = (d.sizeY ?? '—').toFixed ? d.sizeY.toFixed(2) : d.sizeY
-                        this.model.sizeZ = (d.sizeZ ?? '—').toFixed ? d.sizeZ.toFixed(2) : d.sizeZ
-                        this.model.unit   = d.unit ?? 'mm'
-                        this.model.triangles = d.triangles ?? null
+                    // Dimensions globales
+                    window.addEventListener('cad-model-stats', ({detail}) => {
+                        if (detail) this.stats = detail
                     })
-
-                    // sélection face (émis par ton viewer)
-                    window.addEventListener('cad-selection', (e) => {
-                        this.face = e.detail || null
-                        // tu peux aussi envoyer la face sélectionnée vers le chat si besoin
-                        // Livewire.dispatch('chatObjectClickReal', { objectId: this.face?.realFaceId ?? this.face?.id ?? null })
+                    // Sélection
+                    window.addEventListener('cad-selection', ({detail}) => {
+                        this.selection = detail
                     })
-
-                    // applique le preset par défaut au mount
-                    this.applyPreset()
-                    // this.$nextTick(() => Livewire.dispatch('updatedMaterialColor', {color: this.materialColor}))
-                    // this.applyPreset()
-                    //
-                    // // re-contraindre à l’écran si resize
-                    // window.addEventListener('resize', () => this.clampToViewport())
-                    //
-                    // // écoute les stats du modèle et la sélection envoyées par app.js
-                    // window.addEventListener('cad-model-stats', (e) => {
-                    //     if (e?.detail) this.modelStats = e.detail
-                    // })
-                    // window.addEventListener('cad-selection', (e) => {
-                    //     this.selectedFace = e?.detail ?? null
-                    // })
-                    //
-                    // // si des stats sont déjà disponibles (modèle chargé avant panneau)
-                    // if (window.cadLastStats) this.modelStats = window.cadLastStats
+                    // Matériau initial
+                    this.setMaterial(this.material)
                 },
                 // ---- Drag & drop ----
                 startDrag(e) {
@@ -338,39 +302,35 @@
                     this.x = Math.min(Math.max(this.x, 12), Math.max(maxX, 12))
                     this.y = Math.min(Math.max(this.y, 12), Math.max(maxY, 12))
                 },
+                // Helpers d’affichage
+                fmt(v) {
+                    return (v == null) ? '—' : `${(+v).toFixed(0)} mm`
+                },
+                fmtArea(v) {
+                    return (v == null) ? '—' : `${(+v).toFixed(0)} mm²`
+                },
+                fmtThickness() {
+                    return '—'
+                }, // branche quand tu auras l’info
+                coord(c) {
+                    if (!c) return '—';
+                    const u = this.stats.unit || 'mm';
+                    return `(${(c.x || 0).toFixed(1)}, ${(c.y || 0).toFixed(1)}, ${(c.z || 0).toFixed(1)}) ${u}`
+                },
 
-                // ---- Livewire events (identiques) ----
-                emitEdges() {
-                    Livewire.dispatch('toggleShowEdges', {show: !!this.edgesShow, threshold: Number(this.threshold)})
+                // Features
+                dispatchEdges() {
+                    Livewire.dispatch('toggleShowEdges', {show: this.showEdges, threshold: 45, color: '#000000'})
                 },
-                emitEdgeColor() {
-                    Livewire.dispatch('updatedEdgeColor', {color: this.edgeColor})
-                },
-                emitHoverColor() {
-                    Livewire.dispatch('updatedHoverColor', {color: this.hoverColor})
-                },
-                emitSelectColor() {
-                    Livewire.dispatch('updatedSelectColor', {color: this.selectColor})
-                    render()
-                },
-                recenter() {
-                    // côté viewer: écoute window "viewer-fit"
-                    window.dispatchEvent(new CustomEvent('viewer-fit'))
+                setMaterial(name) {
+                    this.material = name
+                    Livewire.dispatch('updatedMaterialPreset', {preset: name})
                 },
                 toggleMeasure() {
                     this.measureEnabled = !this.measureEnabled
-                    Livewire.dispatch('toggleMeasureMode', { enabled: this.measureEnabled })
+                    Livewire.dispatch('toggleMeasureMode', {enabled: this.measureEnabled})
+                    if (!this.measureEnabled) Livewire.dispatch('resetMeasure')
                 },
-                resetMeasure() {
-                    Livewire.dispatch('resetMeasure')
-                },
-                // format helper for sizes
-                formatVal(v) {
-                    if (v === undefined || v === null || isNaN(v)) return '-'
-                    const n = Number(v)
-                    return `${n.toFixed(2)} ${this.modelStats.unit}`
-                },
-
             }
         }
     </script>

@@ -1,6 +1,6 @@
 @php
-    // Ajuste ici si ton header fait autre chose que 96px
-    $HEADER_H = 120; // en px
+// Ajuste ici si ton header fait autre chose que 96px
+$HEADER_H = 120; // en px
 @endphp
 
 <div class="mx-auto w-full max-w-[1600px] px-4 lg:px-6">
@@ -20,7 +20,7 @@
                         class="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
                         <h2 class="text-sm font-semibold text-gray-900 dark:text-zinc-100">Tolery • Assistant CAO</h2>
                         @if($isProcessing ?? false)
-                            <span class="text-xs text-blue-600">Calcul…</span>
+                        <span class="text-xs text-blue-600">Calcul…</span>
                         @endif
                     </header>
 
@@ -31,28 +31,30 @@
                          x-on:tolery-chat-append.window="scrollToEnd()"
                          class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                         @forelse ($messages ?? [] as $msg)
-                            <article
-                                class="flex items-start gap-3 {{ $msg['role'] === 'user' ? 'flex-row-reverse' : '' }}">
-                                <div class="h-8 w-8 shrink-0 rounded-full grid place-items-center
+                        <article
+                            class="flex items-start gap-3 {{ $msg['role'] === 'user' ? 'flex-row-reverse' : '' }}">
+                            <div class="h-8 w-8 shrink-0 rounded-full grid place-items-center
                             {{ $msg['role'] === 'user' ? 'bg-violet-300 text-white' : 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200' }}">
-                                    {{ $msg['role'] === 'user' ? '👤' : '🤖' }}
-                                </div>
-                                <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">
-                                    <div class="text-xs text-gray-500 dark:text-zinc-400 mb-1">
-                                        {{ $msg['role'] === 'user' ? 'Vous' : 'Tolery' }}
-                                        <span class="mx-1">•</span>
-                                        <time>{{ \Illuminate\Support\Carbon::parse($msg['created_at'] ?? now())->format('H:i') }}</time>
-                                    </div>
-                                    <div
-                                        class="{{ $msg['role'] === 'user' ? 'inline-block border border-gray-100 bg-gray-50' : 'inline-block bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100' }} rounded-xl px-3 py-2">
-                                        {!! nl2br(e($msg['content'] ?? '')) !!}
-                                    </div>
-                                </div>
-                            </article>
-                        @empty
-                            <div class="text-sm text-gray-500 dark:text-zinc-400">Démarrez une conversation avec votre
-                                demande de pièce.
+                                {{ $msg['role'] === 'user' ? '👤' : '🤖' }}
                             </div>
+                            <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">
+                                <div class="text-xs text-gray-500 dark:text-zinc-400 mb-1">
+                                    {{ $msg['role'] === 'user' ? 'Vous' : 'Tolery' }}
+                                    <span class="mx-1">•</span>
+                                    <time>{{ \Illuminate\Support\Carbon::parse($msg['created_at'] ??
+                                        now())->format('H:i') }}
+                                    </time>
+                                </div>
+                                <div
+                                    class="{{ $msg['role'] === 'user' ? 'inline-block border border-gray-100 bg-gray-50' : 'inline-block bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100' }} rounded-xl px-3 py-2">
+                                    {!! nl2br(e($msg['content'] ?? '')) !!}
+                                </div>
+                            </div>
+                        </article>
+                        @empty
+                        <div class="text-sm text-gray-500 dark:text-zinc-400">
+                            Démarrez une conversation avec votre demande de pièce.
+                        </div>
                         @endforelse
                     </div>
 
@@ -102,10 +104,14 @@
                         <div class="grid grid-cols-5 gap-6 mb-6">
                             <template x-for="s in steps" :key="s.key">
                                 <div class="flex items-center gap-2">
-                                    <span class="h-5 w-5 rounded-full grid place-items-center" :class="s.state==='done' ? 'bg-violet-600 text-white' : (s.state==='active' ? 'border-2 border-violet-500 text-violet-500' : 'border-2 border-gray-300 text-gray-300')">
-                                        <span x-text="s.state === 'done' ? '' : '•'" :class="s.state !== 'done' ? 'animate-pulse' : ''"></span>
+                                    <span class="h-5 w-5 rounded-full grid place-items-center"
+                                          :class="s.state==='done' ? 'bg-violet-600 text-white' : (s.state==='active' ? 'border-2 border-violet-500 text-violet-500' : 'border-2 border-gray-300 text-gray-300')">
+                                        <span x-text="s.state === 'done' ? '' : '•'"
+                                              :class="s.state !== 'done' ? 'animate-pulse' : ''"></span>
                                     </span>
-                                    <span class="text-sm" :class="s.state === 'inactive' ? 'text-gray-400' : 'text-gray-900 dark:text-zinc-100'" x-text="s.label">
+                                    <span class="text-sm"
+                                          :class="s.state === 'inactive' ? 'text-gray-400' : 'text-gray-900 dark:text-zinc-100'"
+                                          x-text="s.label">
                                     </span>
                                 </div>
                             </template>
@@ -169,22 +175,26 @@
             activeStep: null,
             completedSteps: 0,
             steps: [
-                { key: 'analysis', label: 'Analysis', state: 'inactive' },   // inactive | active | done
-                { key: 'parameters', label: 'Parameters', state: 'inactive' },
-                { key: 'generation_code', label: 'Generation', state: 'inactive' },
-                { key: 'export', label: 'Export', state: 'inactive' },
-                { key: 'complete', label: 'Complete', state: 'inactive' },
+                {key: 'analysis', label: 'Analysis', state: 'inactive'},   // inactive | active | done
+                {key: 'parameters', label: 'Parameters', state: 'inactive'},
+                {key: 'generation_code', label: 'Generation', state: 'inactive'},
+                {key: 'export', label: 'Export', state: 'inactive'},
+                {key: 'complete', label: 'Complete', state: 'inactive'},
             ],
             init() {
                 const comp = this;
-                this._onLivewire = ({ message, projectId, isEdit = false}) => comp.startStream(message, projectId, isEdit);
+                this._onLivewire = ({
+                                        message,
+                                        projectId,
+                                        isEdit = false
+                                    }) => comp.startStream(message, projectId, isEdit);
                 Livewire.on('aicad:startStream', this._onLivewire);
                 Livewire.on('aicad-start-stream', this._onLivewire);
                 const input = document.querySelector('#message'); // adapte l’ID/selector à ton champ
                 Livewire.on('tolery-chat-focus-input', () => {
                     if (input) {
-                      input.focus();
-                      input.setSelectionRange(input.value.length, input.value.length); // curseur fin de texte
+                        input.focus();
+                        input.setSelectionRange(input.value.length, input.value.length); // curseur fin de texte
                     }
                 });
             },
@@ -219,11 +229,11 @@
                 this.controller = new AbortController();
 
                 // Passage en GET avec paramètres dans l'URL
-                const base = this.apiBaseUrl.replace(/\/+$/,'');
+                const base = this.apiBaseUrl.replace(/\/+$/, '');
                 const qs = new URLSearchParams({
                     message: String(message ?? ''),
                     project_id: String(projectId ?? ''),
-                        is_edit_request: isEdit ? 'true' : 'false',
+                    is_edit_request: isEdit ? 'true' : 'false',
                 }).toString();
                 const url = `${base}/api/generate-cad-stream?${qs}`;
 
@@ -232,7 +242,7 @@
                         // GET par défaut
                         headers: {
                             'Accept': 'text/event-stream',
-                            ...(window.aicadAuthToken ? { 'Authorization': `Bearer ${window.aicadAuthToken}` } : {}),
+                            ...(window.aicadAuthToken ? {'Authorization': `Bearer ${window.aicadAuthToken}`} : {}),
                         },
                         signal: this.controller.signal,
                     });
@@ -244,9 +254,9 @@
                     let buffer = '';
 
                     while (true) {
-                        const { value, done } = await reader.read();
+                        const {value, done} = await reader.read();
                         if (done) break;
-                        buffer += decoder.decode(value, { stream: true });
+                        buffer += decoder.decode(value, {stream: true});
 
                         let sep;
                         while ((sep = buffer.indexOf('\n\n')) !== -1) {
@@ -262,7 +272,11 @@
                                 if (!json || json === '[DONE]') continue;
 
                                 let payload;
-                                try { payload = JSON.parse(json); } catch { continue; }
+                                try {
+                                    payload = JSON.parse(json);
+                                } catch {
+                                    continue;
+                                }
 
                                 if (payload.final_response) {
                                     const resp = payload.final_response || {};

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use JetBrains\PhpStorm\NoReturn;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
@@ -40,7 +41,7 @@ class Chatbot extends Component
 
     protected int $lockSeconds = 12;    // anti double submit
 
-    public string $partName = 'Ma nouvelle pièce';
+    public string $partName = '';
 
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
@@ -59,7 +60,7 @@ class Chatbot extends Component
             $chat->team()->associate($user->team);
             $chat->user()->associate($user);
             $chat->save();
-            $chat->name ??= 'Nouvelle conversation';
+            $chat->name ??= 'Ma nouvelle pièce';
             $chat->save();
             $this->chat = $chat;
         }
@@ -77,6 +78,7 @@ class Chatbot extends Component
         if ($objToDisplay) {
             // 1. JSON tessellé pour la sélection de faces
             $jsonUrl = $objToDisplay->getJSONEdgeUrl();
+
             if ($jsonUrl) {
                 $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
             }
@@ -96,6 +98,17 @@ class Chatbot extends Component
     public function updatedEdgesColor($value)
     {
         $this->dispatch('updatedEdgeColor', color: $value);
+    }
+
+    function updatedPartName($value): void
+    {
+        $this->partName = trim($value) === '' ? null : $value;
+
+        if (! $this->partName) {
+            $this->chat->name = $this->partName;
+            $this->chat->save();
+            $this->dispatch('tolery-chat-name-updated', name: $this->partName);
+        }
     }
 
     public function render(): View
@@ -205,11 +218,10 @@ class Chatbot extends Component
         $this->messages = $this->mapDbMessagesToArray();
 
         $last = $this->chat->messages()->orderByDesc('id')->first();
-        if ($last && $last->ai_cad_path) {
-            $this->dispatch('jsonLoaded', objPath: $last->getObjUrl());
-        }
         if ($last && $last->ai_json_edge_path) {
             $this->dispatch('jsonEdgesLoaded', jsonPath: $last->getJSONEdgeUrl());
+        } elseif ($last && $last->ai_cad_path) {
+            $this->dispatch('objLoaded', objPath: $last->getObjUrl());
         }
 
         $this->dispatch('tolery-chat-append');
@@ -224,6 +236,8 @@ class Chatbot extends Component
      *   session_id?:string,
      *   obj_export?:?string,
      *   step_export?:?string,
+     *   json_export?:?string,
+     *   technical_drawing_export?:?string,
      *   tessellated_export?:?string,
      *   attribute_and_transientid_map?:mixed,
      *   manufacturing_errors?:array
@@ -235,7 +249,9 @@ class Chatbot extends Component
 
         $chatResponse = (string) ($final['chat_response'] ?? '');
         $objUrl = $final['obj_export'] ?? null;
-        $tessUrl = $final['tessellated_export'] ?? null;
+        $jsonModelUrl = $final['json_export'] ?? null; // ← nouveau: JSON principal pour affichage
+        $tessUrl = $final['tessellated_export'] ?? null; // JSON tessellé (héritage)
+        $techDrawingUrl = $final['technical_drawing_export'] ?? null; // ← nouveau: plan technique
 
         // Met à jour le dernier message assistant (placeholder "AI thinking…")
         /** @var ChatMessage|null $asst */
@@ -256,9 +272,16 @@ class Chatbot extends Component
                 $asst->ai_cad_path = $objUrl;
             }
 
-            if (is_string($tessUrl) && $tessUrl !== '') {
-                // On stocke le JSON tessellé pour la sélection de faces
+            // Priorité à json_export pour l'affichage 3D JSON
+            if (is_string($jsonModelUrl) && $jsonModelUrl !== '') {
+                $asst->ai_json_edge_path = $jsonModelUrl;
+            } elseif (is_string($tessUrl) && $tessUrl !== '') {
+                // fallback compat
                 $asst->ai_json_edge_path = $tessUrl;
+            }
+
+            if (is_string($techDrawingUrl) && $techDrawingUrl !== '') {
+                $asst->ai_technical_drawing_path = $techDrawingUrl;
             }
 
             // Optionnel: journaliser la réponse complète pour audit/debug
@@ -271,19 +294,25 @@ class Chatbot extends Component
             if (is_string($objUrl) && $objUrl !== '') {
                 $asst->ai_cad_path = $objUrl;
             }
-            if (is_string($tessUrl) && $tessUrl !== '') {
+            if (is_string($jsonModelUrl) && $jsonModelUrl !== '') {
+                $asst->ai_json_edge_path = $jsonModelUrl;
+            } elseif (is_string($tessUrl) && $tessUrl !== '') {
                 $asst->ai_json_edge_path = $tessUrl;
+            }
+            if (is_string($techDrawingUrl) && $techDrawingUrl !== '') {
+                $asst->ai_technical_drawing_path = $techDrawingUrl;
             }
             $asst->save();
         }
 
         // Déclenche le rafraîchissement UI (scroll + viewer)
-        $this->dispatch('tolery-chat:append');
-        if ($asst->ai_cad_path) {
-            $this->dispatch('jsonLoaded', objPath: $asst->getObjUrl());
-        }
+        $this->dispatch('tolery-chat-append');
+        // Préférence: JSON
         if ($asst->ai_json_edge_path) {
             $this->dispatch('jsonEdgesLoaded', jsonPath: $asst->getJSONEdgeUrl());
+        } elseif ($asst->ai_cad_path) {
+            // fallback OBJ
+            $this->dispatch('objLoaded', objPath: $asst->getObjUrl());
         }
     }
 
