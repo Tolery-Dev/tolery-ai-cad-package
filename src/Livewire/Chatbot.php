@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
-use JetBrains\PhpStorm\NoReturn;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
@@ -100,7 +99,7 @@ class Chatbot extends Component
         $this->dispatch('updatedEdgeColor', color: $value);
     }
 
-    function updatedPartName($value): void
+    public function updatedPartName($value): void
     {
         $this->partName = trim($value) === '' ? null : $value;
 
