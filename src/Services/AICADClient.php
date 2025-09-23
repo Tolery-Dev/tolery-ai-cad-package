@@ -123,5 +123,4 @@ readonly class AICADClient
     {
         return rtrim(config('ai-cad.api.base_url', ''), '/');
     }
-
 }
