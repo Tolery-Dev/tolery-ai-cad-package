@@ -253,7 +253,7 @@ class Chatbot extends Component
         $techDrawingUrl = $final['technical_drawing_export'] ?? null; // plan technique
 
         // Save session_id
-        if ($final['session_id'] && $this->chat->session_id !== $final['session_id']) {
+        if (isset($final['session_id']) && $this->chat->session_id !== $final['session_id']) {
             $this->chat->session_id = $final['session_id'];
             $this->chat->save();
         }
