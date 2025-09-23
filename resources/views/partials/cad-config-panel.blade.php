@@ -55,7 +55,6 @@
                 <flux:input
                     type="text"
                     wire:model.live="partName"
-                    x-model.trim="$wire.entangle('partName')"
                     placeholder="Ex : Plat 200x50 (S235)"/>
                 <div class="text-xs text-gray-500">Utilisé pour vos notes / devis.</div>
             </div>
@@ -106,8 +105,8 @@
                 </flux:field>
             </div>
 
-            <flux:callout icon="information-circle" class="text-indigo-900">
-                Sélectionnez une face sur le modèle 3D pour plus d’options.
+            <flux:callout icon="information-circle" size="sm" color="violet" class="text-violet-900">
+                    <flux:callout.text>Sélectionnez une face sur le modèle 3D pour plus d’options.</flux:callout.text>
             </flux:callout>
 
             {{-- Outil de mesure --}}
@@ -123,6 +122,13 @@
                 </flux:button>
             </div>
 
+            {{-- Barre d’actions rapide --}}
+            <div class="flex items-center justify-between -mt-1">
+              <div class="text-sm text-gray-500"></div>
+              <flux:button variant="outline" size="sm" icon="arrows-pointing-in" @click="recenter()">
+                Recentrer vue
+              </flux:button>
+            </div>
             <flux:separator/>
 
             {{-- Infos de sélection --}}
@@ -157,57 +163,6 @@
                 </template>
             </div>
 
-            {{--            <div class="flex grow flex-col justify-end items-end">--}}
-            {{--                <flux:modal.trigger name="buy-file">--}}
-            {{--                    <flux:button variant="filled" color="purple">Acheter la piéce</flux:button>--}}
-            {{--                </flux:modal.trigger>--}}
-
-            {{--                <flux:modal name="buy-file" variant="flyout" class="rounded-l-xl">--}}
-            {{--                    <div class="space-y-6">--}}
-            {{--                        <div>--}}
-            {{--                            <flux:heading size="lg" level="2" class="font-bold">Acheter le fichier</flux:heading>--}}
-            {{--                        </div>--}}
-
-            {{--                        <div class="p-6 rounded-xl border">--}}
-            {{--                            <div>--}}
-
-            {{--                                <img class="w-64 h-52 p-2.5 mx-auto" src="https://placehold.co/262x201"/>--}}
-            {{--                            </div>--}}
-
-            {{--                            <div class="flex items-center space-x-6 bg-gray-100 p-6 rounded-xl text-sm">--}}
-            {{--                                <strong>ABCDE - 2345</strong>--}}
-            {{--                                <div>--}}
-            {{--                                    <strong>Dimension pièce : </strong>--}}
-            {{--                                    <span>100 x 25 x 82 x ep 4 mm</span>--}}
-            {{--                                </div>--}}
-            {{--                                <div>--}}
-            {{--                                    <strong>Dimension à plat : </strong>--}}
-            {{--                                    <span>25 x 251 mm</span>--}}
-            {{--                                </div>--}}
-            {{--                                <div>--}}
-            {{--                                    <strong>Pliages : </strong>--}}
-            {{--                                    <span>4</span>--}}
-            {{--                                </div>--}}
-            {{--                            </div>--}}
-            {{--                        </div>--}}
-
-            {{--                        <div>--}}
-            {{--                            @hasLimit--}}
-            {{--                            @php--}}
-            {{--                                $team = auth()->user()->team;--}}
-            {{--                                $limit = $team->limits->first();--}}
-            {{--                                $product = $team->getSubscriptionProduct()--}}
-            {{--                            @endphp--}}
-
-            {{--                            <p>Vous avec un abonement en cours</p>--}}
-            {{--                            <p>Vous avez consommé {{ $limit->used_amount }}/ {{$product->files_allowed }}</p>--}}
-            {{--                            @else--}}
-            {{--                                <p>Vous n'avec pas d'abonement</p>--}}
-            {{--                            @endif--}}
-            {{--                        </div>--}}
-            {{--                    </div>--}}
-            {{--                </flux:modal>--}}
-            {{--            </div>--}}
             <div class="border-t border-violet-100/60 dark:border-violet-900/40"></div>
         </div>
     </div>
@@ -330,6 +285,10 @@
                     this.measureEnabled = !this.measureEnabled
                     Livewire.dispatch('toggleMeasureMode', {enabled: this.measureEnabled})
                     if (!this.measureEnabled) Livewire.dispatch('resetMeasure')
+                },
+                recenter() {
+                  // Demande au viewer de se recentrer
+                  window.dispatchEvent(new CustomEvent('viewer-fit'));
                 },
             }
         }
