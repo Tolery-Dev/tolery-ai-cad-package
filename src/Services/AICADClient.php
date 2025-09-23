@@ -10,11 +10,6 @@ use Illuminate\Support\Str;
 
 readonly class AICADClient
 {
-    public function __construct(
-        private ?string $baseUrl = null,
-        private ?string $apiKey = null,
-    ) {}
-
     /**
      * POST /api/generate-cad-stream — SSE progress + final payload
      * Events (exemples reçus):
@@ -111,7 +106,7 @@ readonly class AICADClient
     protected function http(int $timeoutSec): PendingRequest
     {
         $req = Http::timeout($timeoutSec)->acceptJson();
-        $key = $this->apiKey ?? config('ai-cad.api.key') ?? env('AICAD_API_KEY');
+        $key = config('ai-cad.api.key', '');
         if ($key) {
             $req = $req->withToken($key);
         }
@@ -126,47 +121,7 @@ readonly class AICADClient
 
     protected function baseUrl(): string
     {
-        return rtrim($this->baseUrl ?? config('ai-cad.api.base_url') ?? env('AICAD_BASE_URL', ''), '/');
+        return rtrim(config('ai-cad.api.base_url', ''), '/');
     }
 
-    /**
-     * Normalise l’entrée en string:
-     * - si string -> retour direct
-     * - si array -> prend le dernier élément pertinent:
-     *      * si c’est un string -> retour
-     *      * si c’est un array {content: "..."} -> content
-     *      * sinon, tente le dernier item avec 'content', sinon json_encode compact
-     */
-    private function normalizeMessage(array|string $messages): string
-    {
-        if (is_string($messages)) {
-            return $messages;
-        }
-
-        if ($messages === []) {
-            return '';
-        }
-
-        // Dernier élément
-        $last = $messages[array_key_last($messages)];
-
-        if (is_string($last)) {
-            return $last;
-        }
-
-        if (is_array($last) && array_key_exists('content', $last)) {
-            return (string) $last['content'];
-        }
-
-        // Sinon, cherche le dernier avec 'content'
-        for ($i = count($messages) - 1; $i >= 0; $i--) {
-            $m = $messages[$i];
-            if (is_array($m) && array_key_exists('content', $m)) {
-                return (string) $m['content'];
-            }
-        }
-
-        // Fallback ultime: stringifier prudemment
-        return (is_scalar($last) ? (string) $last : json_encode($last, JSON_UNESCAPED_UNICODE)) ?: '';
-    }
 }
