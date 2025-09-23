@@ -51,7 +51,7 @@ class Chatbot extends Component
     public function mount(): void
     {
         // Si nouveau chat, on s’assure qu’il existe en base
-        if (!$this->chat->exists) {
+        if (! $this->chat->exists) {
             $chat = new Chat;
             /** @var ChatUser $user */
             $user = auth()->user();
@@ -128,7 +128,7 @@ class Chatbot extends Component
 
         $this->validate();
 
-        $rateKey = 'aicad:chat:' . ($this->chat->id ?: request()->session()->getId());
+        $rateKey = 'aicad:chat:'.($this->chat->id ?: request()->session()->getId());
         if ($limiter->tooManyAttempts($rateKey, $this->ratePerMinute)) {
             $wait = $limiter->availableIn($rateKey);
             $this->appendAssistant("Vous envoyez des messages trop vite. Réessayez dans {$wait}s.");
@@ -140,7 +140,7 @@ class Chatbot extends Component
         $limiter->hit($rateKey, 60);
 
         $lock = Cache::lock("aicad:send:chat:{$this->chat->id}", $this->lockSeconds);
-        if (!$lock->get()) {
+        if (! $lock->get()) {
             return;
         }
         try {
@@ -172,7 +172,7 @@ class Chatbot extends Component
             $this->lastRefreshAt = microtime(true);
 
             // Démarre le stream côté navigateur: ouverture du modal + progression live
-            $this->dispatch('aicad-start-stream', message: $userText, sessionId: (string)$this->chat->session_id, isEdit: $isEdit);
+            $this->dispatch('aicad-start-stream', message: $userText, sessionId: (string) $this->chat->session_id, isEdit: $isEdit);
 
         } finally {
             $this->isProcessing = false;
@@ -193,7 +193,7 @@ class Chatbot extends Component
 
         // UX: scroll + focus sur l'input côté vue
         $this->dispatch('tolery-chat-append');
-        $this->dispatch('tolery-chat-focus-input', faceId: (string)$objectId);
+        $this->dispatch('tolery-chat-focus-input', faceId: (string) $objectId);
     }
 
     #[On('chatObjectClickReal')]
@@ -207,7 +207,7 @@ class Chatbot extends Component
         $this->message = "Sélection de face {$objectId} — décrivez les modifications souhaitées (ex: perçage Ø10 au centre, chanfrein 1mm, pli à 90°, etc.).";
 
         $this->dispatch('tolery-chat-append');
-        $this->dispatch('tolery-chat-focus-input', faceId: (string)$objectId);
+        $this->dispatch('tolery-chat-focus-input', faceId: (string) $objectId);
     }
 
     public function refreshFromDb(): void
@@ -246,7 +246,7 @@ class Chatbot extends Component
     {
         Log::info('[AICAD] saveStreamFinal', ['final' => $final]);
 
-        $chatResponse = (string)($final['chat_response'] ?? '');
+        $chatResponse = (string) ($final['chat_response'] ?? '');
         $objUrl = $final['obj_export'] ?? null;
         $jsonModelUrl = $final['json_export'] ?? null; // JSON principal pour affichage
         $tessUrl = $final['tessellated_export'] ?? null; // JSON tessellé (héritage)
@@ -301,12 +301,11 @@ class Chatbot extends Component
      */
     private function applyFinalAssetsToMessage(
         ChatMessage $asst,
-        mixed       $objUrl,
-        mixed       $jsonModelUrl,
-        mixed       $tessUrl,
-        mixed       $techDrawingUrl
-    ): void
-    {
+        mixed $objUrl,
+        mixed $jsonModelUrl,
+        mixed $tessUrl,
+        mixed $techDrawingUrl
+    ): void {
         if (is_string($objUrl) && $objUrl !== '') {
             // Convention existante: ai_cad_path pour l'URL OBJ
             $asst->ai_cad_path = $objUrl;
@@ -332,6 +331,7 @@ class Chatbot extends Component
         // Préférence: JSON
         if ($asst->ai_json_edge_path) {
             $this->dispatch('jsonEdgesLoaded', jsonPath: $asst->getJSONEdgeUrl());
+
             return;
         }
 
@@ -346,9 +346,9 @@ class Chatbot extends Component
     protected function mapDbMessagesToArray(): array
     {
         return $this->chat->messages()->orderBy('created_at')->get()
-            ->map(fn(ChatMessage $m) => [
+            ->map(fn (ChatMessage $m) => [
                 'role' => $m->role,
-                'content' => (string)$m->message,
+                'content' => (string) $m->message,
                 'created_at' => Carbon::parse($m->created_at)->toIso8601String(),
             ])->all();
     }
@@ -375,7 +375,7 @@ class Chatbot extends Component
         }
 
         $this->messages[$this->streamingIndex]['content'] .= $delta;
-        $dbMessage->message = ($dbMessage->message ?? '') . $delta;
+        $dbMessage->message = ($dbMessage->message ?? '').$delta;
         $dbMessage->save();
 
         $now = microtime(true);
