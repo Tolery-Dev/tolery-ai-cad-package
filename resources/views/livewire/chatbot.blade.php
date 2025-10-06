@@ -29,6 +29,68 @@ $HEADER_H = 120; // en px
                          x-init="$nextTick(()=>scrollToEnd())"
                          x-on:tolery-chat-append.window="scrollToEnd()"
                          class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                        
+                        {{-- Prompts prédéfinis (uniquement si aucun message) --}}
+                        @if(empty($messages))
+                            <div class="space-y-3">
+                                <div class="text-sm text-gray-600 dark:text-zinc-400 font-medium mb-3">
+                                    Exemples de pièces :
+                                </div>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <button 
+                                        type="button"
+                                        wire:click="sendPredefinedPrompt('Je souhaite un fichier pour une plaque de dimensions 200x100x3mm avec des rayons de 5mm dans chaque coin')"
+                                        class="text-left p-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 hover:border-violet-300 transition-all group">
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-violet-600 text-lg shrink-0">📄</span>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-zinc-100">Plaque</div>
+                                                <div class="text-xs text-gray-600 dark:text-zinc-400 line-clamp-2">200×100×3mm avec rayons d'angles</div>
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        type="button"
+                                        wire:click="sendPredefinedPrompt('Je veux un fichier pour une platine de 200mm de longueur, 200mm en largeur, épaisseur 5mm. Il faut 4 perçages taraudés M6 dans chaques coins situés à 25mm des bords. Peux tu ajouter des rayons de 15mm dans chaque angle')"
+                                        class="text-left p-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 hover:border-violet-300 transition-all group">
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-violet-600 text-lg shrink-0">⚙️</span>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-zinc-100">Platine taraudée</div>
+                                                <div class="text-xs text-gray-600 dark:text-zinc-400 line-clamp-2">200×200×5mm, 4 taraudages M6 aux coins</div>
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        type="button"
+                                        wire:click="sendPredefinedPrompt('Créer un support en forme de L, avec une base de 100 mm, une hauteur de 60 mm, une largeur de 30 mm, d\'épaisseur 2 mm, avec un pli à 90° et un rayon de pliage intérieur de 2 mm et exterieur de 4mm, comprenant deux trous de 6 mm de diamètre sur la base espacés de 70 mm, centrés en largeur, ainsi qu\'un trou de 8 mm de diamètre centré sur la partie de 60mm. Ajouter des rayons de 5mm dans chaque coins')"
+                                        class="text-left p-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 hover:border-violet-300 transition-all group">
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-violet-600 text-lg shrink-0">📐</span>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-zinc-100">Support en L</div>
+                                                <div class="text-xs text-gray-600 dark:text-zinc-400 line-clamp-2">Base 100mm, hauteur 60mm, pli 90°</div>
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        type="button"
+                                        wire:click="sendPredefinedPrompt('Je souhaite créer un fichier CAO pour un tube rectangulaire de 1400 mm de long, avec une section de 60 x 30 mm, une épaisseur de 2 mm, des coupes droites à chaque extrémité, un rayon intérieur égal à l\'épaisseur (2 mm) et un rayon extérieur égal à deux fois l\'épaisseur (4 mm)')"
+                                        class="text-left p-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 hover:border-violet-300 transition-all group">
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-violet-600 text-lg shrink-0">🔲</span>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-zinc-100">Tube</div>
+                                                <div class="text-xs text-gray-600 dark:text-zinc-400 line-clamp-2">Rectangulaire 1400mm, section 60×30mm</div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        @else
                         @forelse ($messages ?? [] as $msg)
                             <article
                                 class="flex items-start gap-3 {{ $msg['role'] === 'user' ? 'flex-row-reverse' : '' }}">
@@ -51,10 +113,9 @@ $HEADER_H = 120; // en px
                                 </div>
                             </article>
                         @empty
-                            <div class="text-sm text-gray-500 dark:text-zinc-400">
-                                Démarrez une conversation avec votre demande de pièce.
-                            </div>
+                            {{-- Ne devrait jamais arriver ici car les prompts s'affichent quand vide --}}
                         @endforelse
+                        @endif
                     </div>
 
                     {{-- Composer --}}

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string $message
  * @property string|null $ai_cad_path
  * @property string|null $ai_json_edge_path
+ * @property string|null $ai_step_path
  * @property string|null $ai_technical_drawing_path
  * @property Carbon $created_at
  * @property Carbon $updated_at
@@ -73,5 +74,12 @@ class ChatMessage extends Model
     public function getTechnicalDrawingUrl(): ?string
     {
         return $this->ai_technical_drawing_path ?: null;
+    }
+
+    public function getStepUrl(): ?string
+    {
+        return $this->ai_step_path ?
+            Storage::providesTemporaryUrls() ? Storage::temporaryUrl($this->ai_step_path, now()->addMinutes(5)) : Storage::url($this->ai_step_path)
+            : null;
     }
 }

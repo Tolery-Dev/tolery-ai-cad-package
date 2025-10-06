@@ -85,6 +85,9 @@ class Chatbot extends Component
             if ($jsonUrl) {
                 $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
             }
+            
+            // 2. Dispatch des liens de téléchargement initiaux
+            $this->dispatchExportLinks($objToDisplay);
         }
     }
 
@@ -118,6 +121,14 @@ class Chatbot extends Component
         return [
             'message' => ['required', 'string', 'min:2', 'max:5000'],
         ];
+    }
+
+    public function sendPredefinedPrompt(string $prompt): void
+    {
+        // Remplit le champ message avec le prompt prédéfini
+        $this->message = $prompt;
+        // Appelle la méthode send normale
+        $this->send(app(AICADClient::class), app(RateLimiter::class));
     }
 
     public function send(AICADClient $api, RateLimiter $limiter): void
@@ -248,6 +259,7 @@ class Chatbot extends Component
 
         $chatResponse = (string) ($final['chat_response'] ?? '');
         $objUrl = $final['obj_export'] ?? null;
+        $stepUrl = $final['step_export'] ?? null; // STEP export
         $jsonModelUrl = $final['json_export'] ?? null; // JSON principal pour affichage
         $tessUrl = $final['tessellated_export'] ?? null; // JSON tessellé (héritage)
         $techDrawingUrl = $final['technical_drawing_export'] ?? null; // plan technique
@@ -272,7 +284,7 @@ class Chatbot extends Component
         }
 
         // Applique les URLs/exports aux champs du message
-        $this->applyFinalAssetsToMessage($asst, $objUrl, $jsonModelUrl, $tessUrl, $techDrawingUrl);
+        $this->applyFinalAssetsToMessage($asst, $objUrl, $stepUrl, $jsonModelUrl, $tessUrl, $techDrawingUrl);
 
         // Optionnel: journaliser la réponse complète pour audit/debug
         logger()->info('[AICAD] final_response saved', ['chat_id' => $this->chat->id, 'final' => $final]);
@@ -296,12 +308,13 @@ class Chatbot extends Component
     }
 
     /**
-     * Applique les exports finaux (OBJ, JSON edges, plan technique) au message.
+     * Applique les exports finaux (OBJ, STEP, JSON edges, plan technique) au message.
      * Préférence: json_export, fallback: tessellated_export.
      */
     private function applyFinalAssetsToMessage(
         ChatMessage $asst,
         mixed $objUrl,
+        mixed $stepUrl,
         mixed $jsonModelUrl,
         mixed $tessUrl,
         mixed $techDrawingUrl
@@ -309,6 +322,10 @@ class Chatbot extends Component
         if (is_string($objUrl) && $objUrl !== '') {
             // Convention existante: ai_cad_path pour l'URL OBJ
             $asst->ai_cad_path = $objUrl;
+        }
+        
+        if (is_string($stepUrl) && $stepUrl !== '') {
+            $asst->ai_step_path = $stepUrl;
         }
 
         // Priorité à json_export pour l'affichage 3D JSON (fallback compat sur tessellated_export)
@@ -331,14 +348,27 @@ class Chatbot extends Component
         // Préférence: JSON
         if ($asst->ai_json_edge_path) {
             $this->dispatch('jsonEdgesLoaded', jsonPath: $asst->getJSONEdgeUrl());
-
-            return;
-        }
-
-        // Fallback OBJ
-        if ($asst->ai_cad_path) {
+        } elseif ($asst->ai_cad_path) {
+            // Fallback OBJ
             $this->dispatch('objLoaded', objPath: $asst->getObjUrl());
         }
+        
+        // Dispatch des liens de téléchargement vers le panneau Alpine
+        $this->dispatchExportLinks($asst);
+    }
+    
+    /**
+     * Envoie les liens de téléchargement disponibles au panneau de configuration
+     */
+    private function dispatchExportLinks(ChatMessage $asst): void
+    {
+        $exports = [
+            'step' => $asst->ai_step_path ? $asst->getStepUrl() : null,
+            'obj' => $asst->ai_cad_path ? $asst->getObjUrl() : null,
+            'technical_drawing' => $asst->ai_technical_drawing_path ? $asst->getTechnicalDrawingUrl() : null,
+        ];
+        
+        $this->dispatch('cad-exports-updated', ...$exports);
     }
 
     /* ----------------- Helpers ----------------- */
