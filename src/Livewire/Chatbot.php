@@ -85,7 +85,7 @@ class Chatbot extends Component
             if ($jsonUrl) {
                 $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
             }
-            
+
             // 2. Dispatch des liens de téléchargement initiaux
             $this->dispatchExportLinks($objToDisplay);
         }
@@ -323,7 +323,7 @@ class Chatbot extends Component
             // Convention existante: ai_cad_path pour l'URL OBJ
             $asst->ai_cad_path = $objUrl;
         }
-        
+
         if (is_string($stepUrl) && $stepUrl !== '') {
             $asst->ai_step_path = $stepUrl;
         }
@@ -352,11 +352,11 @@ class Chatbot extends Component
             // Fallback OBJ
             $this->dispatch('objLoaded', objPath: $asst->getObjUrl());
         }
-        
+
         // Dispatch des liens de téléchargement vers le panneau Alpine
         $this->dispatchExportLinks($asst);
     }
-    
+
     /**
      * Envoie les liens de téléchargement disponibles au panneau de configuration
      */
@@ -367,7 +367,7 @@ class Chatbot extends Component
             'obj' => $asst->ai_cad_path ? $asst->getObjUrl() : null,
             'technical_drawing' => $asst->ai_technical_drawing_path ? $asst->getTechnicalDrawingUrl() : null,
         ];
-        
+
         $this->dispatch('cad-exports-updated', ...$exports);
     }
 
