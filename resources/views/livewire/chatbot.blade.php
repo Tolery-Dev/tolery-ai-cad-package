@@ -216,7 +216,11 @@ $HEADER_H = 120; // en px
         </section>
 
         {{-- Fenêtre volante (drag + toggle, contour/ombre violets) --}}
-        @include('ai-cad::partials.cad-config-panel')
+        @include('ai-cad::partials.cad-config-panel', [
+            'stepExportUrl' => $stepExportUrl,
+            'objExportUrl' => $objExportUrl,
+            'technicalDrawingUrl' => $technicalDrawingUrl
+        ])
     </div>
 </div>
 

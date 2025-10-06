@@ -1,7 +1,11 @@
 {{-- Fenêtre volante du configurateur CAD (draggable) --}}
 <template x-teleport="body">
     <aside
-        x-data="cadConfigPanel()"
+        x-data="cadConfigPanel({
+            initialStepUrl: @js($stepExportUrl ?? null),
+            initialObjUrl: @js($objExportUrl ?? null),
+            initialTechnicalDrawingUrl: @js($technicalDrawingUrl ?? null)
+        })"
         x-show="true"
         :style="`position: fixed; top: 0; left: 0; transform: translate(${x}px, ${y}px); z-index: 9999;`"
         @dblclick.stop="open = !open"
@@ -138,8 +142,9 @@
                 <div class="text-lg font-semibold text-gray-900">Télécharger les fichiers</div>
                 <div class="grid grid-cols-1 gap-2">
                     <template x-if="exports.step">
-                        <a :href="exports.step" 
-                           download
+                        <a :href="exports.step"
+                           target="_blank"
+                           rel="noopener noreferrer"
                            class="flex items-center justify-between px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 transition-colors group">
                             <div class="flex items-center gap-3">
                                 <div class="h-8 w-8 rounded-lg bg-violet-600 text-white grid place-items-center text-xs font-semibold">
@@ -157,8 +162,9 @@
                     </template>
 
                     <template x-if="exports.obj">
-                        <a :href="exports.obj" 
-                           download
+                        <a :href="exports.obj"
+                           target="_blank"
+                           rel="noopener noreferrer"
                            class="flex items-center justify-between px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 transition-colors group">
                             <div class="flex items-center gap-3">
                                 <div class="h-8 w-8 rounded-lg bg-indigo-600 text-white grid place-items-center text-xs font-semibold">
@@ -176,8 +182,9 @@
                     </template>
 
                     <template x-if="exports.technical_drawing">
-                        <a :href="exports.technical_drawing" 
-                           download
+                        <a :href="exports.technical_drawing"
+                           target="_blank"
+                           rel="noopener noreferrer"
                            class="flex items-center justify-between px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 transition-colors group">
                             <div class="flex items-center gap-3">
                                 <div class="h-8 w-8 rounded-lg bg-purple-600 text-white grid place-items-center text-xs font-semibold">
@@ -238,7 +245,7 @@
 
 @once
     <script>
-        function cadConfigPanel() {
+        function cadConfigPanel(config = {}) {
             return {
                 // UI
                 open: true, // État d'ouverture/fermeture du panneau
@@ -258,12 +265,12 @@
                 partName: 'Pièce 001',
                 showEdges: false,
                 material: 'inox', // inox | aluminium | acier
-                
-                // Exports disponibles (alimenté par Livewire)
+
+                // Exports disponibles (initialisés depuis Livewire puis mis à jour par événements)
                 exports: {
-                    step: null,
-                    obj: null,
-                    technical_drawing: null
+                    step: config.initialStepUrl || null,
+                    obj: config.initialObjUrl || null,
+                    technical_drawing: config.initialTechnicalDrawingUrl || null
                 },
 
                 init() {

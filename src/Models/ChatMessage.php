@@ -49,9 +49,19 @@ class ChatMessage extends Model
 
     public function getObjUrl(): ?string
     {
-        return $this->ai_cad_path ?
-            Storage::providesTemporaryUrls() ? Storage::temporaryUrl($this->ai_cad_path, now()->addMinutes(5)) : Storage::url($this->ai_cad_path)
-            : null;
+        if (! $this->ai_cad_path) {
+            return null;
+        }
+
+        // Si c'est déjà une URL complète (http/https), on la retourne telle quelle
+        if (filter_var($this->ai_cad_path, FILTER_VALIDATE_URL)) {
+            return $this->ai_cad_path;
+        }
+
+        // Sinon, c'est un chemin Storage local
+        return Storage::providesTemporaryUrls()
+            ? Storage::temporaryUrl($this->ai_cad_path, now()->addMinutes(5))
+            : Storage::url($this->ai_cad_path);
     }
 
     public function objUrl(): Attribute
@@ -68,18 +78,52 @@ class ChatMessage extends Model
 
     public function getJSONEdgeUrl(): ?string
     {
-        return $this->ai_json_edge_path ?: null;
+        if (! $this->ai_json_edge_path) {
+            return null;
+        }
+
+        // Si c'est déjà une URL complète (http/https), on la retourne telle quelle
+        if (filter_var($this->ai_json_edge_path, FILTER_VALIDATE_URL)) {
+            return $this->ai_json_edge_path;
+        }
+
+        // Sinon, c'est un chemin Storage local
+        return Storage::providesTemporaryUrls()
+            ? Storage::temporaryUrl($this->ai_json_edge_path, now()->addMinutes(5))
+            : Storage::url($this->ai_json_edge_path);
     }
 
     public function getTechnicalDrawingUrl(): ?string
     {
-        return $this->ai_technical_drawing_path ?: null;
+        if (! $this->ai_technical_drawing_path) {
+            return null;
+        }
+
+        // Si c'est déjà une URL complète (http/https), on la retourne telle quelle
+        if (filter_var($this->ai_technical_drawing_path, FILTER_VALIDATE_URL)) {
+            return $this->ai_technical_drawing_path;
+        }
+
+        // Sinon, c'est un chemin Storage local
+        return Storage::providesTemporaryUrls()
+            ? Storage::temporaryUrl($this->ai_technical_drawing_path, now()->addMinutes(5))
+            : Storage::url($this->ai_technical_drawing_path);
     }
 
     public function getStepUrl(): ?string
     {
-        return $this->ai_step_path ?
-            Storage::providesTemporaryUrls() ? Storage::temporaryUrl($this->ai_step_path, now()->addMinutes(5)) : Storage::url($this->ai_step_path)
-            : null;
+        if (! $this->ai_step_path) {
+            return null;
+        }
+
+        // Si c'est déjà une URL complète (http/https), on la retourne telle quelle
+        if (filter_var($this->ai_step_path, FILTER_VALIDATE_URL)) {
+            return $this->ai_step_path;
+        }
+
+        // Sinon, c'est un chemin Storage local
+        return Storage::providesTemporaryUrls()
+            ? Storage::temporaryUrl($this->ai_step_path, now()->addMinutes(5))
+            : Storage::url($this->ai_step_path);
     }
 }

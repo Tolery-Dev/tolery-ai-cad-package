@@ -42,6 +42,13 @@ class Chatbot extends Component
 
     public ?string $partName = '';
 
+    /** Export links pour le panneau de configuration */
+    public ?string $stepExportUrl = null;
+
+    public ?string $objExportUrl = null;
+
+    public ?string $technicalDrawingUrl = null;
+
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -86,7 +93,10 @@ class Chatbot extends Component
                 $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
             }
 
-            // 2. Dispatch des liens de téléchargement initiaux
+            // 2. Initialise les liens d'export pour le panneau
+            $this->updateExportUrls($objToDisplay);
+
+            // 3. Dispatch des liens de téléchargement initiaux
             $this->dispatchExportLinks($objToDisplay);
         }
     }
@@ -358,14 +368,26 @@ class Chatbot extends Component
     }
 
     /**
+     * Met à jour les propriétés publiques d'export pour le panneau
+     */
+    private function updateExportUrls(ChatMessage $asst): void
+    {
+        $this->stepExportUrl = $asst->ai_step_path ? $asst->getStepUrl() : null;
+        $this->objExportUrl = $asst->ai_cad_path ? $asst->getObjUrl() : null;
+        $this->technicalDrawingUrl = $asst->ai_technical_drawing_path ? $asst->getTechnicalDrawingUrl() : null;
+    }
+
+    /**
      * Envoie les liens de téléchargement disponibles au panneau de configuration
      */
     private function dispatchExportLinks(ChatMessage $asst): void
     {
+        $this->updateExportUrls($asst);
+
         $exports = [
-            'step' => $asst->ai_step_path ? $asst->getStepUrl() : null,
-            'obj' => $asst->ai_cad_path ? $asst->getObjUrl() : null,
-            'technical_drawing' => $asst->ai_technical_drawing_path ? $asst->getTechnicalDrawingUrl() : null,
+            'step' => $this->stepExportUrl,
+            'obj' => $this->objExportUrl,
+            'technical_drawing' => $this->technicalDrawingUrl,
         ];
 
         $this->dispatch('cad-exports-updated', ...$exports);
