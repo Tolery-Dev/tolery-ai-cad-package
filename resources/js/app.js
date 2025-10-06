@@ -295,7 +295,7 @@ class JsonModelViewer3D {
     this.ensureMeasureLabel();
     const mid = p1.clone().add(p2).multiplyScalar(0.5);
     const s = this.worldToScreen(mid);
-    const distMM = p1.distanceTo(p2) * 1000;
+    const distMM = p1.distanceTo(p2);
     this.measureLabelEl.textContent = `${distMM.toFixed(2)} mm`;
     this.measureLabelEl.style.left = `${s.x}px`;
     this.measureLabelEl.style.top = `${s.y}px`;
@@ -652,9 +652,9 @@ class JsonModelViewer3D {
       triangles: Math.floor(fg.count / 3),
       unit: "mm",
       bbox: {
-        x: (maxX - minX) * 1000,
-        y: (maxY - minY) * 1000,
-        z: (maxZ - minZ) * 1000,
+        x: maxX - minX,
+        y: maxY - minY,
+        z: maxZ - minZ,
       },
       area: +(areaM2 * 1e6).toFixed(2), // mm²
     };
