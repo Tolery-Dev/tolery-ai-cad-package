@@ -7,6 +7,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -329,24 +330,68 @@ class Chatbot extends Component
         mixed $tessUrl,
         mixed $techDrawingUrl
     ): void {
+        // Télécharge et stocke les fichiers localement si ce sont des URLs externes
         if (is_string($objUrl) && $objUrl !== '') {
-            // Convention existante: ai_cad_path pour l'URL OBJ
-            $asst->ai_cad_path = $objUrl;
+            $asst->ai_cad_path = $this->downloadAndStoreFile($objUrl, 'obj');
         }
 
         if (is_string($stepUrl) && $stepUrl !== '') {
-            $asst->ai_step_path = $stepUrl;
+            $asst->ai_step_path = $this->downloadAndStoreFile($stepUrl, 'step');
         }
 
         // Priorité à json_export pour l'affichage 3D JSON (fallback compat sur tessellated_export)
         if (is_string($jsonModelUrl) && $jsonModelUrl !== '') {
-            $asst->ai_json_edge_path = $jsonModelUrl;
+            $asst->ai_json_edge_path = $this->downloadAndStoreFile($jsonModelUrl, 'json');
         } elseif (is_string($tessUrl) && $tessUrl !== '') {
-            $asst->ai_json_edge_path = $tessUrl;
+            $asst->ai_json_edge_path = $this->downloadAndStoreFile($tessUrl, 'json');
         }
 
         if (is_string($techDrawingUrl) && $techDrawingUrl !== '') {
-            $asst->ai_technical_drawing_path = $techDrawingUrl;
+            $asst->ai_technical_drawing_path = $this->downloadAndStoreFile($techDrawingUrl, 'pdf');
+        }
+    }
+
+    /**
+     * Télécharge un fichier depuis une URL et le stocke localement
+     * Retourne le chemin de stockage ou l'URL si ce n'est pas une URL HTTP
+     */
+    private function downloadAndStoreFile(string $url, string $extension): string
+    {
+        // Si ce n'est pas une URL HTTP/HTTPS, on retourne tel quel (peut-être déjà un chemin local)
+        if (! filter_var($url, FILTER_VALIDATE_URL) || ! preg_match('/^https?:\/\//i', $url)) {
+            return $url;
+        }
+
+        try {
+            // Télécharge le contenu
+            $content = file_get_contents($url, false, stream_context_create([
+                'http' => [
+                    'timeout' => 30,
+                    'ignore_errors' => true,
+                ],
+            ]));
+
+            if ($content === false) {
+                logger()->warning("[AICAD] Failed to download file from {$url}");
+
+                return $url; // Fallback sur l'URL originale
+            }
+
+            // Génère un chemin de stockage dans le dossier du chat
+            $folder = $this->chat->getStorageFolder();
+            $filename = uniqid('cad_').'.'.$extension;
+            $path = "{$folder}/{$filename}";
+
+            // Stocke le fichier
+            Storage::put($path, $content);
+
+            logger()->info("[AICAD] Downloaded and stored file: {$url} -> {$path}");
+
+            return $path;
+        } catch (\Exception $e) {
+            logger()->error("[AICAD] Error downloading file: {$url}", ['error' => $e->getMessage()]);
+
+            return $url; // Fallback sur l'URL originale
         }
     }
 
