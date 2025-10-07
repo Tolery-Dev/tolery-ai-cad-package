@@ -5,7 +5,6 @@ namespace Tolery\AiCad\Livewire;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -13,6 +12,7 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
+use Tolery\AiCad\Models\ChatUser;
 use Tolery\AiCad\Services\AICADClient;
 
 class Chatbot extends Component

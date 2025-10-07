@@ -24,6 +24,6 @@ class ChatConfig extends Component
 
     public function render()
     {
-        return view('ai-cad::livewire.chat-config'); // @phpstan-ignore-line
+        return view('ai-cad::livewire.chat-config');
     }
 }
