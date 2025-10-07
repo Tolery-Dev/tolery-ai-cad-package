@@ -1,21 +1,27 @@
 {{-- Fenêtre volante du configurateur CAD (draggable) --}}
-<aside
-    x-data="cadConfigPanel()"
-    :style="`transform: translate(${x}px, ${y}px)`"
-    @dblclick.stop="open = !open"
-    class="fixed z-40 w-[360px] max-w-[90vw]
-         rounded-2xl border border-violet-500/80 bg-white dark:bg-zinc-900
-         ring-1 ring-violet-400/50
-         shadow-xl shadow-violet-500/10
-         scroll-smooth overflow-hidden select-none"
-    :class="open ? '[box-shadow:0_12px_30px_-6px_rgba(124,58,237,0.35),0_6px_18px_-8px_rgba(124,58,237,0.25)]' : ''"
->
+<template x-teleport="body">
+    <aside
+        x-data="cadConfigPanel({
+            initialStepUrl: @js($stepExportUrl ?? null),
+            initialObjUrl: @js($objExportUrl ?? null),
+            initialTechnicalDrawingUrl: @js($technicalDrawingUrl ?? null)
+        })"
+        x-show="true"
+        :style="`position: fixed; top: 0; left: 0; transform: translate(${x}px, ${y}px); z-index: 9999;`"
+        @dblclick.stop="open = !open"
+        class="w-[360px] max-w-[90vw]
+             rounded-2xl border border-violet-500/80 bg-white dark:bg-zinc-900
+             ring-1 ring-violet-400/50
+             shadow-xl shadow-violet-500/10
+             scroll-smooth overflow-hidden select-none"
+        :class="open ? '[box-shadow:0_12px_30px_-6px_rgba(124,58,237,0.35),0_6px_18px_-8px_rgba(124,58,237,0.25)]' : ''"
+    >
     {{-- Header (handle drag) --}}
     <div class="flex items-center justify-between px-4 py-3 bg-violet-50/60 dark:bg-violet-950/20 cursor-move"
          @mousedown.self="startDrag($event)" @touchstart.self.passive="startDrag($event)">
         <div class="flex items-center gap-2">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
-            <h3 class="text-sm font-semibold text-violet-700 dark:text-violet-300">Paramètres de votre pièce</h3>
+            <h3 class="text-sm font-semibold text-violet-700 dark:text-violet-300">Paramètres de votre fichier</h3>
         </div>
 
         <button
@@ -131,6 +137,74 @@
             </div>
             <flux:separator/>
 
+            {{-- Section téléchargements (si fichiers disponibles) --}}
+            <div x-show="hasExports()" class="space-y-3">
+                <div class="text-lg font-semibold text-gray-900">Télécharger les fichiers</div>
+                <div class="grid grid-cols-1 gap-2">
+                    <template x-if="exports.step">
+                        <a :href="exports.step"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="flex items-center justify-between px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <div class="h-8 w-8 rounded-lg bg-violet-600 text-white grid place-items-center text-xs font-semibold">
+                                    3D
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Fichier STEP</div>
+                                    <div class="text-xs text-gray-500">Format CAO standard</div>
+                                </div>
+                            </div>
+                            <svg class="h-5 w-5 text-violet-600 group-hover:translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                        </a>
+                    </template>
+
+                    <template x-if="exports.obj">
+                        <a :href="exports.obj"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="flex items-center justify-between px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <div class="h-8 w-8 rounded-lg bg-indigo-600 text-white grid place-items-center text-xs font-semibold">
+                                    OBJ
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Fichier OBJ</div>
+                                    <div class="text-xs text-gray-500">Modèle 3D mesh</div>
+                                </div>
+                            </div>
+                            <svg class="h-5 w-5 text-indigo-600 group-hover:translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                        </a>
+                    </template>
+
+                    <template x-if="exports.technical_drawing">
+                        <a :href="exports.technical_drawing"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="flex items-center justify-between px-4 py-3 rounded-lg border border-violet-200 bg-violet-50/50 hover:bg-violet-100/70 transition-colors group">
+                            <div class="flex items-center gap-3">
+                                <div class="h-8 w-8 rounded-lg bg-purple-600 text-white grid place-items-center text-xs font-semibold">
+                                    PDF
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Plan technique</div>
+                                    <div class="text-xs text-gray-500">Mise en plan PDF</div>
+                                </div>
+                            </div>
+                            <svg class="h-5 w-5 text-purple-600 group-hover:translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                        </a>
+                    </template>
+                </div>
+            </div>
+
+            <flux:separator x-show="hasExports()"/>
+
             {{-- Infos de sélection --}}
             <div class="space-y-2">
                 <div class="text-base font-semibold text-gray-900">Sélection</div>
@@ -166,13 +240,15 @@
             <div class="border-t border-violet-100/60 dark:border-violet-900/40"></div>
         </div>
     </div>
-</aside>
+    </aside>
+</template>
 
 @once
     <script>
-        function cadConfigPanel() {
+        function cadConfigPanel(config = {}) {
             return {
                 // UI
+                open: true, // État d'ouverture/fermeture du panneau
                 showDetails: true,
                 measureEnabled: false,
 
@@ -190,18 +266,47 @@
                 showEdges: false,
                 material: 'inox', // inox | aluminium | acier
 
+                // Exports disponibles (initialisés depuis Livewire puis mis à jour par événements)
+                exports: {
+                    step: config.initialStepUrl || null,
+                    obj: config.initialObjUrl || null,
+                    technical_drawing: config.initialTechnicalDrawingUrl || null
+                },
+
                 init() {
-                    // position par défaut : coin bas-droit avec marge (si pas de state stocké)
-                    const saved = JSON.parse(localStorage.getItem('cadPanelPos') || 'null')
-                    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-                        this.x = saved.x;
-                        this.y = saved.y
-                    } else {
-                        // positionne par défaut en bas/droite : 24px de marge
-                        const w = 360
-                        this.x = window.innerWidth - w - 24
-                        this.y = window.innerHeight - 320 - 24
-                    }
+                    // Après teleport, calcule la position initiale adaptée à l'écran
+                    this.$nextTick(() => {
+                        const saved = JSON.parse(localStorage.getItem('cadPanelPos') || 'null')
+                        const panelWidth = 360
+                        const viewportWidth = window.innerWidth
+                        const viewportHeight = window.innerHeight
+
+                        if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+                            // Restaure position sauvegardée
+                            this.x = saved.x
+                            this.y = saved.y
+                        } else {
+                            // Position par défaut selon taille d'écran
+                            if (viewportWidth < 768) {
+                                // Mobile/petit écran : centré en haut
+                                this.x = Math.max(12, (viewportWidth - panelWidth) / 2)
+                                this.y = 12
+                            } else {
+                                // Desktop : haut droite
+                                this.x = viewportWidth - panelWidth - 24
+                                this.y = 24
+                            }
+                        }
+
+                        // Valide que la position est dans l'écran
+                        this.clampToViewport()
+                    })
+
+                    // Réajuste sur resize
+                    window.addEventListener('resize', () => {
+                        this.clampToViewport()
+                    })
+
                     // Dimensions globales
                     window.addEventListener('cad-model-stats', ({detail}) => {
                         if (detail) this.stats = detail
@@ -212,6 +317,16 @@
                     })
                     // Matériau initial
                     this.setMaterial(this.material)
+
+                    // Écoute les événements d'export depuis Livewire
+                    Livewire.on('cad-exports-updated', ({step, obj, technical_drawing}) => {
+                        this.exports.step = step || null
+                        this.exports.obj = obj || null
+                        this.exports.technical_drawing = technical_drawing || null
+                    })
+                },
+                hasExports() {
+                    return this.exports.step || this.exports.obj || this.exports.technical_drawing
                 },
                 // ---- Drag & drop ----
                 startDrag(e) {
