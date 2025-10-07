@@ -1,41 +1,31 @@
-@php
-// Ajuste ici si ton header fait autre chose que 96px
-$HEADER_H = 120; // en px
-@endphp
+<div class="relative h-[calc(100vh-120px)]">
 
-<div class="h-[calc(100vh-{{ $HEADER_H }}px)] px-6 pt-4">
+    {{-- Grille pleine hauteur : 40% / 60% --}}
+    <div class="grid grid-cols-[40%_60%] h-full w-full">
 
-    {{-- Grille pleine hauteur de fenêtre (moins le header) --}}
-    <div class="grid grid-cols-[380px_1fr] gap-6 h-full">
+        {{-- GAUCHE (40%) — Chat sur fond gris plein écran --}}
+        <section class="flex flex-col h-full bg-[#fcfcfc]">
+            <div class="h-full flex flex-col bg-[#fcfcfc] rounded-bl-xl shadow-sm overflow-hidden">
+                {{-- Header chat --}}
+                <div class="pl-8">
+                    <flux:heading size="xl" class="flex gap-4 pb-4">
+                        <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg')}}" alt="">
+                        Bonjour Arthur !
+                    </flux:heading>
 
-        {{-- GAUCHE (1/3) — Chat sticky full height --}}
-        <section class="flex flex-col h-full min-h-0">
-            <div class="sticky"
-                 style="top: 16px; height: calc(100vh - {{ $HEADER_H }}px - 32px);">
-                <div
-                    class="h-full dark:bg-zinc-900 flex flex-col overflow-hidden">
-                    {{-- Header chat --}}
-                    <header
-                        class="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
-                        <h2 class="text-sm font-semibold text-gray-900 dark:text-zinc-100">Tolery • Assistant CAO</h2>
-                        @if($isProcessing ?? false)
-                        <span class="text-xs text-blue-600">Calcul...</span>
-                        @endif
-                    </header>
-
-                    {{-- Messages (scroll) --}}
-                    <div id="chat-scroll"
-                         x-data="{ scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight } }"
-                         x-init="$nextTick(()=>scrollToEnd())"
-                         x-on:tolery-chat-append.window="scrollToEnd()"
-                         class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                    <flux:text size="xl" class="text-black"> Bienvenue dans le configurateur intelligent de pièces en tôle.</flux:text>
+                    <flux:text size="xl" class="text-black"> Vous pouvez démarrer votre demande de fichier CAO en cliquant ici :</flux:text>
+                </div>
+                {{-- Messages (scroll) --}}
+                <div id="chat-scroll"
+                     x-data="{ scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight } }"
+                     x-init="$nextTick(()=>scrollToEnd())"
+                     x-on:tolery-chat-append.window="scrollToEnd()"
+                     class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
                         {{-- Prompts prédéfinis (uniquement si aucun message) --}}
                         @if(empty($messages))
                             <div class="space-y-3">
-                                <div class="text-sm text-gray-600 dark:text-zinc-400 font-medium mb-3">
-                                    Exemples de pièces :
-                                </div>
                                 <div class="grid grid-cols-1 gap-2">
                                     <flux:button
                                         type="button"
@@ -100,7 +90,11 @@ $HEADER_H = 120; // en px
                                 class="flex items-start gap-3 {{ $msg['role'] === 'user' ? 'flex-row-reverse' : '' }}">
                                 <div class="h-8 w-8 shrink-0 rounded-full grid place-items-center
                                 {{ $msg['role'] === 'user' ? 'bg-violet-300 text-white' : 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200' }}">
-                                    {{ $msg['role'] === 'user' ? '👤' : '🤖' }}
+                                    @if($msg['role'] === 'user')
+                                        👤
+                                    @else
+                                        <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg')}}" alt="">
+                                    @endif
                                 </div>
                                 <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">
                                     <div class="text-xs text-gray-500 dark:text-zinc-400 mb-1">
@@ -120,58 +114,70 @@ $HEADER_H = 120; // en px
                             {{-- Ne devrait jamais arriver ici car les prompts s'affichent quand vide --}}
                         @endforelse
                         @endif
-                    </div>
-
-                    {{-- Composer --}}
-                    <footer class="border-t border-gray-100 dark:border-zinc-800 p-3">
-                        <form wire:submit.prevent="send" class="flex flex-col gap-2">
-                            <div>
-                                <flux:textarea
-                                    id="message"
-                                    rows="2"
-                                    placeholder="Décrivez votre pièce ou posez une question"
-                                    wire:model.defer="message"
-                                    x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
-                                    class="rounded-xl transition-all duration-200
-                                           border border-violet-500/20 ring-1 ring-violet-500/20
-                                           shadow-md shadow-violet-500/10
-                                           focus:ring-2 focus:ring-violet-500/50
-                                           focus:shadow-lg focus:shadow-violet-500/20
-                                           focus:border-violet-500/50"
-                                />
-                            </div>
-                            <div class="flex justify-end">
-                                <flux:button type="submit" variant="ghost" icon="paper-airplane"/>
-                            </div>
-                        </form>
-                    </footer>
                 </div>
-            </div>
 
-            {{-- Modal progression CAD (SSE) --}}
+                {{-- Composer --}}
+                <footer class="w-full border-t border-gray-100 dark:border-zinc-800 p-3 shrink-0">
+                    <form wire:submit.prevent="send" class="flex flex-col gap-2">
+                        <div>
+                            <flux:textarea
+                                id="message"
+                                rows="2"
+                                placeholder="Décrivez votre pièce ou posez une question"
+                                wire:model.defer="message"
+                                x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
+                                class="rounded-xl transition-all duration-200
+                                       border border-violet-500/20 ring-1 ring-violet-500/20
+                                       shadow-md shadow-violet-500/10
+                                       focus:ring-2 focus:ring-violet-500/50
+                                       focus:shadow-lg focus:shadow-violet-500/20
+                                       focus:border-violet-500/50 w-80%"
+                            />
+                        </div>
+                        <div class="flex justify-end">
+                            <flux:button type="submit" variant="ghost" icon="paper-airplane"/>
+                        </div>
+                    </form>
+                </footer>
+            </div>
+        </section>
+
+        {{-- DROITE (60%) — Viewer sur fond gris (pas de carte blanche) --}}
+        <section class="relative h-full bg-gray-50 dark:bg-zinc-900 px-6 py-4">
+            {{-- Modal progression CAD (intégré dans la colonne, pas en overlay) --}}
             <div x-data="cadStreamModal()"
                  x-show="open"
                  x-cloak
-                 class="fixed inset-0 z-[100] flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/40" @click="cancelable ? close() : null"></div>
-
-                <div class="relative w-full max-w-3xl mx-4 overflow-hidden rounded-2xl shadow-2xl">
+                 class="absolute inset-0 z-50 flex items-start justify-center pt-8">
+                <div class="w-full max-w-4xl mx-4">
                     <div
-                        class="bg-gradient-to-r from-violet-600 to-indigo-800 px-6 py-4 text-white flex items-center justify-between">
+                        class="bg-gradient-to-r from-violet-600 to-indigo-800 px-6 py-4 text-white flex items-center justify-between rounded-t-2xl">
                         <h3 class="text-lg font-semibold">Processing</h3>
                         <div class="text-sm" x-text="`${completedSteps} out of 5 steps completed`"></div>
                     </div>
 
-                    <div class="bg-white dark:bg-zinc-900 p-6">
-                        <div class="grid grid-cols-5 gap-6 mb-6">
+                    <div class="bg-white dark:bg-zinc-900 p-6 rounded-b-2xl shadow-2xl">
+                        <div class="flex items-center justify-between gap-6 mb-6">
                             <template x-for="s in steps" :key="s.key">
-                                <div class="flex items-center gap-2">
-                                    <span class="h-5 w-5 rounded-full grid place-items-center"
-                                          :class="s.state==='done' ? 'bg-violet-600 text-white' : (s.state==='active' ? 'border-2 border-violet-500 text-violet-500' : 'border-2 border-gray-300 text-gray-300')">
-                                        <span x-text="s.state === 'done' ? '' : '•'"
-                                              :class="s.state !== 'done' ? 'animate-pulse' : ''"></span>
-                                    </span>
-                                    <span class="text-sm"
+                                <div class="flex flex-col items-center gap-2 flex-1">
+                                    <div class="relative">
+                                        <span class="h-12 w-12 rounded-full grid place-items-center text-lg font-semibold transition-all duration-300"
+                                              :class="s.state==='done' ? 'bg-violet-600 text-white scale-100' : (s.state==='active' ? 'bg-violet-100 text-violet-600 border-2 border-violet-500 animate-pulse scale-110' : 'bg-gray-100 text-gray-400 scale-90')">
+                                            <span x-show="s.state === 'done'">✓</span>
+                                            <span x-show="s.state !== 'done'"
+                                                  class="inline-block"
+                                                  :class="s.state === 'active' ? 'animate-spin' : ''"
+                                                  x-html="s.state === 'active' ? '●' : '○'"></span>
+                                        </span>
+                                        {{-- Cercle de progression animé pour l'étape active --}}
+                                        <svg x-show="s.state === 'active'" class="absolute inset-0 w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                                            <circle cx="24" cy="24" r="22" fill="none" stroke="#a78bfa" stroke-width="2"
+                                                    stroke-dasharray="138" stroke-dashoffset="69"
+                                                    class="animate-spin origin-center">
+                                            </circle>
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-medium text-center"
                                           :class="s.state === 'inactive' ? 'text-gray-400' : 'text-gray-900 dark:text-zinc-100'"
                                           x-text="s.label">
                                     </span>
@@ -180,42 +186,26 @@ $HEADER_H = 120; // en px
                         </div>
 
                         <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-2 bg-gradient-to-r from-gray-800 to-violet-600 transition-all duration-300"
+                            <div class="h-2 bg-gradient-to-r from-violet-600 to-indigo-600 transition-all duration-500 ease-out"
                                  :style="`width: ${overall}%`"></div>
                         </div>
 
                         <div class="mt-4 text-sm text-gray-600 dark:text-zinc-300 flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <span class="inline-block h-2 w-2 rounded-full"
+                                <span class="inline-block h-2 w-2 rounded-full animate-pulse"
                                     :class="activeStep ? 'bg-violet-500' : 'bg-gray-300'"></span>
                                 <span x-text="statusText"></span>
                             </div>
-                            <div x-text="`${overall}%`"></div>
-                        </div>
-
-                        <div class="mt-6 flex justify-end gap-2">
-                            <button type="button"
-                                    class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    x-show="cancelable" @click="close()">Close
-                            </button>
+                            <div class="font-semibold" x-text="`${overall}%`"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
 
-        {{-- DROITE (2/3) — Viewer plein espace + fond gris + panneau volant --}}
-        <section class="relative w-full h-full min-h-0">
-            {{-- Fond gris autour du viewer (comme ta maquette) --}}
-            <div class="h-full w-full bg-gray-100 p-4">
-                <div
-                    class="relative h-full rounded-xl border border-gray-200 dark:border-zinc-800 bg-white overflow-hidden shadow-sm">
-                    {{-- Le canvas/WebGL prend 100% de la carte blanche --}}
-                    <div id="viewer"
-                         wire:ignore
-                         class="h-full w-full relative rounded-2xl bg-white/70 shadow-inner">
-                    </div>
-                </div>
+            {{-- Viewer directement sur le fond gris --}}
+            <div id="viewer"
+                 wire:ignore
+                 class="h-full w-full rounded-xl overflow-hidden shadow-sm">
             </div>
         </section>
 

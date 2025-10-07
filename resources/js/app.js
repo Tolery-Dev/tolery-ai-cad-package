@@ -60,7 +60,7 @@ class JsonModelViewer3D {
     this.container.appendChild(this.renderer.domElement);
 
     // --- Lumières pour métaux : ambiance + reflets ---
-    this.scene.background = new THREE.Color(0xf5f5f7); // gris très clair
+    this.scene.background = new THREE.Color(0xfcfcfc); // gris très clair
 
     // Lumière d'ambiance douce (simule le ciel)
     const ambient = new THREE.AmbientLight(0xffffff, 0.4);
@@ -264,7 +264,7 @@ class JsonModelViewer3D {
           const finnoise = (Math.random() - 0.5) * 3;
 
           // Combine les effets
-          const totalX = brushLine + microScratch + lineVariation + finoise;
+          const totalX = brushLine + microScratch + lineVariation + finnoise;
           const totalY = -Math.abs(brushLine) * 0.6; // Crée des creux dans les lignes
 
           data[i] = Math.max(0, Math.min(255, 128 + totalX));
@@ -456,7 +456,7 @@ class JsonModelViewer3D {
     Object.assign(el.style, {
       position: "absolute",
       padding: "4px 8px",
-      background: "rgba(124,58,237,.95)",
+      background: "rgba(255,255,255,1)",
       color: "#fff",
       borderRadius: "6px",
       fontSize: "12px",
