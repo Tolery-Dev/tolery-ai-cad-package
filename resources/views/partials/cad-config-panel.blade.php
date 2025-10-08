@@ -21,7 +21,7 @@
          @mousedown.self="startDrag($event)" @touchstart.self.passive="startDrag($event)">
         <div class="flex items-center gap-2">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
-            <h3 class="text-sm font-semibold text-violet-700 dark:text-violet-300">Paramètres de votre fichier</h3>
+            <h3 class="text-sm font-semibold text-violet-700 dark:text-violet-300">Configuration</h3>
         </div>
 
         <button
@@ -248,7 +248,7 @@
         function cadConfigPanel(config = {}) {
             return {
                 // UI
-                open: true, // État d'ouverture/fermeture du panneau
+                open: false, // État d'ouverture/fermeture du panneau
                 showDetails: true,
                 measureEnabled: false,
 

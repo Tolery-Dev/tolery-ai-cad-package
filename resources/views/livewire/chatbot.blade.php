@@ -5,7 +5,7 @@
 
         {{-- GAUCHE (40%) — Chat sur fond gris plein écran --}}
         <section class="flex flex-col h-full bg-[#fcfcfc]">
-            <div class="h-full flex flex-col bg-[#fcfcfc] rounded-bl-xl shadow-sm overflow-hidden">
+            <div class="h-full flex flex-col bg-[#fcfcfc] rounded-bl-xl overflow-hidden">
                 {{-- Header chat --}}
                 <div class="pl-8">
                     <flux:heading size="xl" class="flex gap-4 pb-4">
@@ -117,8 +117,8 @@
                 </div>
 
                 {{-- Composer --}}
-                <footer class="w-full border-t border-gray-100 dark:border-zinc-800 p-3 shrink-0">
-                    <form wire:submit.prevent="send" class="flex flex-col gap-2">
+                <footer class="w-full border-t border-gray-100 dark:border-zinc-800 p-4 shrink-0">
+                    <form wire:submit.prevent="send" class="flex flex-col gap-2 max-w-2xl mx-auto">
                         <div>
                             <flux:textarea
                                 id="message"
@@ -131,7 +131,7 @@
                                        shadow-md shadow-violet-500/10
                                        focus:ring-2 focus:ring-violet-500/50
                                        focus:shadow-lg focus:shadow-violet-500/20
-                                       focus:border-violet-500/50 w-80%"
+                                       focus:border-violet-500/50"
                             />
                         </div>
                         <div class="flex justify-end">
@@ -143,7 +143,7 @@
         </section>
 
         {{-- DROITE (60%) — Viewer sur fond gris (pas de carte blanche) --}}
-        <section class="relative h-full bg-gray-50 dark:bg-zinc-900 px-6 py-4">
+        <section class="relative h-full bg-gray-200 dark:bg-zinc-900 px-6 py-4">
             {{-- Modal progression CAD (intégré dans la colonne, pas en overlay) --}}
             <div x-data="cadStreamModal()"
                  x-show="open"
@@ -203,9 +203,22 @@
             </div>
 
             {{-- Viewer directement sur le fond gris --}}
-            <div id="viewer"
-                 wire:ignore
-                 class="h-full w-full rounded-xl overflow-hidden shadow-sm">
+            <div class="relative h-full w-max rounded-xl overflow-hidden shadow-sm">
+                <div id="viewer"
+                     wire:ignore
+                     class="h-full w-full">
+                </div>
+
+                {{-- Callout violet quand aucune pièce n'est générée --}}
+                @if(!$objExportUrl && !$stepExportUrl)
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <flux:callout icon="sparkles" variant="outline" class="w-full max-w-md bg-violet-50 border-violet-300">
+                            <flux:callout.text class="text-violet-700 text-center">
+                                Commencez votre discussion avec TOLERYCAD, la pièce générée s'affichera ici
+                            </flux:callout.text>
+                        </flux:callout>
+                    </div>
+                @endif
             </div>
         </section>
 
