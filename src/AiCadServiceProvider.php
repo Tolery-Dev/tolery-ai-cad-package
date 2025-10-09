@@ -29,6 +29,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->name('ai-cad')
             ->hasConfigFile('ai-cad')
             ->hasViews('ai-cad')
+            ->hasRoute('web')
             ->discoversMigrations()
             ->runsMigrations()
             ->hasCommands([

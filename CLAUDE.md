@@ -57,19 +57,25 @@ php artisan limits:auto-renewal
 
 ### Core Flow: Chat-to-CAD Generation
 
-1. **User Input** → Livewire component (`Chatbot.php:123-182`)
-2. **SSE Streaming** → AICADClient makes streaming request to external API (`AICADClient.php:26-103`)
-3. **Real-time Updates** → JavaScript receives progress events and updates UI (`app.js`)
-4. **Final Response** → 3D model URLs (OBJ, JSON, technical drawings) saved to ChatMessage
-5. **3D Visualization** → Three.js renders model with interactive face selection
+1. **User Input** → Livewire component (`Chatbot.php`)
+2. **Frontend Request** → JavaScript calls Laravel SSE endpoint (`routes/web.php:ai-cad.stream.generate-cad`)
+3. **Server Proxy** → StreamController proxies the request to external API with Bearer token (`StreamController.php`)
+4. **SSE Streaming** → AICADClient makes streaming request to external API (`AICADClient.php:26-103`)
+5. **Real-time Updates** → Server streams SSE events back to frontend, JavaScript updates UI
+6. **Final Response** → 3D model files downloaded and stored locally, URLs saved to ChatMessage
+7. **3D Visualization** → Three.js renders model with interactive face selection
 
 ### Key Components
 
 **Backend (Laravel)**
-- `AICADClient`: Handles SSE streaming requests to external AI CAD API
+- `StreamController`: Proxies SSE streaming from external API to frontend (secure, avoids CORS)
+- `AICADClient`: Handles SSE streaming requests to external AI CAD API with Bearer token authentication
 - `Chatbot` (Livewire): Main chat interface with real-time streaming
 - `ChatMessage`: Stores messages with references to generated CAD files (`ai_cad_path`, `ai_json_edge_path`, `ai_technical_drawing_path`)
 - `Chat`: Session management with `session_id` for context preservation
+
+**Routes**
+- `POST /ai-cad/stream/generate-cad` (named: `ai-cad.stream.generate-cad`): SSE streaming endpoint, requires authentication
 
 **Frontend (Three.js)**
 - `JsonModelViewer3D` (`app.js`): Renders 3D models from JSON format
@@ -160,8 +166,10 @@ Custom directives registered in `AiCadServiceProvider`:
 ### Important Notes
 
 - **Streaming Architecture**: The package uses SSE (Server-Sent Events) for real-time progress updates during CAD generation
+- **Security**: All API calls go through Laravel server proxy to avoid CORS issues and secure the Bearer token. JavaScript never directly accesses the external API.
 - **Context Preservation**: `$serverKeepsContext = true` (Chatbot.php:46) means only the last user message is sent to API when session_id exists
 - **Rate Limiting**: 10 messages per minute per chat (`$ratePerMinute`, Chatbot.php:39)
 - **Lock Mechanism**: 12-second lock prevents duplicate submissions (`$lockSeconds`, Chatbot.php:41)
 - **3D Viewer**: Uses Three.js with OrbitControls, supports material presets and face selection
 - **File Formats**: Supports OBJ export, JSON tessellated models, and technical drawings
+- **File Storage**: CAD files are automatically downloaded from external API and stored locally in Laravel storage for persistence

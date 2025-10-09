@@ -233,12 +233,8 @@
 
 @script
 <script>
-    // Define API token globally for fetch requests
-    window.aicadAuthToken = @js(config('ai-cad.api.key'));
-
     Alpine.data('cadStreamModal', () => {
         return {
-            apiBaseUrl: @js(rtrim(config('ai-cad.api.base_url'), '/')),
             open: false,
             cancelable: false,
             controller: null,
@@ -300,22 +296,22 @@
                 this.cancelable = true;
                 this.controller = new AbortController();
 
-                // Passage en GET avec paramètres dans l'URL
-                const base = this.apiBaseUrl.replace(/\/+$/, '');
-                const qs = new URLSearchParams({
-                    message: String(message ?? ''),
-                    session_id: String(sessionId ?? ''),
-                    is_edit_request: isEdit ? 'true' : 'false',
-                }).toString();
-                const url = `${base}/api/generate-cad-stream?${qs}`;
+                // Appel de la route Laravel qui proxifie l'API externe (évite CORS + sécurise le token)
+                const url = @js(route('ai-cad.stream.generate-cad'));
 
                 try {
                     const res = await fetch(url, {
-                        // GET par défaut
+                        method: 'POST',
                         headers: {
+                            'Content-Type': 'application/json',
                             'Accept': 'text/event-stream',
-                            ...(window.aicadAuthToken ? {'Authorization': `Bearer ${window.aicadAuthToken}`} : {}),
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
                         },
+                        body: JSON.stringify({
+                            message: String(message ?? ''),
+                            session_id: String(sessionId ?? ''),
+                            is_edit_request: isEdit,
+                        }),
                         signal: this.controller.signal,
                     });
                     if (!res.ok || !res.body) {
