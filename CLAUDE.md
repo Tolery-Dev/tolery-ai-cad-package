@@ -95,7 +95,7 @@ php artisan limits:auto-renewal
 ```env
 # AI CAD API
 AI_CAD_API_URL=https://tolery-dfm-docker-api.cleverapps.io/api-production
-AICAD_API_KEY=your-api-key
+AICAD_API_KEY=your-api-key  # Bearer token for API authentication
 
 # Onshape Integration (optional)
 ONSHAPE_SECRET_KEY=

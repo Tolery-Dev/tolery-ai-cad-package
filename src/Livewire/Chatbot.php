@@ -363,13 +363,23 @@ class Chatbot extends Component
         }
 
         try {
-            // Télécharge le contenu
-            $content = file_get_contents($url, false, stream_context_create([
+            // Prépare les en-têtes HTTP avec Bearer token si configuré
+            $apiKey = config('ai-cad.api.key');
+            $headers = [];
+            if ($apiKey) {
+                $headers[] = "Authorization: Bearer {$apiKey}";
+            }
+
+            $contextOptions = [
                 'http' => [
                     'timeout' => 30,
                     'ignore_errors' => true,
+                    'header' => implode("\r\n", $headers),
                 ],
-            ]));
+            ];
+
+            // Télécharge le contenu
+            $content = file_get_contents($url, false, stream_context_create($contextOptions));
 
             if ($content === false) {
                 logger()->warning("[AICAD] Failed to download file from {$url}");

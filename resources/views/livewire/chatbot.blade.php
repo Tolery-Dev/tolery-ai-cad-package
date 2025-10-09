@@ -233,6 +233,9 @@
 
 @script
 <script>
+    // Define API token globally for fetch requests
+    window.aicadAuthToken = @js(config('ai-cad.api.key'));
+
     Alpine.data('cadStreamModal', () => {
         return {
             apiBaseUrl: @js(rtrim(config('ai-cad.api.base_url'), '/')),
