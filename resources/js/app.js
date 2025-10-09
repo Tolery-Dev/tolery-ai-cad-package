@@ -930,7 +930,12 @@ class JsonModelViewer3D {
 let JSON_VIEWER = null;
 
 function ensureViewer() {
-  if (!JSON_VIEWER) JSON_VIEWER = new JsonModelViewer3D("viewer");
+  if (!JSON_VIEWER) {
+    // Only initialize if the viewer container exists
+    if (document.getElementById("viewer")) {
+      JSON_VIEWER = new JsonModelViewer3D("viewer");
+    }
+  }
   return JSON_VIEWER;
 }
 
@@ -978,5 +983,7 @@ Livewire.on("resetMeasure", () => {
   v.resetMeasure();
 });
 
-// Boot once so the canvas exists even before data arrives
-ensureViewer();
+// Boot once so the canvas exists even before data arrives (only if container exists)
+if (document.getElementById("viewer")) {
+  ensureViewer();
+}
