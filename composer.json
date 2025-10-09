@@ -1,91 +1,90 @@
 {
-    "name": "tolery/ai-cad",
-    "version": "0.0.1",
-    "description": "Package to use AI CAD in Laravel",
-    "keywords": [
-        "tolery",
-        "laravel",
-        "ai-cad"
+  "name": "tolery/ai-cad",
+  "version": "0.5.0",
+  "description": "Package to use AI CAD in Laravel",
+  "keywords": [
+    "tolery",
+    "laravel",
+    "ai-cad"
+  ],
+  "homepage": "https://github.com/tolery/ai-cad",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Ultraviolettes",
+      "email": "arnaud@ultraviolettes.fr",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": "^8.4",
+    "ext-zip": "*",
+    "illuminate/contracts": "^12.0",
+    "laravel/cashier": "^16",
+    "livewire/flux": "^2.0",
+    "livewire/livewire": "^3.5",
+    "spatie/laravel-package-tools": "^1.16",
+    "spatie/temporary-directory": "^2.2"
+  },
+  "require-dev": {
+    "larastan/larastan": "^3.1.0",
+    "laravel/pint": "^1.14",
+    "mockery/mockery": "^1.6",
+    "nunomaduro/collision": "^8.6.0",
+    "orchestra/testbench": "^10.0",
+    "pestphp/pest": "^3.7.0",
+    "pestphp/pest-plugin-arch": "^3.0",
+    "pestphp/pest-plugin-laravel": "^3.1",
+    "phpstan/extension-installer": "^1.3",
+    "phpstan/phpstan-deprecation-rules": "^2.0",
+    "phpstan/phpstan-mockery": "^2.0",
+    "phpstan/phpstan-phpunit": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Tolery\\AiCad\\": "src/",
+      "Tolery\\AiCad\\Database\\Factories\\": "database/factories/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tolery\\AiCad\\Tests\\": "tests/",
+      "Workbench\\App\\": "workbench/app/"
+    }
+  },
+  "scripts": {
+    "post-autoload-dump": "@composer run prepare",
+    "clear": "@php vendor/bin/testbench package:purge-ai-cad --ansi",
+    "prepare": "@php vendor/bin/testbench package:discover --ansi",
+    "build": [
+      "@composer run prepare",
+      "@php vendor/bin/testbench workbench:build --ansi"
     ],
-    "homepage": "https://github.com/tolery/ai-cad",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Ultraviolettes",
-            "email": "arnaud@ultraviolettes.fr",
-            "role": "Developer"
-        }
+    "start": [
+      "Composer\\Config::disableProcessTimeout",
+      "@composer run build",
+      "@php vendor/bin/testbench serve"
     ],
-    "require": {
-        "php": "^8.4",
-        "ext-zip": "*",
-        "illuminate/contracts": "^12.0",
-        "laravel/cashier": "^15.6",
-        "livewire/flux": "^2.0",
-        "livewire/livewire": "^3.5",
-        "spatie/laravel-package-tools": "^1.16",
-        "spatie/temporary-directory": "^2.2"
-    },
-    "require-dev": {
-        "larastan/larastan": "^3.1.0",
-        "laravel/pint": "^1.14",
-        "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6.0",
-        "orchestra/testbench": "^10.0",
-        "pestphp/pest": "^3.7.0",
-        "pestphp/pest-plugin-arch": "^3.0",
-        "pestphp/pest-plugin-laravel": "^3.1",
-        "phpstan/extension-installer": "^1.3",
-        "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-mockery": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0"
-    },
-    "autoload": {
-        "psr-4": {
-            "Tolery\\AiCad\\": "src/",
-            "Tolery\\AiCad\\Database\\Factories\\": "database/factories/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Tolery\\AiCad\\Tests\\": "tests/",
-            "Workbench\\App\\": "workbench/app/"
-        }
-    },
-    "scripts": {
-        "post-autoload-dump": "@composer run prepare",
-        "clear": "@php vendor/bin/testbench package:purge-ai-cad --ansi",
-        "prepare": "@php vendor/bin/testbench package:discover --ansi",
-        "build": [
-            "@composer run prepare",
-            "@php vendor/bin/testbench workbench:build --ansi"
-        ],
-        "start": [
-            "Composer\\Config::disableProcessTimeout",
-            "@composer run build",
-            "@php vendor/bin/testbench serve"
-        ],
-        "analyse": "vendor/bin/phpstan analyse --memory-limit=2G",
-        "test": "vendor/bin/pest",
-        "test-coverage": "vendor/bin/pest --coverage",
-        "format": "vendor/bin/pint"
-    },
-    "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "phpstan/extension-installer": true
-        }
-    },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Tolery\\AiCad\\AiCadServiceProvider"
-            ],
-            "aliases": {
-            }
-        }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "analyse": "vendor/bin/phpstan analyse --memory-limit=2G",
+    "test": "vendor/bin/pest",
+    "test-coverage": "vendor/bin/pest --coverage",
+    "format": "vendor/bin/pint"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true,
+      "phpstan/extension-installer": true
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Tolery\\AiCad\\AiCadServiceProvider"
+      ],
+      "aliases": {}
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }
