@@ -3,7 +3,6 @@
 namespace Tolery\AiCad\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tolery\AiCad\Services\AICADClient;
