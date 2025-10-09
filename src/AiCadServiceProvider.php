@@ -9,7 +9,6 @@ use Laravel\Cashier\Cashier;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tolery\AiCad\Commands\AiCadCommand;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
@@ -33,7 +32,6 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->discoversMigrations()
             ->runsMigrations()
             ->hasCommands([
-                AiCadCommand::class,
                 LimitsAutoRenewal::class,
             ]);
 

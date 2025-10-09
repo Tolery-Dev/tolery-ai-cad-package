@@ -13,7 +13,6 @@ use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
-use Tolery\AiCad\Services\AICADClient;
 
 class Chatbot extends Component
 {
@@ -139,10 +138,10 @@ class Chatbot extends Component
         // Remplit le champ message avec le prompt prédéfini
         $this->message = $prompt;
         // Appelle la méthode send normale
-        $this->send(app(AICADClient::class), app(RateLimiter::class));
+        $this->send(app(RateLimiter::class));
     }
 
-    public function send(AICADClient $api, RateLimiter $limiter): void
+    public function send(RateLimiter $limiter): void
     {
         if ($this->isProcessing) {
             return;

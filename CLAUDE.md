@@ -83,9 +83,7 @@ php artisan limits:auto-renewal
 - Interactive face selection for editing specific parts
 
 **Jobs**
-- `GetAICADResponse`: Legacy job for non-streaming API calls
-- `ProcessChatToCad`: Queued SSE streaming job (timeout: 600s, 3 tries)
-- `LimitRenew`: Auto-renews usage limits based on subscription
+- `LimitRenew`: Auto-renews usage limits based on subscription (scheduled daily at 1:00 AM)
 
 ### Subscription & Limits System
 
