@@ -10,7 +10,7 @@
                 <div class="pl-8">
                     <flux:heading size="xl" class="flex gap-4 pb-4">
                         <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg')}}" alt="">
-                        Bonjour Arthur !
+                        Bonjour {{ auth()->user()->firstname }} !
                     </flux:heading>
 
                     <flux:text size="xl" class="text-black"> Bienvenue dans le configurateur intelligent de pièces en tôle.</flux:text>
@@ -134,7 +134,7 @@
                                        focus:border-violet-500/50"
                             />
                         </div>
-                        <div class="flex justify-end">
+                        <div class="flex justify-end ">
                             <flux:button type="submit" variant="ghost" icon="paper-airplane"/>
                         </div>
                     </form>

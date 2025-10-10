@@ -113,6 +113,75 @@ return view('your-view', compact('chat'));
 
 ## Testing
 
+### Quick API Connection Test
+
+Test that your Laravel application can communicate with the AI CAD API:
+
+```bash
+# Test with default message
+php artisan ai-cad:test-api
+
+# Test with custom message
+php artisan ai-cad:test-api --message="Create a 200x100x3mm aluminum plate"
+```
+
+This command will:
+- ✅ Verify your `.env` configuration (API URL and Bearer token)
+- ✅ Test the SSE streaming connection to the external API
+- ✅ Show real-time progress with a progress bar
+- ✅ Display all received exports (OBJ, STEP, JSON, PDF)
+
+**Example output:**
+```
+🔧 Testing AI CAD API Connection...
+
+📋 Configuration:
+   API URL: https://tolery-dfm-docker-api.cleverapps.io/api-production
+   API Key: ************abcd
+
+🚀 Starting SSE stream test...
+   Message: Create a simple 100x100x5mm steel plate
+
+100% [=========================] [export] Export completed
+
+✅ Stream completed! Received 42 events
+
+📦 Final Response:
+   Chat Response: ✓
+   OBJ Export: ✓
+   STEP Export: ✓
+   JSON Export: ✓
+   Technical Drawing: ✓
+   Session ID: sess_abc123
+
+🎉 API Test PASSED!
+```
+
+### Testing Both APIs
+
+**1. Test External API (DFM):**
+```bash
+php artisan ai-cad:test-api
+```
+This tests the direct connection to the external AI CAD API with your Bearer token.
+
+**2. Test Laravel Proxy Route:**
+```bash
+# Run feature tests (requires authentication setup)
+vendor/bin/pest tests/Feature/StreamControllerTest.php
+```
+This tests the Laravel route that proxies requests to the external API.
+
+**3. Test via UI:**
+- Navigate to your application's chat interface
+- Send a test message like "Create a 100x100x5mm steel plate"
+- Verify the streaming progress modal appears
+- Check that the 3D model loads in the viewer
+
+### Automated Tests
+
+Run the full test suite:
+
 ```bash
 composer test
 ```

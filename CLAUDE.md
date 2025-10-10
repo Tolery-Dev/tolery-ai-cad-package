@@ -161,6 +161,30 @@ Custom directives registered in `AiCadServiceProvider`:
 - Architecture tests in `ArchTest.php`
 - Test database: SQLite in-memory (`database.default = testing`)
 
+**Quick API Test (recommended for debugging):**
+```bash
+# Test the external AI CAD API connection
+php artisan ai-cad:test-api
+
+# Test with custom message
+php artisan ai-cad:test-api --message="Create a 200x100x3mm aluminum plate"
+```
+
+This command will:
+- ✅ Verify configuration (API URL and Bearer token)
+- ✅ Test SSE streaming connection to external API
+- ✅ Show real-time progress
+- ✅ Display final response details (OBJ, STEP, JSON exports)
+
+**Automated Tests:**
+```bash
+# Run all tests
+composer test
+
+# Run specific feature tests
+vendor/bin/pest tests/Feature/StreamControllerTest.php
+```
+
 ### Important Notes
 
 - **Streaming Architecture**: The package uses SSE (Server-Sent Events) for real-time progress updates during CAD generation

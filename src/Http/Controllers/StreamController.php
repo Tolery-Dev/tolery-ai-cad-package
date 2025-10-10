@@ -40,11 +40,20 @@ class StreamController extends Controller
             if (ob_get_level()) {
                 ob_end_flush();
             }
+
+            // Send initial comment to establish connection (helps with some proxies/browsers)
+            echo ": connected\n\n";
             flush();
+
+            $eventCount = 0;
+            \Log::info('StreamController: Starting SSE stream', ['message' => $message, 'session_id' => $sessionId]);
 
             try {
                 // Génère le streaming via AICADClient
                 foreach ($this->client->generateCadStream($message, $sessionId, 600) as $event) {
+                    $eventCount++;
+                    \Log::debug("StreamController: Event #{$eventCount} received", ['event' => $event]);
+
                     // Format SSE
                     $eventType = $event['type'] ?? 'unknown';
 
@@ -54,6 +63,7 @@ class StreamController extends Controller
                             'final_response' => $event['final_response'],
                         ]);
                         echo "data: {$data}\n\n";
+                        \Log::info('StreamController: Final event sent', ['has_response' => isset($event['final_response'])]);
                     } elseif ($eventType === 'progress') {
                         // Événement de progression
                         $data = json_encode([
@@ -63,10 +73,16 @@ class StreamController extends Controller
                             'overall_percentage' => $event['overall_percentage'] ?? 0,
                         ]);
                         echo "data: {$data}\n\n";
+                        \Log::debug('StreamController: Progress event sent', [
+                            'step' => $event['step'] ?? '',
+                            'percentage' => $event['overall_percentage'] ?? 0,
+                        ]);
                     }
 
                     flush();
                 }
+
+                \Log::info('StreamController: Stream completed', ['total_events' => $eventCount]);
 
                 // Événement de fin
                 echo "data: [DONE]\n\n";

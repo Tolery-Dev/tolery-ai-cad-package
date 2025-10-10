@@ -11,7 +11,9 @@ use Illuminate\Support\Str;
 readonly class AICADClient
 {
     /**
-     * POST /api/generate-cad-stream — SSE progress + final payload
+     * GET /api/generate-cad-stream — SSE progress + final payload
+     * Query parameters: message, project_id (optional), stream=true
+     *
      * Events (exemples reçus):
      *  - {"step":"analysis","status":"Analyzing user requirements...","overall_percentage":10,...}
      *  - ...
@@ -27,18 +29,26 @@ readonly class AICADClient
     {
         $url = $this->endpoint('/api/generate-cad-stream');
 
+        // Build query parameters for GET request
+        $queryParams = [
+            'message' => $message,
+            'stream' => 'true',
+        ];
+
+        if ($projectId !== null) {
+            $queryParams['project_id'] = $projectId;
+        }
+
         $resp = $this->http($timeoutSec)
             ->withHeaders(['Accept' => 'text/event-stream'])
             ->withOptions(['stream' => true])
-            ->post($url, [
-                'message' => $message,
-                'project_id' => $projectId,
-                'stream' => true,
-            ]);
+            ->get($url, $queryParams);
 
         $psr = $resp->toPsrResponse();
         $body = $psr->getBody();
         $buffer = '';
+        $chunkCount = 0;
+        $totalBytes = 0;
 
         while (! $body->eof()) {
             $chunk = $body->read(8192);
@@ -47,6 +57,18 @@ readonly class AICADClient
 
                 continue;
             }
+            $chunkCount++;
+            $totalBytes += strlen($chunk);
+
+            // Debug: log first few chunks to see what we're receiving
+            if ($chunkCount <= 3) {
+                \Log::info("AICADClient: Chunk #{$chunkCount}", [
+                    'length' => strlen($chunk),
+                    'preview' => substr($chunk, 0, 300),
+                    'url' => $url,
+                ]);
+            }
+
             $buffer .= $chunk;
 
             // SSE: paquets séparés par \n\n
@@ -54,24 +76,32 @@ readonly class AICADClient
                 $packet = substr($buffer, 0, $pos);
                 $buffer = substr($buffer, $pos + 2);
 
+                \Log::debug('AICADClient: SSE packet received', ['packet' => substr($packet, 0, 200)]);
+
                 foreach (explode("\n", $packet) as $line) {
                     $line = ltrim($line);
                     if ($line === '' || Str::startsWith($line, ':')) {
+                        \Log::debug('AICADClient: Skipping line (empty or comment)', ['line' => substr($line, 0, 100)]);
                         continue;
                     }
                     if (! Str::startsWith($line, 'data:')) {
+                        \Log::warning('AICADClient: Non-data line encountered', ['line' => substr($line, 0, 100)]);
                         continue;
                     }
 
                     $json = trim(substr($line, 5));
                     if ($json === '' || $json === '[DONE]') {
+                        \Log::debug('AICADClient: Empty or DONE marker', ['json' => $json]);
                         continue;
                     }
 
                     $payload = json_decode($json, true);
                     if (! is_array($payload)) {
+                        \Log::warning('AICADClient: Failed to parse JSON', ['json' => substr($json, 0, 200)]);
                         continue;
                     }
+
+                    \Log::info('AICADClient: Valid payload parsed', ['payload_keys' => array_keys($payload)]);
 
                     if (isset($payload['final_response'])) {
                         yield [
@@ -99,6 +129,20 @@ readonly class AICADClient
                     }
                 }
             }
+        }
+
+        // Debug: log if we received no events
+        if ($chunkCount === 0 && config('app.debug')) {
+            \Log::warning('SSE stream ended with no chunks received', [
+                'url' => $url,
+                'status' => $psr->getStatusCode(),
+                'headers' => $psr->getHeaders(),
+            ]);
+        } elseif (config('app.debug')) {
+            \Log::debug('SSE stream completed', [
+                'chunks' => $chunkCount,
+                'total_bytes' => $totalBytes,
+            ]);
         }
     }
 
