@@ -82,22 +82,26 @@ readonly class AICADClient
                     $line = ltrim($line);
                     if ($line === '' || Str::startsWith($line, ':')) {
                         \Log::debug('AICADClient: Skipping line (empty or comment)', ['line' => substr($line, 0, 100)]);
+
                         continue;
                     }
                     if (! Str::startsWith($line, 'data:')) {
                         \Log::warning('AICADClient: Non-data line encountered', ['line' => substr($line, 0, 100)]);
+
                         continue;
                     }
 
                     $json = trim(substr($line, 5));
                     if ($json === '' || $json === '[DONE]') {
                         \Log::debug('AICADClient: Empty or DONE marker', ['json' => $json]);
+
                         continue;
                     }
 
                     $payload = json_decode($json, true);
                     if (! is_array($payload)) {
                         \Log::warning('AICADClient: Failed to parse JSON', ['json' => substr($json, 0, 200)]);
+
                         continue;
                     }
 

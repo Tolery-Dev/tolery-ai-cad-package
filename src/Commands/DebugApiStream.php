@@ -80,6 +80,7 @@ class DebugApiStream extends Command
                 $chunk = $body->read(8192);
                 if ($chunk === '') {
                     usleep(100_000); // 100ms
+
                     continue;
                 }
 

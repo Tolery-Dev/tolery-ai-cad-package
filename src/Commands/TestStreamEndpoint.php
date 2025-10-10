@@ -71,6 +71,7 @@ class TestStreamEndpoint extends Command
                 $chunk = $body->read(8192);
                 if ($chunk === '') {
                     usleep(100_000); // 100ms
+
                     continue;
                 }
 
@@ -89,6 +90,7 @@ class TestStreamEndpoint extends Command
                             if (str_starts_with($line, ':')) {
                                 $this->line("💬 Comment: {$line}");
                             }
+
                             continue;
                         }
 
