@@ -4,6 +4,7 @@ namespace Tolery\AiCad\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tolery\AiCad\Services\AICADClient;
 
@@ -16,11 +17,14 @@ class StreamController extends Controller
     /**
      * Proxifie le streaming SSE de l'API externe vers le frontend
      * Cette approche évite les problèmes CORS et sécurise le token API
+     *
+     * Architecture: StreamController → AICADClient::streamDirectlyToOutput() → API DFM
+     * Pas de Generator, echo direct pour éviter le nested streaming
      */
     public function generateCadStream(Request $request): StreamedResponse
     {
         $validated = $request->validate([
-            'message' => 'required|string',
+            'message' => 'required|string|min:1',
             'session_id' => 'nullable|string',
             'is_edit_request' => 'nullable|boolean',
         ]);
@@ -29,64 +33,52 @@ class StreamController extends Controller
         $sessionId = $validated['session_id'] ?? null;
 
         return new StreamedResponse(function () use ($message, $sessionId) {
-            // Headers SSE
-            header('Content-Type: text/event-stream');
-            header('Cache-Control: no-cache');
-            header('Connection: keep-alive');
-            header('X-Accel-Buffering: no'); // Nginx buffering disabled
+            // PHP Configuration: Disable timeouts and enable continuous execution
+            set_time_limit(0);              // No PHP timeout
+            ignore_user_abort(true);        // Keep running if client disconnects
+            ini_set('output_buffering', 'off');  // Disable PHP output buffering
+            ini_set('implicit_flush', '1'); // Auto-flush after every output
 
-            // Flush output buffers
-            if (ob_get_level()) {
+            // Clear ALL nested output buffers
+            while (ob_get_level() > 0) {
                 ob_end_flush();
             }
 
-            // Send initial comment to establish connection (helps with some proxies/browsers)
+            // Headers SSE (also set in Response object below, but set here for immediate effect)
+            header('Content-Type: text/event-stream');
+            header('Cache-Control: no-cache');
+            header('Connection: keep-alive');
+            header('X-Accel-Buffering: no'); // Nginx: disable buffering for this request
+
+            // Send initial SSE comment to establish connection
+            // This ensures the client receives something immediately
             echo ": connected\n\n";
             flush();
 
-            $eventCount = 0;
-            \Log::info('StreamController: Starting SSE stream', ['message' => $message, 'session_id' => $sessionId]);
+            Log::info('StreamController: Starting SSE stream (direct mode)', [
+                'message' => substr($message, 0, 100),
+                'session_id' => $sessionId,
+                'php_version' => PHP_VERSION,
+                'sapi' => php_sapi_name(),
+            ]);
 
             try {
-                // Génère le streaming via AICADClient
-                foreach ($this->client->generateCadStream($message, $sessionId, 600) as $event) {
-                    $eventCount++;
-                    \Log::debug("StreamController: Event #{$eventCount} received", ['event' => $event]);
+                // Direct streaming: AICADClient will echo SSE events directly to output
+                // No Generator, no foreach loop, no nested streaming
+                $this->client->streamDirectlyToOutput($message, $sessionId, 600);
 
-                    // Format SSE
-                    $eventType = $event['type'] ?? 'unknown';
+                Log::info('StreamController: Stream completed successfully');
 
-                    if ($eventType === 'final') {
-                        // Événement final avec final_response
-                        $data = json_encode([
-                            'final_response' => $event['final_response'],
-                        ]);
-                        echo "data: {$data}\n\n";
-                        \Log::info('StreamController: Final event sent', ['has_response' => isset($event['final_response'])]);
-                    } elseif ($eventType === 'progress') {
-                        // Événement de progression
-                        $data = json_encode([
-                            'step' => $event['step'] ?? '',
-                            'status' => $event['status'] ?? '',
-                            'message' => $event['message'] ?? '',
-                            'overall_percentage' => $event['overall_percentage'] ?? 0,
-                        ]);
-                        echo "data: {$data}\n\n";
-                        \Log::debug('StreamController: Progress event sent', [
-                            'step' => $event['step'] ?? '',
-                            'percentage' => $event['overall_percentage'] ?? 0,
-                        ]);
-                    }
-
-                    flush();
-                }
-
-                \Log::info('StreamController: Stream completed', ['total_events' => $eventCount]);
-
-                // Événement de fin
+                // Événement de fin SSE
                 echo "data: [DONE]\n\n";
                 flush();
+
             } catch (\Exception $e) {
+                Log::error('StreamController: Stream failed', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
                 // Envoie une erreur au format SSE
                 $error = json_encode([
                     'error' => true,
@@ -99,7 +91,7 @@ class StreamController extends Controller
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
-            'X-Accel-Buffering' => 'no',
+            'X-Accel-Buffering' => 'no', // Critical for Nginx/Cloudflare
         ]);
     }
 }
