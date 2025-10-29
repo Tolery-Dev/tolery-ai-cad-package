@@ -151,6 +151,9 @@ class JsonModelViewer3D {
     });
 
     this.animate();
+
+    // Force initial resize after DOM is ready to ensure canvas takes full container width
+    setTimeout(() => this.onResize(), 100);
   }
 
   // --- Environment Map pour reflets réalistes ---
@@ -370,6 +373,9 @@ class JsonModelViewer3D {
     window.dispatchEvent(new CustomEvent("cad-model-stats", { detail }));
 
     this.fitCamera();
+
+    // Ensure canvas is properly sized after model load
+    this.onResize();
   }
 
   // --- Edges / Contours ---
