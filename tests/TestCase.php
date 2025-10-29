@@ -3,12 +3,15 @@
 namespace Tolery\AiCad\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\File;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Tolery\AiCad\AiCadServiceProvider;
 
 class TestCase extends Orchestra
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -16,6 +19,9 @@ class TestCase extends Orchestra
         Factory::guessFactoryNamesUsing(
             fn (string $modelName) => 'Tolery\\AiCad\\Database\\Factories\\'.class_basename($modelName).'Factory'
         );
+
+        // Fake queues to avoid needing jobs table migration
+        Queue::fake();
     }
 
     protected function getPackageProviders($app): array
@@ -28,10 +34,10 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app): void
     {
         config()->set('database.default', 'testing');
+    }
 
-        foreach (File::allFiles(__DIR__.'/../database/migrations') as $migration) {
-            (include $migration->getRealPath())->up();
-        }
-
+    protected function defineDatabaseMigrations(): void
+    {
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
     }
 }
