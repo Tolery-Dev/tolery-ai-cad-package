@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $ai_json_edge_path
  * @property string|null $ai_step_path
  * @property string|null $ai_technical_drawing_path
+ * @property string|null $ai_screenshot_path
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -125,5 +126,22 @@ class ChatMessage extends Model
         return Storage::providesTemporaryUrls()
             ? Storage::temporaryUrl($this->ai_step_path, now()->addMinutes(5))
             : Storage::url($this->ai_step_path);
+    }
+
+    public function getScreenshotUrl(): ?string
+    {
+        if (! $this->ai_screenshot_path) {
+            return null;
+        }
+
+        // Si c'est déjà une URL complète (http/https), on la retourne telle quelle
+        if (filter_var($this->ai_screenshot_path, FILTER_VALIDATE_URL)) {
+            return $this->ai_screenshot_path;
+        }
+
+        // Sinon, c'est un chemin Storage local
+        return Storage::providesTemporaryUrls()
+            ? Storage::temporaryUrl($this->ai_screenshot_path, now()->addMinutes(5))
+            : Storage::url($this->ai_screenshot_path);
     }
 }

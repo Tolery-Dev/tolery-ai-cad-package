@@ -257,7 +257,7 @@ class Chatbot extends Component
      *   step_export?:?string,
      *   json_export?:?string,
      *   technical_drawing_export?:?string,
-     *   technical_drawing_export?:?string,
+     *   screenshot_export?:?string,
      *   tessellated_export?:?string,
      *   attribute_and_transientid_map?:mixed,
      *   manufacturing_errors?:array
@@ -273,6 +273,7 @@ class Chatbot extends Component
         $jsonModelUrl = $final['json_export'] ?? null; // JSON principal pour affichage
         $tessUrl = $final['tessellated_export'] ?? null; // JSON tessellé (héritage)
         $techDrawingUrl = $final['technical_drawing_export'] ?? null; // plan technique
+        $screenshotUrl = $final['screenshot_export'] ?? null; // screenshot 800x800px
 
         // Save session_id
         if (isset($final['session_id']) && $this->chat->session_id !== $final['session_id']) {
@@ -294,7 +295,7 @@ class Chatbot extends Component
         }
 
         // Applique les URLs/exports aux champs du message
-        $this->applyFinalAssetsToMessage($asst, $objUrl, $stepUrl, $jsonModelUrl, $tessUrl, $techDrawingUrl);
+        $this->applyFinalAssetsToMessage($asst, $objUrl, $stepUrl, $jsonModelUrl, $tessUrl, $techDrawingUrl, $screenshotUrl);
 
         // Optionnel: journaliser la réponse complète pour audit/debug
         logger()->info('[AICAD] final_response saved', ['chat_id' => $this->chat->id, 'final' => $final]);
@@ -318,7 +319,7 @@ class Chatbot extends Component
     }
 
     /**
-     * Applique les exports finaux (OBJ, STEP, JSON edges, plan technique) au message.
+     * Applique les exports finaux (OBJ, STEP, JSON edges, plan technique, screenshot) au message.
      * Préférence: json_export, fallback: tessellated_export.
      */
     private function applyFinalAssetsToMessage(
@@ -327,7 +328,8 @@ class Chatbot extends Component
         mixed $stepUrl,
         mixed $jsonModelUrl,
         mixed $tessUrl,
-        mixed $techDrawingUrl
+        mixed $techDrawingUrl,
+        mixed $screenshotUrl
     ): void {
         // Télécharge et stocke les fichiers localement si ce sont des URLs externes
         if (is_string($objUrl) && $objUrl !== '') {
@@ -347,6 +349,10 @@ class Chatbot extends Component
 
         if (is_string($techDrawingUrl) && $techDrawingUrl !== '') {
             $asst->ai_technical_drawing_path = $this->downloadAndStoreFile($techDrawingUrl, 'pdf');
+        }
+
+        if (is_string($screenshotUrl) && $screenshotUrl !== '') {
+            $asst->ai_screenshot_path = $this->downloadAndStoreFile($screenshotUrl, 'png');
         }
     }
 

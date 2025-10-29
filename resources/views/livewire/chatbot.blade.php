@@ -82,6 +82,20 @@
                                             </div>
                                         </div>
                                     </flux:button>
+
+                                    <flux:button
+                                        type="button"
+                                        wire:click="sendPredefinedPrompt('Je voudrais une tôle perforée R12 U27,72, en 500 x 1000 mm')"
+                                        variant="outline"
+                                        class="!justify-start !h-auto !py-3">
+                                        <div class="flex items-start gap-2">
+                                            <span class="text-violet-600 text-lg shrink-0">🔘</span>
+                                            <div class="flex-1 min-w-0 text-left">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-zinc-100">Tôle perforée</div>
+                                                <div class="text-xs text-gray-600 dark:text-zinc-400 line-clamp-2">R12 U27,72, 500×1000mm</div>
+                                            </div>
+                                        </div>
+                                    </flux:button>
                                 </div>
                             </div>
                         @else
@@ -203,7 +217,7 @@
             </div>
 
             {{-- Viewer directement sur le fond gris --}}
-            <div class="relative h-full w-max rounded-xl overflow-hidden shadow-sm">
+            <div class="relative h-full w-full rounded-xl overflow-hidden shadow-sm">
                 <div id="viewer"
                      wire:ignore
                      class="h-full w-full">
