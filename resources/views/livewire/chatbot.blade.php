@@ -13,8 +13,8 @@
                         Bonjour {{ auth()->user()->firstname }} !
                     </flux:heading>
 
-                    <flux:text size="xl" class="text-black"> Bienvenue dans le configurateur intelligent de pièces en tôle.</flux:text>
-                    <flux:text size="xl" class="text-black"> Vous pouvez démarrer votre demande de fichier CAO en cliquant ici :</flux:text>
+                    <flux:text size="xl" class="text-black"> Bienvenue dans notre configurateur intelligent de création de fichier CAO instantanément et sur-mesure pour la tôlerie. </flux:text>
+                    <flux:text size="xl" class="text-black"> Vous pouvez démarrer votre demande de création de fichier CAO (STEP) en décrivant le plus précisément votre pièce ci-dessous. </flux:text>
                 </div>
                 {{-- Messages (scroll) --}}
                 <div id="chat-scroll"
