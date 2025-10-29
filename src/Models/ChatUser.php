@@ -9,6 +9,8 @@ class ChatUser extends User
 {
     protected $table = 'users';
 
+    protected $guarded = [];
+
     /**
      * @return BelongsTo<ChatTeam, $this>
      */

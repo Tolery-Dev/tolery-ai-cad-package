@@ -10,11 +10,11 @@
                 <div class="pl-8">
                     <flux:heading size="xl" class="flex gap-4 pb-4">
                         <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg')}}" alt="">
-                        Bonjour Arthur !
+                        Bonjour {{ auth()->user()->firstname }} !
                     </flux:heading>
 
-                    <flux:text size="xl" class="text-black"> Bienvenue dans le configurateur intelligent de pièces en tôle.</flux:text>
-                    <flux:text size="xl" class="text-black"> Vous pouvez démarrer votre demande de fichier CAO en cliquant ici :</flux:text>
+                    <flux:text size="xl" class="text-black"> Bienvenue dans notre configurateur intelligent de création de fichier CAO instantanément et sur-mesure pour la tôlerie. </flux:text>
+                    <flux:text size="xl" class="text-black"> Vous pouvez démarrer votre demande de création de fichier CAO (STEP) en décrivant le plus précisément votre pièce ci-dessous. </flux:text>
                 </div>
                 {{-- Messages (scroll) --}}
                 <div id="chat-scroll"
@@ -134,7 +134,7 @@
                                        focus:border-violet-500/50"
                             />
                         </div>
-                        <div class="flex justify-end">
+                        <div class="flex justify-end ">
                             <flux:button type="submit" variant="ghost" icon="paper-airplane"/>
                         </div>
                     </form>
@@ -235,7 +235,6 @@
 <script>
     Alpine.data('cadStreamModal', () => {
         return {
-            apiBaseUrl: @js(rtrim(config('ai-cad.api.base_url'), '/')),
             open: false,
             cancelable: false,
             controller: null,
@@ -297,22 +296,22 @@
                 this.cancelable = true;
                 this.controller = new AbortController();
 
-                // Passage en GET avec paramètres dans l'URL
-                const base = this.apiBaseUrl.replace(/\/+$/, '');
-                const qs = new URLSearchParams({
-                    message: String(message ?? ''),
-                    session_id: String(sessionId ?? ''),
-                    is_edit_request: isEdit ? 'true' : 'false',
-                }).toString();
-                const url = `${base}/api/generate-cad-stream?${qs}`;
+                // Appel de la route Laravel qui proxifie l'API externe (évite CORS + sécurise le token)
+                const url = @js(route('ai-cad.stream.generate-cad'));
 
                 try {
                     const res = await fetch(url, {
-                        // GET par défaut
+                        method: 'POST',
                         headers: {
+                            'Content-Type': 'application/json',
                             'Accept': 'text/event-stream',
-                            ...(window.aicadAuthToken ? {'Authorization': `Bearer ${window.aicadAuthToken}`} : {}),
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
                         },
+                        body: JSON.stringify({
+                            message: String(message ?? ''),
+                            session_id: String(sessionId ?? ''),
+                            is_edit_request: isEdit,
+                        }),
                         signal: this.controller.signal,
                     });
                     if (!res.ok || !res.body) {

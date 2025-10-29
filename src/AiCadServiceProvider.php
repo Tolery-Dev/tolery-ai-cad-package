@@ -9,8 +9,10 @@ use Laravel\Cashier\Cashier;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tolery\AiCad\Commands\AiCadCommand;
+use Tolery\AiCad\Commands\DebugApiStream;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
+use Tolery\AiCad\Commands\TestApiConnection;
+use Tolery\AiCad\Commands\TestStreamEndpoint;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Models\ChatTeam;
@@ -29,11 +31,14 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->name('ai-cad')
             ->hasConfigFile('ai-cad')
             ->hasViews('ai-cad')
+            ->hasRoute('web')
             ->discoversMigrations()
             ->runsMigrations()
             ->hasCommands([
-                AiCadCommand::class,
                 LimitsAutoRenewal::class,
+                TestApiConnection::class,
+                DebugApiStream::class,
+                TestStreamEndpoint::class,
             ]);
 
         Cashier::useCustomerModel(ChatTeam::class);

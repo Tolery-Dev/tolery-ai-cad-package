@@ -8,6 +8,8 @@ use function Pest\Laravel\artisan;
 
 test('0 subscription to be renewed', function () {
 
+    Queue::fake();
+
     Limit::factory()
         ->current()
         ->create();
@@ -19,9 +21,7 @@ test('0 subscription to be renewed', function () {
 
 test('subscriptions to be renewed', function () {
 
-    Queue::fake([
-        LimitRenew::class,
-    ]);
+    Queue::fake();
 
     Limit::factory()
         ->count(10)

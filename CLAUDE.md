@@ -57,19 +57,25 @@ php artisan limits:auto-renewal
 
 ### Core Flow: Chat-to-CAD Generation
 
-1. **User Input** → Livewire component (`Chatbot.php:123-182`)
-2. **SSE Streaming** → AICADClient makes streaming request to external API (`AICADClient.php:26-103`)
-3. **Real-time Updates** → JavaScript receives progress events and updates UI (`app.js`)
-4. **Final Response** → 3D model URLs (OBJ, JSON, technical drawings) saved to ChatMessage
-5. **3D Visualization** → Three.js renders model with interactive face selection
+1. **User Input** → Livewire component (`Chatbot.php`)
+2. **Frontend Request** → JavaScript calls Laravel SSE endpoint (`routes/web.php:ai-cad.stream.generate-cad`)
+3. **Server Proxy** → StreamController proxies the request to external API with Bearer token (`StreamController.php`)
+4. **SSE Streaming** → AICADClient makes streaming request to external API (`AICADClient.php:26-103`)
+5. **Real-time Updates** → Server streams SSE events back to frontend, JavaScript updates UI
+6. **Final Response** → 3D model files downloaded and stored locally, URLs saved to ChatMessage
+7. **3D Visualization** → Three.js renders model with interactive face selection
 
 ### Key Components
 
 **Backend (Laravel)**
-- `AICADClient`: Handles SSE streaming requests to external AI CAD API
+- `StreamController`: Proxies SSE streaming from external API to frontend (secure, avoids CORS)
+- `AICADClient`: Handles SSE streaming requests to external AI CAD API with Bearer token authentication
 - `Chatbot` (Livewire): Main chat interface with real-time streaming
 - `ChatMessage`: Stores messages with references to generated CAD files (`ai_cad_path`, `ai_json_edge_path`, `ai_technical_drawing_path`)
 - `Chat`: Session management with `session_id` for context preservation
+
+**Routes**
+- `POST /ai-cad/stream/generate-cad` (named: `ai-cad.stream.generate-cad`): SSE streaming endpoint, requires authentication
 
 **Frontend (Three.js)**
 - `JsonModelViewer3D` (`app.js`): Renders 3D models from JSON format
@@ -77,9 +83,7 @@ php artisan limits:auto-renewal
 - Interactive face selection for editing specific parts
 
 **Jobs**
-- `GetAICADResponse`: Legacy job for non-streaming API calls
-- `ProcessChatToCad`: Queued SSE streaming job (timeout: 600s, 3 tries)
-- `LimitRenew`: Auto-renews usage limits based on subscription
+- `LimitRenew`: Auto-renews usage limits based on subscription (scheduled daily at 1:00 AM)
 
 ### Subscription & Limits System
 
@@ -95,7 +99,7 @@ php artisan limits:auto-renewal
 ```env
 # AI CAD API
 AI_CAD_API_URL=https://tolery-dfm-docker-api.cleverapps.io/api-production
-AICAD_API_KEY=your-api-key
+AICAD_API_KEY=your-api-key  # Bearer token for API authentication
 
 # Onshape Integration (optional)
 ONSHAPE_SECRET_KEY=
@@ -157,11 +161,37 @@ Custom directives registered in `AiCadServiceProvider`:
 - Architecture tests in `ArchTest.php`
 - Test database: SQLite in-memory (`database.default = testing`)
 
+**Quick API Test (recommended for debugging):**
+```bash
+# Test the external AI CAD API connection
+php artisan ai-cad:test-api
+
+# Test with custom message
+php artisan ai-cad:test-api --message="Create a 200x100x3mm aluminum plate"
+```
+
+This command will:
+- ✅ Verify configuration (API URL and Bearer token)
+- ✅ Test SSE streaming connection to external API
+- ✅ Show real-time progress
+- ✅ Display final response details (OBJ, STEP, JSON exports)
+
+**Automated Tests:**
+```bash
+# Run all tests
+composer test
+
+# Run specific feature tests
+vendor/bin/pest tests/Feature/StreamControllerTest.php
+```
+
 ### Important Notes
 
 - **Streaming Architecture**: The package uses SSE (Server-Sent Events) for real-time progress updates during CAD generation
+- **Security**: All API calls go through Laravel server proxy to avoid CORS issues and secure the Bearer token. JavaScript never directly accesses the external API.
 - **Context Preservation**: `$serverKeepsContext = true` (Chatbot.php:46) means only the last user message is sent to API when session_id exists
 - **Rate Limiting**: 10 messages per minute per chat (`$ratePerMinute`, Chatbot.php:39)
 - **Lock Mechanism**: 12-second lock prevents duplicate submissions (`$lockSeconds`, Chatbot.php:41)
 - **3D Viewer**: Uses Three.js with OrbitControls, supports material presets and face selection
 - **File Formats**: Supports OBJ export, JSON tessellated models, and technical drawings
+- **File Storage**: CAD files are automatically downloaded from external API and stored locally in Laravel storage for persistence

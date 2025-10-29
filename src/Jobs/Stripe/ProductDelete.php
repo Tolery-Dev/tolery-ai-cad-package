@@ -29,6 +29,6 @@ class ProductDelete implements ShouldQueue
         // On ne peut pas supprimer un produit avec un prix associé via l'API, on le va donc juste le désactiver.
         Cashier::stripe()
             ->products
-            ->update($this->subscriptionProductStripeId, ['active' => false, 'metadata' => ['deleted' => true]]);
+            ->update($this->subscriptionProductStripeId, ['active' => false, 'metadata' => ['deleted' => 'true']]);
     }
 }

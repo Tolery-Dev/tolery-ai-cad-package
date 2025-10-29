@@ -11,13 +11,14 @@ use Tolery\AiCad\Traits\HasSubscription;
 
 class ChatTeam extends Model
 {
+    use Billable;
     use HasFactory;
+    use HasLimits;
+    use HasSubscription;
 
     protected $table = 'teams';
 
-    use Billable,
-        HasLimits,
-        HasSubscription;
+    protected $guarded = [];
 
     public function getForeignKey(): string
     {
