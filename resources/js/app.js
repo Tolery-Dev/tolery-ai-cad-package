@@ -376,6 +376,12 @@ class JsonModelViewer3D {
 
     // Ensure canvas is properly sized after model load
     this.onResize();
+
+    // Capture et envoie automatiquement un screenshot après chargement
+    // Délai de 500ms pour s'assurer que le rendu est stable
+    setTimeout(() => {
+      this.captureAndSendScreenshot();
+    }, 500);
   }
 
   // --- Edges / Contours ---
@@ -918,6 +924,93 @@ class JsonModelViewer3D {
 
   requestRender() {
     this._dirty = true;
+  }
+
+  /**
+   * Capture un screenshot de la scène 3D actuelle
+   * @param {number} width - Largeur du screenshot (défaut: 800)
+   * @param {number} height - Hauteur du screenshot (défaut: 800)
+   * @returns {Promise<Blob>} - Promise résolvant avec le blob de l'image PNG
+   */
+  async captureScreenshot(width = 800, height = 800) {
+    return new Promise((resolve, reject) => {
+      try {
+        // Sauvegarde de la taille actuelle
+        const originalWidth = this.container.clientWidth;
+        const originalHeight = this.container.clientHeight;
+        const originalAspect = this.camera.aspect;
+
+        // Redimensionne temporairement le renderer
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+
+        // Force un rendu
+        this.renderer.render(this.scene, this.camera);
+
+        // Capture le screenshot
+        this.renderer.domElement.toBlob(
+          (blob) => {
+            // Restaure la taille originale
+            this.camera.aspect = originalAspect;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(originalWidth, originalHeight);
+            this.renderer.render(this.scene, this.camera);
+
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Failed to create blob from canvas"));
+            }
+          },
+          "image/png",
+          0.95
+        );
+      } catch (error) {
+        console.error("[JsonModelViewer3D] Screenshot capture failed:", error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Capture et envoie un screenshot au serveur Livewire
+   */
+  async captureAndSendScreenshot() {
+    try {
+      console.log("[JsonModelViewer3D] Capturing screenshot...");
+      const blob = await this.captureScreenshot(800, 800);
+
+      // Convertit le blob en base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result.split(",")[1]; // Retire le préfixe data:image/png;base64,
+        console.log(
+          "[JsonModelViewer3D] Screenshot captured, size:",
+          blob.size,
+          "bytes"
+        );
+
+        // Envoie à Livewire
+        if (window.Livewire) {
+          Livewire.dispatch("saveClientScreenshot", { base64Data: base64 });
+          console.log("[JsonModelViewer3D] Screenshot sent to Livewire");
+        } else {
+          console.warn(
+            "[JsonModelViewer3D] Livewire not available, screenshot not sent"
+          );
+        }
+      };
+      reader.onerror = (error) => {
+        console.error("[JsonModelViewer3D] Failed to read blob:", error);
+      };
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      console.error(
+        "[JsonModelViewer3D] Failed to capture and send screenshot:",
+        error
+      );
+    }
   }
 
   animate() {
