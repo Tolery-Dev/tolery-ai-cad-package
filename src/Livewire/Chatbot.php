@@ -231,6 +231,58 @@ class Chatbot extends Component
         $this->dispatch('tolery-chat-focus-input', faceId: (string) $objectId);
     }
 
+    /**
+     * Sauvegarde un screenshot généré côté client (navigateur)
+     * Appelé automatiquement après le chargement d'un modèle 3D dans le viewer
+     */
+    #[On('saveClientScreenshot')]
+    public function saveClientScreenshot(string $base64Data): void
+    {
+        try {
+            // Décode le base64
+            $imageData = base64_decode($base64Data, true);
+
+            if ($imageData === false) {
+                Log::warning('[AICAD] Failed to decode base64 screenshot data');
+
+                return;
+            }
+
+            // Trouve le dernier message assistant
+            $lastAssistant = $this->findLatestAssistantMessage();
+
+            if (! $lastAssistant) {
+                Log::warning('[AICAD] No assistant message found to attach screenshot');
+
+                return;
+            }
+
+            // Génère un nom de fichier unique
+            $folder = $this->chat->getStorageFolder();
+            $filename = uniqid('screenshot_').'.png';
+            $path = "{$folder}/{$filename}";
+
+            // Sauvegarde le fichier
+            Storage::put($path, $imageData);
+
+            // Met à jour le message avec le chemin du screenshot
+            $lastAssistant->ai_screenshot_path = $path;
+            $lastAssistant->save();
+
+            Log::info('[AICAD] Client screenshot saved', [
+                'chat_id' => $this->chat->id,
+                'message_id' => $lastAssistant->id,
+                'path' => $path,
+                'size' => strlen($imageData),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[AICAD] Failed to save client screenshot', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
     public function refreshFromDb(): void
     {
         $this->messages = $this->mapDbMessagesToArray();
