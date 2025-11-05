@@ -7,11 +7,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Tolery\AiCad\Database\Factories\SubscriptionProductFactory;
 use Tolery\AiCad\Enum\ResetFrequency;
 use Tolery\AiCad\Observers\SubscriptionProductObserver;
 
 /**
+ * @property int $id
  * @property string $name
  * @property string $description
  * @property int $price
@@ -20,24 +22,41 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property string $stripe_id
  * @property string $stripe_price_id
  * @property ResetFrequency $frequency
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, SubscriptionPrice> $prices
+ * @property-read ?SubscriptionPrice $activeMonthlyPrice
+ * @property-read ?SubscriptionPrice $activeYearlyPrice
  */
 #[ObservedBy([SubscriptionProductObserver::class])]
 class SubscriptionProduct extends Model
 {
     use HasFactory;
 
-    /**
-     * @return array{
-     *     'active':'boolean',
-     *      'frequency': 'Tolery\AiCad\Enum\ResetFrequency',
-     * }
-     */
     protected function casts(): array
     {
         return [
             'active' => 'boolean',
             'frequency' => ResetFrequency::class,
         ];
+    }
+
+    public function prices(): HasMany
+    {
+        return $this->hasMany(SubscriptionPrice::class, 'subscription_product_id');
+    }
+
+    public function activePrices(): HasMany
+    {
+        return $this->prices()->active();
+    }
+
+    public function getActiveMonthlyPriceAttribute(): ?SubscriptionPrice
+    {
+        return $this->prices()->active()->monthly()->first();
+    }
+
+    public function getActiveYearlyPriceAttribute(): ?SubscriptionPrice
+    {
+        return $this->prices()->active()->yearly()->first();
     }
 
     public function price(): Attribute
@@ -59,14 +78,13 @@ class SubscriptionProduct extends Model
             'active' => $this->active,
             'description' => $this->description,
             'metadata' => ['files_allowed' => $this->files_allowed, 'frequency' => $this->frequency->value],
-            'tax_code' => 'txcd_10103101', // Logiciel en tant que service (SaaS), téléchargement électronique, usage professionnel
+            'tax_code' => 'txcd_10103101',
             'shippable' => false,
         ];
     }
 
     public function toStripePriceObject(): array
     {
-
         return [
             'nickname' => $this->name.' price',
             'tax_behavior' => 'exclusive',
