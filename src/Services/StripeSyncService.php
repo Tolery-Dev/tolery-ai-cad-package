@@ -134,8 +134,8 @@ class StripeSyncService
             'description' => $product->description,
             'active' => $product->active,
             'metadata' => [
-                'files_allowed' => $product->files_allowed,
-                'laravel_product_id' => $product->id,
+                'files_allowed' => (string) $product->files_allowed,
+                'laravel_product_id' => (string) $product->id,
             ],
         ]);
     }

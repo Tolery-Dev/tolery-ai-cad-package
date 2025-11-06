@@ -46,17 +46,27 @@ class SubscriptionProduct extends Model
 
     public function activePrices(): HasMany
     {
-        return $this->prices()->active();
+        return $this->prices()->where('active', true)->whereNull('archived_at');
     }
 
     public function getActiveMonthlyPriceAttribute(): ?SubscriptionPrice
     {
-        return $this->prices()->active()->monthly()->first();
+        /** @var SubscriptionPrice|null */
+        return $this->prices()
+            ->where('active', true)
+            ->whereNull('archived_at')
+            ->where('interval', 'month')
+            ->first();
     }
 
     public function getActiveYearlyPriceAttribute(): ?SubscriptionPrice
     {
-        return $this->prices()->active()->yearly()->first();
+        /** @var SubscriptionPrice|null */
+        return $this->prices()
+            ->where('active', true)
+            ->whereNull('archived_at')
+            ->where('interval', 'year')
+            ->first();
     }
 
     public function price(): Attribute
@@ -71,13 +81,20 @@ class SubscriptionProduct extends Model
         );
     }
 
+    /**
+     * @return array{name: string, active: bool, description: string, metadata: array<string, string>, tax_code: string, shippable: bool}
+     */
     public function toStripeObject(): array
     {
         return [
             'name' => $this->name,
             'active' => $this->active,
             'description' => $this->description,
-            'metadata' => ['files_allowed' => $this->files_allowed, 'frequency' => $this->frequency->value],
+            'metadata' => [
+                'files_allowed' => (string) $this->files_allowed,
+                'frequency' => $this->frequency->value,
+                'laravel_product_id' => (string) $this->id,
+            ],
             'tax_code' => 'txcd_10103101',
             'shippable' => false,
         ];
