@@ -1,27 +1,32 @@
-<div class="relative h-[calc(100vh-120px)]">
+<div class="relative h-screen">
 
     {{-- Grille pleine hauteur : 40% / 60% --}}
     <div class="grid grid-cols-[40%_60%] h-full w-full">
 
         {{-- GAUCHE (40%) — Chat sur fond gris plein écran --}}
-        <section class="flex flex-col h-full bg-[#fcfcfc]">
-            <div class="h-full flex flex-col bg-[#fcfcfc] rounded-bl-xl overflow-hidden">
+        <section class="flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden">
                 {{-- Header chat --}}
-                <div class="pl-8">
-                    <flux:heading size="xl" class="flex gap-4 pb-4">
-                        <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg')}}" alt="">
-                        Bonjour {{ auth()->user()->firstname }} !
+                <div class="px-8 pt-8 pb-6 shrink-0 border-b border-zinc-100 dark:border-zinc-800">
+                    <flux:heading size="xl" class="flex items-center gap-3 mb-4">
+                        <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg')}}" alt="" class="w-10 h-10">
+                        <span>Bonjour {{ auth()->user()->firstname }} !</span>
                     </flux:heading>
 
-                    <flux:text size="xl" class="text-black"> Bienvenue dans notre configurateur intelligent de création de fichier CAO instantanément et sur-mesure pour la tôlerie. </flux:text>
-                    <flux:text size="xl" class="text-black"> Vous pouvez démarrer votre demande de création de fichier CAO (STEP) en décrivant le plus précisément votre pièce ci-dessous. </flux:text>
+                    <div class="space-y-3">
+                        <flux:text class="text-zinc-700 dark:text-zinc-300">
+                            Bienvenue dans notre configurateur intelligent de création de fichier CAO instantanément et sur-mesure pour la tôlerie.
+                        </flux:text>
+                        <flux:text class="text-zinc-700 dark:text-zinc-300">
+                            Vous pouvez démarrer votre demande de création de fichier CAO (STEP) en décrivant le plus précisément votre pièce ci-dessous.
+                        </flux:text>
+                    </div>
                 </div>
                 {{-- Messages (scroll) --}}
                 <div id="chat-scroll"
                      x-data="{ scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight } }"
                      x-init="$nextTick(()=>scrollToEnd())"
                      x-on:tolery-chat-append.window="scrollToEnd()"
-                     class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                     class="flex-1 overflow-y-auto px-8 py-6 space-y-4">
 
                         {{-- Prompts prédéfinis (uniquement si aucun message) --}}
                         @if(empty($messages))
@@ -131,33 +136,32 @@
                 </div>
 
                 {{-- Composer --}}
-                <footer class="w-full border-t border-gray-100 dark:border-zinc-800 p-4 shrink-0">
-                    <form wire:submit.prevent="send" class="flex flex-col gap-2 max-w-2xl mx-auto">
-                        <div>
-                            <flux:textarea
-                                id="message"
-                                rows="2"
-                                placeholder="Décrivez votre pièce ou posez une question"
-                                wire:model.defer="message"
-                                x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
-                                class="rounded-xl transition-all duration-200
-                                       border border-violet-500/20 ring-1 ring-violet-500/20
-                                       shadow-md shadow-violet-500/10
-                                       focus:ring-2 focus:ring-violet-500/50
-                                       focus:shadow-lg focus:shadow-violet-500/20
-                                       focus:border-violet-500/50"
-                            />
-                        </div>
-                        <div class="flex justify-end ">
-                            <flux:button type="submit" variant="ghost" icon="paper-airplane"/>
+                <footer class="w-full border-t border-zinc-100 dark:border-zinc-800 px-8 py-6 shrink-0">
+                    <form wire:submit.prevent="send" class="flex flex-col gap-3">
+                        <flux:textarea
+                            id="message"
+                            rows="3"
+                            placeholder="Décrivez votre pièce ou posez une question"
+                            wire:model.defer="message"
+                            x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
+                            class="!w-full resize-none rounded-xl transition-all duration-200
+                                   border border-violet-500/20 ring-1 ring-violet-500/20
+                                   shadow-md shadow-violet-500/10
+                                   focus:ring-2 focus:ring-violet-500/50
+                                   focus:shadow-lg focus:shadow-violet-500/20
+                                   focus:border-violet-500/50"
+                        />
+                        <div class="flex justify-end">
+                            <flux:button type="submit" variant="primary" icon="paper-airplane">
+                                Envoyer
+                            </flux:button>
                         </div>
                     </form>
                 </footer>
-            </div>
         </section>
 
         {{-- DROITE (60%) — Viewer sur fond gris (pas de carte blanche) --}}
-        <section class="relative h-full bg-gray-200 dark:bg-zinc-900 px-6 py-4">
+        <section class="relative h-full bg-zinc-50 dark:bg-zinc-900 px-6 py-4">
             {{-- Modal progression CAD (intégré dans la colonne, pas en overlay) --}}
             <div x-data="cadStreamModal()"
                  x-show="open"
