@@ -4,8 +4,7 @@
     <div class="grid grid-cols-[40%_60%] h-full w-full">
 
         {{-- GAUCHE (40%) — Chat sur fond gris plein écran --}}
-        <section class="flex flex-col h-full bg-white dark:bg-zinc-950">
-            <div class="h-full flex flex-col bg-white dark:bg-zinc-950 overflow-hidden">
+        <section class="flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden">
                 {{-- Header chat --}}
                 <div class="px-8 pt-8 pb-6 shrink-0 border-b border-zinc-100 dark:border-zinc-800">
                     <flux:heading size="xl" class="flex items-center gap-3 mb-4">
@@ -145,7 +144,7 @@
                             placeholder="Décrivez votre pièce ou posez une question"
                             wire:model.defer="message"
                             x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
-                            class="w-full rounded-xl transition-all duration-200
+                            class="!w-full resize-none rounded-xl transition-all duration-200
                                    border border-violet-500/20 ring-1 ring-violet-500/20
                                    shadow-md shadow-violet-500/10
                                    focus:ring-2 focus:ring-violet-500/50
@@ -159,7 +158,6 @@
                         </div>
                     </form>
                 </footer>
-            </div>
         </section>
 
         {{-- DROITE (60%) — Viewer sur fond gris (pas de carte blanche) --}}
