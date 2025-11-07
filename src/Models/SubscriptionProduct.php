@@ -72,11 +72,11 @@ class SubscriptionProduct extends Model
     public function price(): Attribute
     {
         return new Attribute(
-            get: function (int $value) {
-                return $value / 100;
+            get: function (?int $value) {
+                return $value ? $value / 100 : null;
             },
-            set: function (int $value) {
-                return $value * 100;
+            set: function (?int $value) {
+                return $value ? $value * 100 : null;
             }
         );
     }

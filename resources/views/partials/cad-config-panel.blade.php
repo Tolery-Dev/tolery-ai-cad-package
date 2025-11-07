@@ -6,18 +6,15 @@
             initialObjUrl: @js($objExportUrl ?? null),
             initialTechnicalDrawingUrl: @js($technicalDrawingUrl ?? null)
         })"
-        x-show="true"
-        :style="`position: fixed; top: 0; left: 0; transform: translate(${x}px, ${y}px); z-index: 9999;`"
+        :style="hasGeneratedInSession ? `position: fixed; top: 0; left: 0; transform: translate(${x}px, ${y}px); z-index: 9999;` : 'display: none;'"
         @dblclick.stop="open = !open"
-        class="w-[360px] max-w-[90vw]
-             rounded-2xl border border-violet-500/80 bg-white dark:bg-zinc-900
-             ring-1 ring-violet-400/50
-             shadow-xl shadow-violet-500/10
-             scroll-smooth overflow-hidden select-none"
+        class="w-[360px] max-w-[90vw] border border-violet-500/80 ring-1 ring-violet-400/50 shadow-xl shadow-violet-500/10 rounded-2xl bg-white dark:bg-zinc-900 scroll-smooth overflow-hidden select-none"
         :class="open ? '[box-shadow:0_12px_30px_-6px_rgba(124,58,237,0.35),0_6px_18px_-8px_rgba(124,58,237,0.25)]' : ''"
     >
     {{-- Header (handle drag) --}}
-    <div class="flex items-center justify-between px-4 py-3 bg-violet-50/60 dark:bg-violet-950/20 cursor-move"
+    <div
+        x-show="hasGeneratedInSession"
+        class="flex items-center justify-between px-4 py-3 bg-violet-50/60 dark:bg-violet-950/20 cursor-move"
          @mousedown.self="startDrag($event)" @touchstart.self.passive="startDrag($event)">
         <div class="flex items-center gap-2">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
@@ -47,6 +44,7 @@
 
     {{-- Contenu (collapsible) --}}
     <div
+        x-show="hasGeneratedInSession"
         id="cad-config-panel"
         :aria-hidden="(!open).toString()"
         class="will-change-[max-height,opacity,transform] overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(.22,1,.36,1)] transition-delay-75"
@@ -138,7 +136,7 @@
             <flux:separator/>
 
             {{-- Section téléchargements (si fichiers disponibles) --}}
-            <div x-show="hasExports()" class="space-y-3">
+            <div x-show="hasGeneratedInSession" class="space-y-3">
                 <div class="text-lg font-semibold text-gray-900">Télécharger les fichiers</div>
                 <div class="grid grid-cols-1 gap-2">
                     <template x-if="exports.step">
@@ -203,7 +201,7 @@
                 </div>
             </div>
 
-            <flux:separator x-show="hasExports()"/>
+            <flux:separator x-show="hasGeneratedInSession"/>
 
             {{-- Infos de sélection --}}
             <div class="space-y-2">
@@ -261,6 +259,9 @@
                 baseX: 0, baseY: 0,     // position du panneau au début du drag
                 dragging: false,
 
+                // Flag pour savoir si une pièce a été générée dans cette session
+                hasGeneratedInSession: localStorage.getItem('cadHasGenerated') === 'true',
+
                 // Data
                 partName: 'Pièce 001',
                 showEdges: false,
@@ -274,6 +275,7 @@
                 },
 
                 init() {
+                    console.log(this.hasGeneratedInSession)
                     // Après teleport, calcule la position initiale adaptée à l'écran
                     this.$nextTick(() => {
                         const saved = JSON.parse(localStorage.getItem('cadPanelPos') || 'null')
@@ -323,6 +325,9 @@
                         this.exports.step = step || null
                         this.exports.obj = obj || null
                         this.exports.technical_drawing = technical_drawing || null
+                        // Marque qu'une pièce a été générée dans cette session
+                        this.hasGeneratedInSession = true
+                        localStorage.setItem('cadHasGenerated', 'true')
                     })
                 },
                 hasExports() {

@@ -13,7 +13,12 @@ class SubscribeToProduct implements ShouldQueue
 {
     use Dispatchable;
 
-    public function __construct(public ChatTeam $team, public ?SubscriptionProduct $product, public ?string $paymentMethodId) {}
+    public function __construct(
+        public ChatTeam $team,
+        public ?SubscriptionProduct $product,
+        public ?string $stripePriceId,
+        public ?string $paymentMethodId
+    ) {}
 
     /**
      * @throws Throwable
@@ -38,15 +43,15 @@ class SubscribeToProduct implements ShouldQueue
                 ]);
             }
 
-            if ($this->product) {
-                $subscription->swap($this->product->stripe_price_id);
+            if ($this->stripePriceId) {
+                $subscription->swap($this->stripePriceId);
             }
 
         } else {
 
-            if ($this->product && $this->paymentMethodId) {
+            if ($this->stripePriceId && $this->paymentMethodId) {
                 $this->team->newSubscription(
-                    'default', $this->product->stripe_price_id
+                    'default', $this->stripePriceId
                 )->create($this->paymentMethodId);
             }
 
