@@ -275,7 +275,6 @@
                 },
 
                 init() {
-                    console.log(this.hasGeneratedInSession)
                     // Après teleport, calcule la position initiale adaptée à l'écran
                     this.$nextTick(() => {
                         const saved = JSON.parse(localStorage.getItem('cadPanelPos') || 'null')
