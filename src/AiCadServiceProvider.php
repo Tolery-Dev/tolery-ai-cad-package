@@ -11,8 +11,10 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\DebugApiStream;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
+use Tolery\AiCad\Commands\SyncStripeProducts;
 use Tolery\AiCad\Commands\TestApiConnection;
 use Tolery\AiCad\Commands\TestStreamEndpoint;
+use Tolery\AiCad\Commands\UpdateStripeMetadata;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Models\ChatTeam;
@@ -39,6 +41,8 @@ class AiCadServiceProvider extends PackageServiceProvider
                 TestApiConnection::class,
                 DebugApiStream::class,
                 TestStreamEndpoint::class,
+                SyncStripeProducts::class,
+                UpdateStripeMetadata::class,
             ]);
 
         Cashier::useCustomerModel(ChatTeam::class);
