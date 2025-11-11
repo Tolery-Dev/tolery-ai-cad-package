@@ -334,6 +334,7 @@
                     })
 
                     // Dimensions globales
+                    // On garde window.addEventListener pour compatibilité avec app.js
                     window.addEventListener('cad-model-stats', ({detail}) => {
                         if (detail) this.stats = detail
                     })
@@ -354,7 +355,7 @@
                         this.hasGeneratedInSession = true
                         localStorage.setItem('cadHasGenerated', 'true')
                         // Dispatch browser event for simple panel
-                        window.dispatchEvent(new CustomEvent('cad-screenshot-updated', { detail: { url: screenshot } }))
+                        this.$dispatch('cad-screenshot-updated', { url: screenshot })
                     })
                 },
                 hasExports() {
@@ -435,7 +436,7 @@
                 },
                 recenter() {
                   // Demande au viewer de se recentrer
-                  window.dispatchEvent(new CustomEvent('viewer-fit'));
+                  this.$dispatch('viewer-fit');
                 },
             }
         }

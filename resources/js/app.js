@@ -370,7 +370,8 @@ class JsonModelViewer3D {
       sizeZ: size.z,
       unit: "mm",
     };
-    window.dispatchEvent(new CustomEvent("cad-model-stats", { detail }));
+    window.Alpine?.dispatchEvent?.("cad-model-stats", detail) ||
+      window.dispatchEvent(new CustomEvent("cad-model-stats", { detail }));
 
     this.fitCamera();
 
@@ -812,7 +813,10 @@ class JsonModelViewer3D {
       // inform Livewire (clear)
       Livewire?.dispatch?.("chatObjectClick", { objectId: null });
       Livewire?.dispatch?.("chatObjectClickReal", { objectId: null });
-      window.dispatchEvent(new CustomEvent("cad-selection", { detail: null }));
+      window.Alpine?.dispatchEvent?.("cad-selection", null) ||
+        window.dispatchEvent(
+          new CustomEvent("cad-selection", { detail: null }),
+        );
       return;
     }
 
@@ -903,7 +907,8 @@ class JsonModelViewer3D {
       },
       area: +areaMm2.toFixed(2), // mm²
     };
-    window.dispatchEvent(new CustomEvent("cad-selection", { detail }));
+    window.Alpine?.dispatchEvent?.("cad-selection", detail) ||
+      window.dispatchEvent(new CustomEvent("cad-selection", { detail }));
   }
 
   updateMaterialStates() {
@@ -964,7 +969,7 @@ class JsonModelViewer3D {
             }
           },
           "image/png",
-          0.95
+          0.95,
         );
       } catch (error) {
         console.error("[JsonModelViewer3D] Screenshot capture failed:", error);
@@ -988,7 +993,7 @@ class JsonModelViewer3D {
         console.log(
           "[JsonModelViewer3D] Screenshot captured, size:",
           blob.size,
-          "bytes"
+          "bytes",
         );
 
         // Envoie à Livewire
@@ -997,7 +1002,7 @@ class JsonModelViewer3D {
           console.log("[JsonModelViewer3D] Screenshot sent to Livewire");
         } else {
           console.warn(
-            "[JsonModelViewer3D] Livewire not available, screenshot not sent"
+            "[JsonModelViewer3D] Livewire not available, screenshot not sent",
           );
         }
       };
@@ -1008,7 +1013,7 @@ class JsonModelViewer3D {
     } catch (error) {
       console.error(
         "[JsonModelViewer3D] Failed to capture and send screenshot:",
-        error
+        error,
       );
     }
   }
@@ -1046,6 +1051,7 @@ Livewire.on("jsonEdgesLoaded", ({ jsonPath }) => {
 });
 
 // Fit request from panel
+// Fonctionne avec $dispatch d'Alpine et window.dispatchEvent natif
 window.addEventListener("viewer-fit", () => {
   ensureViewer().resetView();
 });
