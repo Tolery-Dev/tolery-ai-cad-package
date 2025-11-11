@@ -881,14 +881,14 @@ class JsonModelViewer3D {
       c = new THREE.Vector3(),
       ab = new THREE.Vector3(),
       ac = new THREE.Vector3();
-    let areaM2 = 0;
+    let areaMm2 = 0;
     for (let i = fg.start; i < fg.start + fg.count; i += 3) {
       a.set(pos.getX(i), pos.getY(i), pos.getZ(i));
       b.set(pos.getX(i + 1), pos.getY(i + 1), pos.getZ(i + 1));
       c.set(pos.getX(i + 2), pos.getY(i + 2), pos.getZ(i + 2));
       ab.subVectors(b, a);
       ac.subVectors(c, a);
-      areaM2 += ab.cross(ac).length() * 0.5;
+      areaMm2 += ab.cross(ac).length() * 0.5;
     }
     const detail = {
       id: faceId,
@@ -901,7 +901,7 @@ class JsonModelViewer3D {
         y: maxY - minY,
         z: maxZ - minZ,
       },
-      area: +(areaM2 * 1e6).toFixed(2), // mm²
+      area: +areaMm2.toFixed(2), // mm²
     };
     window.dispatchEvent(new CustomEvent("cad-selection", { detail }));
   }

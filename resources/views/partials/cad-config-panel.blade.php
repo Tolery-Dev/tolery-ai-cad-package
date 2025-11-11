@@ -81,11 +81,11 @@
                     </div>
                     <div class="flex items-baseline gap-2">
                         <span class="text-gray-500">épaisseur</span>
-                        <span class="font-semibold" x-text="fmtThickness()"></span>
+                        <span class="font-semibold" x-text="fmt(stats.sizeZ)"></span>
                     </div>
                     <div class="flex items-baseline gap-2">
                         <span class="text-gray-500">hauteur</span>
-                        <span class="font-semibold" x-text="fmt(stats.sizeZ)"></span>
+                        <span class="font-semibold" x-text="'—'"></span>
                     </div>
                 </div>
             </div>
@@ -295,7 +295,7 @@
                 exports: {
                     step: config.initialStepUrl || null,
                     obj: config.initialObjUrl || null,
-                    technical_drawing: config.initialTechnicalDrawingUrl || null
+                    technical_drawing: config.initialTechnicalDrawingUrl || null,
                     screenshot: config.initialScreenshotUrl || null,
                 },
 

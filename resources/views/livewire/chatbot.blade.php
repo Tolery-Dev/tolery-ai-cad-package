@@ -235,31 +235,28 @@
                      class="h-full w-full">
                 </div>
 
+                {{-- Fenêtre volante (drag + toggle, contour/ombre violets) --}}
+                @include('ai-cad::partials.cad-config-panel', [
+                    'stepExportUrl' => $stepExportUrl,
+                    'objExportUrl' => $objExportUrl,
+                    'technicalDrawingUrl' => $technicalDrawingUrl,
+                    'screenshotUrl' => $screenshotUrl
+                ])
+
                 {{-- Callout violet quand aucune pièce n'est générée --}}
                 @if(!$objExportUrl && !$stepExportUrl)
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <flux:callout icon="sparkles" variant="outline" class="w-full max-w-md bg-violet-50 border-violet-300">
-                            <flux:callout.text class="text-violet-700 text-center">
+                            <flux:callout.text class="text-black text-center">
                                 Commencez votre discussion avec TOLERYCAD, la pièce générée s'affichera ici
                             </flux:callout.text>
                         </flux:callout>
                     </div>
                 @endif
             </div>
-
         </section>
-
-
     </div>
 </div>
-
-{{-- Fenêtre volante (drag + toggle, contour/ombre violets) --}}
-@include('ai-cad::partials.cad-config-panel', [
-    'stepExportUrl' => $stepExportUrl,
-    'objExportUrl' => $objExportUrl,
-    'technicalDrawingUrl' => $technicalDrawingUrl,
-    'screenshotUrl' => $screenshotUrl
-])
 
 @script
 <script>
