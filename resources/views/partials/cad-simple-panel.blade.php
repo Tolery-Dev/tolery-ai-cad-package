@@ -139,6 +139,32 @@
             </template>
         </div>
     </div>
+
+        {{-- Screenshot de la pièce --}}
+        <div class="space-y-2" x-data="{ screenshotUrl: null }" x-init="
+            window.addEventListener('cad-screenshot-updated', (e) => {
+                screenshotUrl = e.detail?.url || null;
+            });
+        ">
+            <flux:heading size="sm" level="3" class="!mb-0">Screenshot</flux:heading>
+            <template x-if="screenshotUrl">
+                <div class="space-y-2">
+                    <img :src="screenshotUrl"
+                         alt="Screenshot de la pièce"
+                         class="w-full h-auto rounded-lg border border-violet-200 shadow-sm"
+                         loading="lazy">
+                    <flux:button
+                        size="xs"
+                        variant="primary"
+                        @click="window.open(screenshotUrl, '_blank')">
+                        Ouvrir en grand
+                    </flux:button>
+                </div>
+            </template>
+            <template x-if="!screenshotUrl">
+                <div class="text-xs text-gray-500">Aucun screenshot disponible.</div>
+            </template>
+        </div>
 </aside>
 
 @once

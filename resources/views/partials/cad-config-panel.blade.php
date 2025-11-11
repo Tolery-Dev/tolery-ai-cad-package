@@ -4,6 +4,7 @@
         x-data="cadConfigPanel({
             initialStepUrl: @js($stepExportUrl ?? null),
             initialObjUrl: @js($objExportUrl ?? null),
+            initialScreenshotUrl: @js($screenshotUrl ?? null),
             initialTechnicalDrawingUrl: @js($technicalDrawingUrl ?? null)
         })"
         :style="hasGeneratedInSession ? `position: fixed; top: 0; left: 0; transform: translate(${x}px, ${y}px); z-index: 9999;` : 'display: none;'"
@@ -199,6 +200,29 @@
                         </a>
                     </template>
                 </div>
+
+                    <template x-if="exports.screenshot">
+                        <div class="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-2">
+                            <div class="flex items-center gap-2">
+                                <div class="h-6 w-6 rounded bg-violet-600 text-white grid place-items-center text-xs font-semibold">
+                                    📸
+                                </div>
+                                <div class="text-sm font-medium text-gray-900">Screenshot de la pièce</div>
+                            </div>
+                            <img :src="exports.screenshot"
+                                 alt="Screenshot de la pièce"
+                                 class="w-full h-auto rounded-lg border border-violet-200 shadow-sm"
+                                 loading="lazy">
+                            <a :href="exports.screenshot"
+                               download
+                               class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                                </svg>
+                                Télécharger
+                            </a>
+                        </div>
+                    </template>
             </div>
 
             <flux:separator x-show="hasGeneratedInSession"/>
@@ -272,6 +296,7 @@
                     step: config.initialStepUrl || null,
                     obj: config.initialObjUrl || null,
                     technical_drawing: config.initialTechnicalDrawingUrl || null
+                    screenshot: config.initialScreenshotUrl || null,
                 },
 
                 init() {
@@ -320,13 +345,16 @@
                     this.setMaterial(this.material)
 
                     // Écoute les événements d'export depuis Livewire
-                    Livewire.on('cad-exports-updated', ({step, obj, technical_drawing}) => {
+                    Livewire.on('cad-exports-updated', ({step, obj, technical_drawing, screenshot}) => {
                         this.exports.step = step || null
                         this.exports.obj = obj || null
                         this.exports.technical_drawing = technical_drawing || null
+                        this.exports.screenshot = screenshot || null
                         // Marque qu'une pièce a été générée dans cette session
                         this.hasGeneratedInSession = true
                         localStorage.setItem('cadHasGenerated', 'true')
+                        // Dispatch browser event for simple panel
+                        window.dispatchEvent(new CustomEvent('cad-screenshot-updated', { detail: { url: screenshot } }))
                     })
                 },
                 hasExports() {

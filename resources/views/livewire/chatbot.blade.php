@@ -127,6 +127,14 @@
                                         class="{{ $msg['role'] === 'user' ? 'inline-block border border-gray-100 bg-gray-50' : 'inline-block bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100' }} rounded-xl px-3 py-2">
                                         {!! nl2br(e($msg['content'] ?? '')) !!}
                                     </div>
+                                    @if(!empty($msg['screenshot_url']))
+                                        <div class="mt-2 inline-block rounded-lg overflow-hidden border border-gray-200 dark:border-zinc-700 shadow-sm">
+                                            <img src="{{ $msg['screenshot_url'] }}"
+                                                 alt="Screenshot de la pièce générée"
+                                                 class="max-w-full h-auto"
+                                                 loading="lazy">
+                                        </div>
+                                    @endif
                                 </div>
                             </article>
                         @empty
@@ -238,13 +246,33 @@
                     </div>
                 @endif
             </div>
+
+                {{-- Screenshot display when available --}}
+                @if($screenshotUrl)
+                    <div class="absolute bottom-4 right-4 z-10 w-64 rounded-xl overflow-hidden border-2 border-violet-500/80 shadow-xl shadow-violet-500/20 bg-white dark:bg-zinc-900">
+                        <div class="px-3 py-2 bg-violet-50/80 dark:bg-violet-950/40 border-b border-violet-200 dark:border-violet-800">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-semibold text-violet-700 dark:text-violet-300">Screenshot</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-2">
+                            <img src="{{ $screenshotUrl }}"
+                                 alt="Screenshot de la pièce générée"
+                                 class="w-full h-auto rounded-lg"
+                                 loading="lazy">
+                        </div>
+                    </div>
+                @endif
         </section>
 
         {{-- Fenêtre volante (drag + toggle, contour/ombre violets) --}}
         @include('ai-cad::partials.cad-config-panel', [
             'stepExportUrl' => $stepExportUrl,
             'objExportUrl' => $objExportUrl,
-            'technicalDrawingUrl' => $technicalDrawingUrl
+            'technicalDrawingUrl' => $technicalDrawingUrl,
+            'screenshotUrl' => $screenshotUrl
         ])
     </div>
 </div>

@@ -70,4 +70,17 @@ class Chat extends Model
     {
         return 'ai-chat/'.$this->created_at->format('Y-m').'/chat-'.$this->id;
     }
+
+    /**
+     * Get the URL of the latest screenshot from chat messages
+     */
+    public function getLatestScreenshotUrl(): ?string
+    {
+        $latestMessage = $this->messages()
+            ->whereNotNull('ai_screenshot_path')
+            ->orderByDesc('created_at')
+            ->first();
+
+        return $latestMessage?->getScreenshotUrl();
+    }
 }
