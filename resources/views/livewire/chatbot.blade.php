@@ -127,14 +127,6 @@
                                         class="{{ $msg['role'] === 'user' ? 'inline-block border border-gray-100 bg-gray-50' : 'inline-block bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-zinc-100' }} rounded-xl px-3 py-2">
                                         {!! nl2br(e($msg['content'] ?? '')) !!}
                                     </div>
-                                    @if(!empty($msg['screenshot_url']))
-                                        <div class="mt-2 inline-block rounded-lg overflow-hidden border border-gray-200 dark:border-zinc-700 shadow-sm">
-                                            <img src="{{ $msg['screenshot_url'] }}"
-                                                 alt="Screenshot de la pièce générée"
-                                                 class="max-w-full h-auto"
-                                                 loading="lazy">
-                                        </div>
-                                    @endif
                                 </div>
                             </article>
                         @empty
