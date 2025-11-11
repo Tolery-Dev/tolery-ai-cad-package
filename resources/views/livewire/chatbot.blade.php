@@ -249,15 +249,17 @@
 
         </section>
 
-        {{-- Fenêtre volante (drag + toggle, contour/ombre violets) --}}
-        @include('ai-cad::partials.cad-config-panel', [
-            'stepExportUrl' => $stepExportUrl,
-            'objExportUrl' => $objExportUrl,
-            'technicalDrawingUrl' => $technicalDrawingUrl,
-            'screenshotUrl' => $screenshotUrl
-        ])
+
     </div>
 </div>
+
+{{-- Fenêtre volante (drag + toggle, contour/ombre violets) --}}
+@include('ai-cad::partials.cad-config-panel', [
+    'stepExportUrl' => $stepExportUrl,
+    'objExportUrl' => $objExportUrl,
+    'technicalDrawingUrl' => $technicalDrawingUrl,
+    'screenshotUrl' => $screenshotUrl
+])
 
 @script
 <script>
