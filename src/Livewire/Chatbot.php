@@ -49,6 +49,8 @@ class Chatbot extends Component
 
     public ?string $technicalDrawingUrl = null;
 
+    public ?string $screenshotUrl = null;
+
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -179,6 +181,7 @@ class Chatbot extends Component
                 'role' => 'user',
                 'content' => $userText,
                 'created_at' => Carbon::parse($mUser->created_at)->toIso8601String(),
+                'screenshot_url' => null,
             ];
             $this->dispatch('tolery-chat-append');
 
@@ -188,6 +191,7 @@ class Chatbot extends Component
                 'role' => 'assistant',
                 'content' => 'AI thinking…',
                 'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
+                'screenshot_url' => null,
             ];
             $this->streamingIndex = array_key_last($this->messages);
             $this->lastRefreshAt = microtime(true);
@@ -487,6 +491,7 @@ class Chatbot extends Component
         $this->stepExportUrl = $asst->ai_step_path ? $asst->getStepUrl() : null;
         $this->objExportUrl = $asst->ai_cad_path ? $asst->getObjUrl() : null;
         $this->technicalDrawingUrl = $asst->ai_technical_drawing_path ? $asst->getTechnicalDrawingUrl() : null;
+        $this->screenshotUrl = $asst->ai_screenshot_path ? $asst->getScreenshotUrl() : null;
     }
 
     /**
@@ -500,6 +505,7 @@ class Chatbot extends Component
             'step' => $this->stepExportUrl,
             'obj' => $this->objExportUrl,
             'technical_drawing' => $this->technicalDrawingUrl,
+            'screenshot' => $this->screenshotUrl,
         ];
 
         $this->dispatch('cad-exports-updated', ...$exports);
@@ -514,6 +520,7 @@ class Chatbot extends Component
                 'role' => $m->role,
                 'content' => (string) $m->message,
                 'created_at' => Carbon::parse($m->created_at)->toIso8601String(),
+                'screenshot_url' => $m->getScreenshotUrl(),
             ])->all();
     }
 
@@ -529,6 +536,7 @@ class Chatbot extends Component
             'role' => 'assistant',
             'content' => $text,
             'created_at' => Carbon::parse($m->created_at)->toIso8601String(),
+            'screenshot_url' => null,
         ];
     }
 

@@ -139,6 +139,28 @@
             </template>
         </div>
     </div>
+
+        {{-- Screenshot de la pièce --}}
+        <div class="space-y-2" x-data="{ screenshotUrl: null }" @cad-screenshot-updated.window="screenshotUrl = $event.detail?.url || null">
+            <flux:heading size="sm" level="3" class="!mb-0">Screenshot</flux:heading>
+            <template x-if="screenshotUrl">
+                <div class="space-y-2">
+                    <img :src="screenshotUrl"
+                         alt="Screenshot de la pièce"
+                         class="w-full h-auto rounded-lg border border-violet-200 shadow-sm"
+                         loading="lazy">
+                    <flux:button
+                        size="xs"
+                        variant="primary"
+                        @click="window.open(screenshotUrl, '_blank')">
+                        Ouvrir en grand
+                    </flux:button>
+                </div>
+            </template>
+            <template x-if="!screenshotUrl">
+                <div class="text-xs text-gray-500">Aucun screenshot disponible.</div>
+            </template>
+        </div>
 </aside>
 
 @once
@@ -183,7 +205,7 @@ function cadSimplePanel () {
         },
         recenter() {
             // côté viewer: écoute window "viewer-fit"
-            window.dispatchEvent(new CustomEvent('viewer-fit'))
+            this.$dispatch('viewer-fit')
         },
         toggleMeasure() {
             this.measureEnabled = !this.measureEnabled
@@ -209,6 +231,8 @@ function cadSimplePanel () {
             }
 
             // stats modèle (émis par ton viewer)
+            // On garde window.addEventListener pour compatibilité avec app.js
+            // mais on supporte aussi Alpine events
             window.addEventListener('cad-model-stats', (e) => {
                 const d = e.detail || {}
                 this.model.sizeX = (d.sizeX ?? '—').toFixed ? d.sizeX.toFixed(2) : d.sizeX
