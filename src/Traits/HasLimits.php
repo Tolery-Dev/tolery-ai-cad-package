@@ -28,7 +28,7 @@ trait HasLimits
             DB::transaction(function () use ($product, $usedAmount) {
 
                 $frequency = $this->determineFrequency($product);
-                
+
                 $limit = new Limit([
                     'used_amount' => $usedAmount,
                     'start_date' => now(),
@@ -58,19 +58,19 @@ trait HasLimits
 
         try {
             $subscription = $this->subscription();
-            
+
             if ($subscription) {
                 $subscription->loadMissing('items');
                 $items = $subscription->items;
-                
+
                 if ($items->isNotEmpty()) {
                     $stripePrice = $items->first()->asStripeSubscriptionItem()->price;
                     $interval = $stripePrice->recurring->interval ?? null;
-                    
+
                     if ($interval === 'year') {
                         return ResetFrequency::YEARLY;
                     }
-                    
+
                     if ($interval === 'month') {
                         return ResetFrequency::MONTHLY;
                     }

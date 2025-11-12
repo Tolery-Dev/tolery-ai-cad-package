@@ -43,7 +43,7 @@ class SubscribeToProduct implements ShouldQueue
     {
         $subscription = $this->team->subscription();
         $subscription->loadMissing('owner');
-        
+
         $product = $this->team->getSubscriptionProduct();
 
         if ($product) {
