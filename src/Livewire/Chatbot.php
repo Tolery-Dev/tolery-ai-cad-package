@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\Flux\Flux;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
@@ -617,10 +618,11 @@ class Chatbot extends Component
         $team = $user->team;
 
         if (! $team) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Impossible de télécharger : aucune équipe associée.',
-            ]);
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Impossible de télécharger : aucune équipe associée.'
+            );
 
             return;
         }
@@ -645,11 +647,18 @@ class Chatbot extends Component
         // Déclenche le téléchargement du fichier STEP
         if ($this->stepExportUrl) {
             $this->dispatch('download-file', url: $this->stepExportUrl);
+
+            Flux::toast(
+                variant: 'success',
+                heading: 'Téléchargement lancé',
+                text: 'Votre fichier CAO est en cours de téléchargement.'
+            );
         } else {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Aucun fichier STEP disponible pour ce chat.',
-            ]);
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Aucun fichier STEP disponible pour ce chat.'
+            );
         }
     }
 
