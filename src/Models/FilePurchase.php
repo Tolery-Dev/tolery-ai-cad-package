@@ -54,6 +54,6 @@ class FilePurchase extends Model
 
     public function getFormattedAmountAttribute(): string
     {
-        return number_format($this->amount / 100, 2, ',', ' ') . ' ' . strtoupper($this->currency);
+        return number_format($this->amount / 100, 2, ',', ' ').' '.strtoupper($this->currency);
     }
 }

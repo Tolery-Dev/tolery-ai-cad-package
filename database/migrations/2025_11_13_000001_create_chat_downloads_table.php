@@ -17,7 +17,7 @@ return new class extends Migration
 
             // Un chat ne peut être téléchargé qu'une fois par équipe
             $table->unique(['team_id', 'chat_id']);
-            
+
             $table->index(['team_id', 'downloaded_at']);
         });
     }

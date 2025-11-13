@@ -12,9 +12,9 @@ class FileAccessService
 {
     /**
      * Vérifie si une team peut télécharger les fichiers d'un chat
-     * 
+     *
      * Règle métier: 1 chat = 1 fichier
-     * 
+     *
      * @return array{
      *   can_download: bool,
      *   reason: string,
@@ -64,9 +64,10 @@ class FileAccessService
 
         // 4. Abonné: vérifie le quota
         $product = $team->getSubscriptionProduct();
-        
+
         if (! $product) {
             Log::warning('Team subscribed but no product found', ['team_id' => $team->id]);
+
             return [
                 'can_download' => false,
                 'reason' => 'no_product',
@@ -139,6 +140,7 @@ class FileAccessService
                 'team_id' => $team->id,
                 'chat_id' => $chat->id,
             ]);
+
             return;
         }
 
@@ -152,7 +154,7 @@ class FileAccessService
         // Si abonné, incrémente le compteur
         if ($team->subscribed()) {
             $product = $team->getSubscriptionProduct();
-            
+
             if ($product) {
                 $limit = $team->limits()
                     ->where('subscription_product_id', $product->id)
@@ -190,7 +192,7 @@ class FileAccessService
         }
 
         $product = $team->getSubscriptionProduct();
-        
+
         if (! $product) {
             return null;
         }
