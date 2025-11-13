@@ -529,3 +529,24 @@
     });
 </script>
 @endscript
+
+@script
+<script>
+    // Listener pour le téléchargement de fichiers
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('download-file', (event) => {
+            const url = event.url || event[0]?.url;
+            if (url) {
+                // Créer un lien temporaire et déclencher le téléchargement
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = '';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                console.log('[AICAD] File download initiated:', url);
+            }
+        });
+    });
+</script>
+@endscript
