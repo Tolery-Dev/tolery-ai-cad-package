@@ -8,7 +8,21 @@ trait HasSubscription
 {
     public function getSubscriptionProduct(): ?SubscriptionProduct
     {
-        $productId = $this->subscription()->items()->first()->stripe_product; // @phpstan-ignore-line
+        $subscription = $this->subscription();
+
+        if (! $subscription) {
+            return null;
+        }
+
+        $subscription->loadMissing('items');
+
+        $firstItem = $subscription->items->first();
+
+        if (! $firstItem) {
+            return null;
+        }
+
+        $productId = $firstItem->stripe_product;
 
         return SubscriptionProduct::query()
             ->where('stripe_id', $productId)
