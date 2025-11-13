@@ -2,21 +2,17 @@
 
 namespace Tolery\AiCad\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Laravel\Cashier\Http\Controllers\WebhookController as CashierWebhookController;
 use Tolery\AiCad\Models\Chat;
-use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\ChatTeam;
+use Tolery\AiCad\Models\FilePurchase;
 
 class StripeWebhookController extends CashierWebhookController
 {
     /**
      * Handle payment_intent.succeeded webhook
-     *
-     * @param array $payload
-     * @return JsonResponse
      */
     public function handlePaymentIntentSucceeded(array $payload): JsonResponse
     {
@@ -30,7 +26,7 @@ class StripeWebhookController extends CashierWebhookController
                     'payment_intent_id' => $paymentIntent['id'],
                     'type' => $metadata['type'] ?? 'unknown',
                 ]);
-                
+
                 return response()->json(['success' => true], 200);
             }
 
@@ -42,7 +38,7 @@ class StripeWebhookController extends CashierWebhookController
                     'payment_intent_id' => $paymentIntent['id'],
                     'metadata' => $metadata,
                 ]);
-                
+
                 return response()->json(['success' => true], 200);
             }
 
@@ -56,19 +52,19 @@ class StripeWebhookController extends CashierWebhookController
                     'chat_id' => $chatId,
                     'payment_intent_id' => $paymentIntent['id'],
                 ]);
-                
+
                 return response()->json(['success' => true], 200);
             }
 
             // Vérifier que l'achat n'existe pas déjà (éviter les doublons)
             $existingPurchase = FilePurchase::where('stripe_payment_intent_id', $paymentIntent['id'])->first();
-            
+
             if ($existingPurchase) {
                 Log::warning('[AICAD] File purchase already exists for this payment intent', [
                     'payment_intent_id' => $paymentIntent['id'],
                     'purchase_id' => $existingPurchase->id,
                 ]);
-                
+
                 return response()->json(['success' => true], 200);
             }
 

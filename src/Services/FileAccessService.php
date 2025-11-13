@@ -230,7 +230,6 @@ class FileAccessService
             ];
         }
 
-
         return [
             'used' => (int) $limit->used_amount,
             'total' => $product->files_allowed,

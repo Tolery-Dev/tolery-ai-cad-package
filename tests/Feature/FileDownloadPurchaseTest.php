@@ -1,12 +1,11 @@
 <?php
 
+use Illuminate\Support\Facades\Http;
 use Tolery\AiCad\Models\Chat;
-use Tolery\AiCad\Models\ChatDownload;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\SubscriptionProduct;
 use Tolery\AiCad\Services\FileAccessService;
-use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
     SubscriptionProduct::create([
@@ -191,7 +190,7 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController();
+        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController;
         $response = $controller->handlePaymentIntentSucceeded($payload);
 
         expect($response->getStatusCode())->toBe(200);
@@ -234,7 +233,7 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController();
+        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController;
         $response = $controller->handlePaymentIntentSucceeded($payload);
 
         expect($response->getStatusCode())->toBe(200);
@@ -260,7 +259,7 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController();
+        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController;
         $response = $controller->handlePaymentIntentSucceeded($payload);
 
         expect($response->getStatusCode())->toBe(200);
