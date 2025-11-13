@@ -22,50 +22,6 @@
                     </div>
                 </div>
 
-                {{-- Bouton de téléchargement --}}
-                @if($stepExportUrl)
-                    <div class="px-8 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                        @if($canDownload)
-                            <flux:button
-                                wire:click="initiateDownload"
-                                variant="primary"
-                                icon="arrow-down-tray"
-                                class="w-full !bg-violet-600 hover:!bg-violet-700 !text-white">
-                                Télécharger mon fichier CAO
-                            </flux:button>
-                            @if($downloadStatus)
-                                @if($downloadStatus['total_quota'] === -1)
-                                    <flux:text class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 text-center block">
-                                        Téléchargements illimités
-                                    </flux:text>
-                                @elseif(isset($downloadStatus['remaining_quota']))
-                                    <flux:text class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 text-center block">
-                                        {{ $downloadStatus['remaining_quota'] }} téléchargement(s) restant(s) ce mois
-                                    </flux:text>
-                                @endif
-                            @endif
-                        @else
-                            <flux:button
-                                wire:click="initiateDownload"
-                                variant="primary"
-                                icon="lock-closed"
-                                class="w-full !bg-violet-600 hover:!bg-violet-700 !text-white">
-                                Débloquer le téléchargement
-                            </flux:button>
-                            @if($downloadStatus && $downloadStatus['reason'] === 'quota_exceeded')
-                                @if($downloadStatus['total_quota'] === -1)
-                                    <flux:text class="text-xs text-orange-600 dark:text-orange-400 mt-2 text-center block">
-                                        Erreur de quota (ce message ne devrait pas apparaître)
-                                    </flux:text>
-                                @else
-                                    <flux:text class="text-xs text-orange-600 dark:text-orange-400 mt-2 text-center block">
-                                        Quota mensuel épuisé ({{ $downloadStatus['total_quota'] - ($downloadStatus['remaining_quota'] ?? 0) }}/{{ $downloadStatus['total_quota'] }})
-                                    </flux:text>
-                                @endif
-                            @endif
-                        @endif
-                    </div>
-                @endif
                 {{-- Messages (scroll) --}}
                 <div id="chat-scroll"
                      x-data="{ scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight } }"
@@ -282,23 +238,26 @@
 
                 {{-- Callout violet quand aucune pièce n'est générée --}}
                 @if(!$objExportUrl && !$stepExportUrl)
-                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <flux:callout icon="sparkles" variant="outline" class="w-full max-w-md bg-violet-50 border-violet-300">
-                            <flux:callout.text class="text-black text-center">
-                                Commencez votre discussion avec TOLERYCAD, la pièce générée s'affichera ici
-                            </flux:callout.text>
-                        </flux:callout>
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none p-8">
+                        <div class="max-w-md pointer-events-auto">
+                            <flux:callout icon="sparkles" color="purple">
+                                <flux:callout.text>
+                                    Commencez par discuter avec TOLERYCAD, la pièce générée s'affichera ici
+                                </flux:callout.text>
+                            </flux:callout>
+                        </div>
                     </div>
                 @endif
 
                 {{-- Bouton de téléchargement (bottom of viewer) --}}
                 @if($stepExportUrl || $objExportUrl)
-                    <div class="absolute bottom-6 left-6 right-6 z-10">
+                    <div class="absolute bottom-6 left-6 z-10">
                         <flux:button
                             wire:click="initiateDownload"
-                            class="w-full !bg-violet-600 hover:!bg-violet-700 shadow-lg">
-                            <flux:icon.arrow-down-tray class="size-5" />
-                            Débloquer le téléchargement
+                            variant="primary"
+                            icon="arrow-down-tray"
+                            class="!bg-violet-600 hover:!bg-violet-700 !text-white shadow-lg">
+                            Télécharger mon fichier CAO
                         </flux:button>
                     </div>
                 @endif
