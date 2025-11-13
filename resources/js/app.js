@@ -378,11 +378,16 @@ class JsonModelViewer3D {
     // Ensure canvas is properly sized after model load
     this.onResize();
 
-    // Capture et envoie automatiquement un screenshot après chargement
+    // Capture et envoie automatiquement un screenshot après chargement si il n'existe pas déjà
     // Délai de 500ms pour s'assurer que le rendu est stable
-    setTimeout(() => {
-      this.captureAndSendScreenshot();
-    }, 500);
+    const screenshotExists = this.container.getAttribute('data-screenshot-exists') === 'true';
+    if (!screenshotExists) {
+      setTimeout(() => {
+        this.captureAndSendScreenshot();
+      }, 500);
+    } else {
+      console.log("[JsonModelViewer3D] Screenshot already exists, skipping capture");
+    }
   }
 
   // --- Edges / Contours ---

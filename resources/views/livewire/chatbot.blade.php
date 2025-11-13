@@ -225,8 +225,8 @@
             <div class="relative h-full w-full rounded-xl overflow-hidden shadow-sm">
                 <div id="viewer"
                      wire:ignore
+                     data-screenshot-exists="{{ $screenshotUrl ? 'true' : 'false' }}"
                      class="h-full w-full">
-                </div>
 
                 {{-- Fenêtre volante (drag + toggle, contour/ombre violets) --}}
                 @include('ai-cad::partials.cad-config-panel', [
