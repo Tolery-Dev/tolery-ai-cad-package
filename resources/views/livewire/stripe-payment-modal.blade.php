@@ -48,8 +48,8 @@
 
                     {{-- Boutons --}}
                     <div class="flex gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-700">
-                        <flux:button 
-                            wire:click="closeModal" 
+                        <flux:button
+                            wire:click="closeModal"
                             variant="ghost"
                             :disabled="$processing">
                             Annuler
@@ -83,12 +83,13 @@
     </flux:modal>
 </div>
 
-@push('scripts')
+
 <script src="https://js.stripe.com/v3/"></script>
+
+@script
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('stripePayment', (clientSecret) => ({
-        stripe: null,
         elements: null,
         cardElement: null,
         processing: false,
@@ -102,7 +103,7 @@ document.addEventListener('alpine:init', () => {
             // Initialize Stripe
             this.stripe = Stripe(@js(config('cashier.key')));
             this.elements = this.stripe.elements();
-            
+
             // Create and mount card element
             this.cardElement = this.elements.create('card', {
                 style: {
@@ -118,7 +119,7 @@ document.addEventListener('alpine:init', () => {
                     },
                 },
             });
-            
+
             this.cardElement.mount('#card-element');
         },
 
@@ -126,7 +127,6 @@ document.addEventListener('alpine:init', () => {
             if (this.processing) return;
 
             this.processing = true;
-            @this.set('processing', true);
 
             try {
                 const { error, paymentIntent } = await this.stripe.confirmCardPayment(clientSecret, {
@@ -137,14 +137,14 @@ document.addEventListener('alpine:init', () => {
 
                 if (error) {
                     console.error('Payment error:', error);
-                    @this.call('handlePaymentError', error.message);
+                    this.call('handlePaymentError', error.message);
                 } else if (paymentIntent.status === 'succeeded') {
                     console.log('Payment succeeded:', paymentIntent);
-                    @this.call('handlePaymentSuccess');
+                    this.call('handlePaymentSuccess');
                 }
             } catch (err) {
                 console.error('Unexpected error:', err);
-                @this.call('handlePaymentError', 'Une erreur inattendue s\'est produite.');
+                this.call('handlePaymentError', 'Une erreur inattendue s\'est produite.');
             } finally {
                 this.processing = false;
             }
@@ -152,4 +152,4 @@ document.addEventListener('alpine:init', () => {
     }));
 });
 </script>
-@endpush
+@endscript
