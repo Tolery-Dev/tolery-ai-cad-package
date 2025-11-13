@@ -733,4 +733,15 @@ class Chatbot extends Component
             ]);
         }
     }
+
+    #[On('payment-completed')]
+    public function handlePaymentCompleted(): void
+    {
+        // Rafraîchir le statut de téléchargement après un paiement réussi
+        $this->refreshFromDb();
+        
+        Log::info('[AICAD] Download status refreshed after payment', [
+            'chat_id' => $this->chat->id,
+        ]);
+    }
 }

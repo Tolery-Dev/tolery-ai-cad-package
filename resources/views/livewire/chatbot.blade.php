@@ -278,6 +278,19 @@
                         </flux:callout>
                     </div>
                 @endif
+
+                {{-- Bouton de téléchargement (bottom of viewer) --}}
+                @if($stepExportUrl || $objExportUrl)
+                    <div class="absolute bottom-6 left-6 right-6 z-10">
+                        <flux:button
+                            wire:click="initiateDownload"
+                            size="lg"
+                            class="w-full !bg-violet-600 hover:!bg-violet-700 shadow-lg">
+                            <flux:icon.arrow-down-tray class="size-5" />
+                            Débloquer le téléchargement
+                        </flux:button>
+                    </div>
+                @endif
             </div>
         </section>
     </div>
@@ -542,3 +555,6 @@
     });
 </script>
 @endscript
+
+{{-- Stripe Payment Modal Component --}}
+<livewire:stripe-payment-modal />

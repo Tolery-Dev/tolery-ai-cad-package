@@ -19,6 +19,14 @@ class Limit extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'team_id',
+        'subscription_product_id',
+        'used_amount',
+        'start_date',
+        'end_date',
+    ];
+
     protected $table = 'subscription_has_limits';
 
     /**
