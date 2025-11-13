@@ -378,13 +378,13 @@
             </div>
         </div>
 
-        <flux:modal.footer>
-            <div class="flex gap-2 justify-end">
-                <flux:button wire:click="closePurchaseModal" variant="ghost">
+        <div class="flex gap-2 justify-end pt-6 border-t border-zinc-200 dark:border-zinc-700">
+            <flux:modal.close>
+                <flux:button variant="ghost">
                     Annuler
                 </flux:button>
-            </div>
-        </flux:modal.footer>
+            </flux:modal.close>
+        </div>
     </flux:modal>
 </div>
 
