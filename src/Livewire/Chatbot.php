@@ -675,10 +675,62 @@ class Chatbot extends Component
      */
     public function purchaseFile(): void
     {
-        // Placeholder pour Phase 3
-        $this->dispatch('notify', [
-            'type' => 'info',
-            'message' => 'Fonctionnalité d\'achat à venir.',
-        ]);
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $team = $user->team;
+
+        if (! $team) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Impossible d\'acheter : aucune équipe associée.',
+            ]);
+
+            return;
+        }
+
+        try {
+            $fileAccessService = app(FileAccessService::class);
+            $price = $fileAccessService->getOneTimePurchasePrice();
+
+            // Créer un Payment Intent Stripe
+            $stripe = new \Stripe\StripeClient(config('cashier.secret'));
+            $paymentIntent = $stripe->paymentIntents->create([
+                'amount' => $price,
+                'currency' => config('cashier.currency', 'eur'),
+                'metadata' => [
+                    'team_id' => (string) $team->id,
+                    'chat_id' => (string) $this->chat->id,
+                    'type' => 'file_purchase',
+                ],
+                'description' => "Achat fichier CAO - Chat #{$this->chat->id}",
+            ]);
+
+            // Dispatcher l'événement pour ouvrir le modal de paiement
+            $this->dispatch('show-stripe-payment-modal', [
+                'clientSecret' => $paymentIntent->client_secret,
+                'amount' => $price,
+                'chatId' => $this->chat->id,
+                'screenshotUrl' => $this->screenshotUrl,
+            ]);
+
+            Log::info('[AICAD] Payment Intent created for file purchase', [
+                'payment_intent_id' => $paymentIntent->id,
+                'team_id' => $team->id,
+                'chat_id' => $this->chat->id,
+                'amount' => $price,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('[AICAD] Failed to create payment intent', [
+                'error' => $e->getMessage(),
+                'team_id' => $team->id,
+                'chat_id' => $this->chat->id,
+            ]);
+
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Erreur lors de la création du paiement. Veuillez réessayer.',
+            ]);
+        }
     }
 }
