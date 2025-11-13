@@ -21,6 +21,39 @@
                         </flux:text>
                     </div>
                 </div>
+
+                {{-- Bouton de téléchargement --}}
+                @if($stepExportUrl)
+                    <div class="px-8 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                        @if($canDownload)
+                            <flux:button
+                                wire:click="initiateDownload"
+                                variant="primary"
+                                icon="arrow-down-tray"
+                                class="w-full !bg-violet-600 hover:!bg-violet-700 !text-white">
+                                Télécharger mon fichier CAO
+                            </flux:button>
+                            @if($downloadStatus && isset($downloadStatus['remaining_quota']))
+                                <flux:text class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 text-center block">
+                                    {{ $downloadStatus['remaining_quota'] }} téléchargement(s) restant(s) ce mois
+                                </flux:text>
+                            @endif
+                        @else
+                            <flux:button
+                                wire:click="initiateDownload"
+                                variant="primary"
+                                icon="lock-closed"
+                                class="w-full !bg-violet-600 hover:!bg-violet-700 !text-white">
+                                Débloquer le téléchargement
+                            </flux:button>
+                            @if($downloadStatus && $downloadStatus['reason'] === 'quota_exceeded')
+                                <flux:text class="text-xs text-orange-600 dark:text-orange-400 mt-2 text-center block">
+                                    Quota mensuel épuisé ({{ $downloadStatus['total_quota'] }}/{{ $downloadStatus['total_quota'] }})
+                                </flux:text>
+                            @endif
+                        @endif
+                    </div>
+                @endif
                 {{-- Messages (scroll) --}}
                 <div id="chat-scroll"
                      x-data="{ scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight } }"
@@ -248,6 +281,111 @@
             </div>
         </section>
     </div>
+
+    {{-- Modal Achat/Abonnement --}}
+    <flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 min-w-[32rem]">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg" class="mb-2">Débloquer ce fichier CAO</flux:heading>
+                <flux:subheading>
+                    @if($downloadStatus && $downloadStatus['reason'] === 'no_subscription')
+                        Vous devez être abonné ou acheter ce fichier pour le télécharger.
+                    @elseif($downloadStatus && $downloadStatus['reason'] === 'quota_exceeded')
+                        Votre quota mensuel est épuisé ({{ $downloadStatus['total_quota'] }}/{{ $downloadStatus['total_quota'] }} fichiers).
+                    @else
+                        Vous n'avez pas accès à ce téléchargement.
+                    @endif
+                </flux:subheading>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {{-- Option 1: S'abonner --}}
+                @if($downloadStatus && isset($downloadStatus['options']['can_subscribe']) && $downloadStatus['options']['can_subscribe'])
+                    <flux:card class="border-2 border-violet-200 dark:border-violet-800">
+                        <div class="flex flex-col h-full">
+                            <div class="flex-1">
+                                <flux:heading size="base" class="mb-2 text-violet-600 dark:text-violet-400">
+                                    S'abonner
+                                </flux:heading>
+                                <flux:subheading class="mb-4">
+                                    Accès illimité aux téléchargements selon votre plan
+                                </flux:subheading>
+                                <ul class="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+                                    <li class="flex items-start gap-2">
+                                        <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
+                                        <span>Plusieurs fichiers par mois</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
+                                        <span>Accès prioritaire au support</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
+                                        <span>Nouvelles fonctionnalités en avant-première</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <flux:button
+                                wire:click="redirectToSubscription"
+                                variant="primary"
+                                class="mt-4 w-full !bg-violet-600 hover:!bg-violet-700">
+                                Voir les plans
+                            </flux:button>
+                        </div>
+                    </flux:card>
+                @endif
+
+                {{-- Option 2: Achat one-shot --}}
+                @if($downloadStatus && isset($downloadStatus['options']['can_purchase']) && $downloadStatus['options']['can_purchase'])
+                    <flux:card class="border-2 border-zinc-200 dark:border-zinc-700">
+                        <div class="flex flex-col h-full">
+                            <div class="flex-1">
+                                <flux:heading size="base" class="mb-2">
+                                    Acheter ce fichier
+                                </flux:heading>
+                                <flux:subheading class="mb-4">
+                                    Paiement unique pour ce fichier uniquement
+                                </flux:subheading>
+                                @if(isset($downloadStatus['options']['purchase_price']))
+                                    <div class="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+                                        {{ number_format($downloadStatus['options']['purchase_price'] / 100, 2) }}€
+                                    </div>
+                                @endif
+                                <ul class="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+                                    <li class="flex items-start gap-2">
+                                        <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
+                                        <span>Téléchargement immédiat</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
+                                        <span>Fichier STEP haute qualité</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
+                                        <span>Accès illimité à ce fichier</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <flux:button
+                                wire:click="purchaseFile"
+                                variant="outline"
+                                class="mt-4 w-full">
+                                Acheter maintenant
+                            </flux:button>
+                        </div>
+                    </flux:card>
+                @endif
+            </div>
+        </div>
+
+        <flux:modal.footer>
+            <div class="flex gap-2 justify-end">
+                <flux:button wire:click="closePurchaseModal" variant="ghost">
+                    Annuler
+                </flux:button>
+            </div>
+        </flux:modal.footer>
+    </flux:modal>
 </div>
 
 @script

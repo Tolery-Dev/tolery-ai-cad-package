@@ -13,6 +13,7 @@ use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
+use Tolery\AiCad\Services\FileAccessService;
 
 class Chatbot extends Component
 {
@@ -50,6 +51,13 @@ class Chatbot extends Component
     public ?string $technicalDrawingUrl = null;
 
     public ?string $screenshotUrl = null;
+
+    /** Download management */
+    public bool $canDownload = false;
+
+    public ?array $downloadStatus = null;
+
+    public bool $showPurchaseModal = false;
 
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
@@ -100,6 +108,9 @@ class Chatbot extends Component
 
             // 3. Dispatch des liens de téléchargement initiaux
             $this->dispatchExportLinks($objToDisplay);
+
+            // 4. Initialize download status
+            $this->updateDownloadStatus();
         }
     }
 
@@ -570,5 +581,104 @@ class Chatbot extends Component
 
         $this->dispatch('tolery-chat-append');
         $this->dispatch('$refresh');
+    }
+
+    /**
+     * Met à jour le statut de téléchargement pour l'utilisateur actuel
+     */
+    protected function updateDownloadStatus(): void
+    {
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $team = $user->team;
+
+        if (! $team) {
+            $this->canDownload = false;
+            $this->downloadStatus = null;
+
+            return;
+        }
+
+        $fileAccessService = app(FileAccessService::class);
+        $status = $fileAccessService->canDownloadChat($team, $this->chat);
+
+        $this->canDownload = $status['can_download'];
+        $this->downloadStatus = $status;
+    }
+
+    /**
+     * Initie le téléchargement du fichier CAO
+     * Gère la logique d'achat/abonnement si nécessaire
+     */
+    public function initiateDownload(): void
+    {
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $team = $user->team;
+
+        if (! $team) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Impossible de télécharger : aucune équipe associée.',
+            ]);
+
+            return;
+        }
+
+        $fileAccessService = app(FileAccessService::class);
+        $status = $fileAccessService->canDownloadChat($team, $this->chat);
+
+        if (! $status['can_download']) {
+            // Affiche le modal d'achat/abonnement
+            $this->showPurchaseModal = true;
+            $this->downloadStatus = $status;
+
+            return;
+        }
+
+        // Enregistre le téléchargement
+        $fileAccessService->recordChatDownload($team, $this->chat);
+
+        // Met à jour le statut
+        $this->updateDownloadStatus();
+
+        // Déclenche le téléchargement du fichier STEP
+        if ($this->stepExportUrl) {
+            $this->dispatch('download-file', url: $this->stepExportUrl);
+        } else {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'message' => 'Aucun fichier STEP disponible pour ce chat.',
+            ]);
+        }
+    }
+
+    /**
+     * Ferme le modal d'achat/abonnement
+     */
+    public function closePurchaseModal(): void
+    {
+        $this->showPurchaseModal = false;
+    }
+
+    /**
+     * Redirige vers la page d'abonnement
+     */
+    public function redirectToSubscription()
+    {
+        return redirect()->route('billing.subscription');
+    }
+
+    /**
+     * Initie l'achat one-shot du fichier
+     * TODO: À implémenter dans la Phase 3
+     */
+    public function purchaseFile(): void
+    {
+        // Placeholder pour Phase 3
+        $this->dispatch('notify', [
+            'type' => 'info',
+            'message' => 'Fonctionnalité d\'achat à venir.',
+        ]);
     }
 }
