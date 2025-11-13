@@ -33,10 +33,16 @@
                                 class="w-full !bg-violet-600 hover:!bg-violet-700 !text-white">
                                 Télécharger mon fichier CAO
                             </flux:button>
-                            @if($downloadStatus && isset($downloadStatus['remaining_quota']))
-                                <flux:text class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 text-center block">
-                                    {{ $downloadStatus['remaining_quota'] }} téléchargement(s) restant(s) ce mois
-                                </flux:text>
+                            @if($downloadStatus)
+                                @if($downloadStatus['total_quota'] === -1)
+                                    <flux:text class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 text-center block">
+                                        Téléchargements illimités
+                                    </flux:text>
+                                @elseif(isset($downloadStatus['remaining_quota']))
+                                    <flux:text class="text-xs text-zinc-500 dark:text-zinc-400 mt-2 text-center block">
+                                        {{ $downloadStatus['remaining_quota'] }} téléchargement(s) restant(s) ce mois
+                                    </flux:text>
+                                @endif
                             @endif
                         @else
                             <flux:button
@@ -47,9 +53,15 @@
                                 Débloquer le téléchargement
                             </flux:button>
                             @if($downloadStatus && $downloadStatus['reason'] === 'quota_exceeded')
-                                <flux:text class="text-xs text-orange-600 dark:text-orange-400 mt-2 text-center block">
-                                    Quota mensuel épuisé ({{ $downloadStatus['total_quota'] }}/{{ $downloadStatus['total_quota'] }})
-                                </flux:text>
+                                @if($downloadStatus['total_quota'] === -1)
+                                    <flux:text class="text-xs text-orange-600 dark:text-orange-400 mt-2 text-center block">
+                                        Erreur de quota (ce message ne devrait pas apparaître)
+                                    </flux:text>
+                                @else
+                                    <flux:text class="text-xs text-orange-600 dark:text-orange-400 mt-2 text-center block">
+                                        Quota mensuel épuisé ({{ $downloadStatus['total_quota'] - ($downloadStatus['remaining_quota'] ?? 0) }}/{{ $downloadStatus['total_quota'] }})
+                                    </flux:text>
+                                @endif
                             @endif
                         @endif
                     </div>
@@ -284,7 +296,6 @@
                     <div class="absolute bottom-6 left-6 right-6 z-10">
                         <flux:button
                             wire:click="initiateDownload"
-                            size="lg"
                             class="w-full !bg-violet-600 hover:!bg-violet-700 shadow-lg">
                             <flux:icon.arrow-down-tray class="size-5" />
                             Débloquer le téléchargement
@@ -294,6 +305,9 @@
             </div>
         </section>
     </div>
+
+    {{-- Stripe Payment Modal Component --}}
+    <livewire:stripe-payment-modal />
 
     {{-- Modal Achat/Abonnement --}}
     <flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 min-w-[32rem]">
@@ -555,6 +569,3 @@
     });
 </script>
 @endscript
-
-{{-- Stripe Payment Modal Component --}}
-<livewire:stripe-payment-modal />

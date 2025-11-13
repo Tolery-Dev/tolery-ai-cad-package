@@ -103,6 +103,18 @@ class FileAccessService
 
         $filesAllowed = $product->files_allowed;
         $filesUsed = (int) $limit->used_amount;
+
+        // Vérifier si le plan est illimité (files_allowed = -1)
+        if ($filesAllowed === -1) {
+            return [
+                'can_download' => true,
+                'reason' => 'subscription_unlimited',
+                'remaining_quota' => null,
+                'total_quota' => -1,
+                'options' => [],
+            ];
+        }
+
         $remaining = max(0, $filesAllowed - $filesUsed);
 
         if ($remaining > 0) {
@@ -207,6 +219,17 @@ class FileAccessService
         if (! $limit) {
             return null;
         }
+
+        // Gérer les plans illimités (files_allowed = -1)
+        if ($product->files_allowed === -1) {
+            return [
+                'used' => (int) $limit->used_amount,
+                'total' => -1,
+                'remaining' => -1,  // -1 indique illimité
+                'period_end' => $limit->end_date,
+            ];
+        }
+
 
         return [
             'used' => (int) $limit->used_amount,
