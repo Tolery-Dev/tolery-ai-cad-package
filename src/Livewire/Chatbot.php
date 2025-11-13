@@ -739,7 +739,7 @@ class Chatbot extends Component
     {
         // Rafraîchir le statut de téléchargement après un paiement réussi
         $this->refreshFromDb();
-        
+
         Log::info('[AICAD] Download status refreshed after payment', [
             'chat_id' => $this->chat->id,
         ]);

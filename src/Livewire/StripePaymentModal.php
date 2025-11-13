@@ -67,7 +67,7 @@ class StripePaymentModal extends Component
         ]);
 
         // Fermer le modal après 2 secondes
-        $this->js("setTimeout(() => { \$wire.closeModal() }, 2000)");
+        $this->js('setTimeout(() => { $wire.closeModal() }, 2000)');
     }
 
     public function handlePaymentError(string $error): void
