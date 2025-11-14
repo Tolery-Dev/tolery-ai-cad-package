@@ -17,3 +17,12 @@ Route::middleware(['web', 'auth'])->prefix('ai-cad')->name('ai-cad.')->group(fun
     Route::post('/stream/generate-cad', [StreamController::class, 'generateCadStream'])
         ->name('stream.generate-cad');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Stripe Webhooks
+|--------------------------------------------------------------------------
+*/
+
+Route::post('/stripe/webhook', [\Tolery\AiCad\Http\Controllers\StripeWebhookController::class, 'handleWebhook'])
+    ->name('stripe.webhook');

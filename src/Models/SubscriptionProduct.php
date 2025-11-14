@@ -31,6 +31,17 @@ class SubscriptionProduct extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'stripe_id',
+        'name',
+        'description',
+        'files_allowed',
+        'active',
+        'frequency',
+        'price',
+        'stripe_price_id',
+    ];
+
     protected function casts(): array
     {
         return [
