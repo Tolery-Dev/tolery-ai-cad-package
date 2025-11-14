@@ -4,6 +4,7 @@ namespace Tolery\AiCad\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Number;
 
 /**
  * @property int $id
@@ -54,6 +55,6 @@ class FilePurchase extends Model
 
     public function getFormattedAmountAttribute(): string
     {
-        return number_format($this->amount / 100, 2, ',', ' ').' '.strtoupper($this->currency);
+        return Number::currency($this->amount / 100, in: $this->currency);
     }
 }
