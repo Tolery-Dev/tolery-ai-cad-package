@@ -33,19 +33,84 @@
                  class="flex-1 overflow-y-auto px-6 py-6">
 
                 @if(empty($messages))
-                    {{-- Welcome Card --}}
-                    <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#B4B4B4] dark:border-zinc-700 rounded-xl p-6 space-y-3 mb-6">
-                        <div class="w-6 h-6 flex items-center justify-center">
-                            <svg class="w-6 h-6 text-black dark:text-zinc-100" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
+                    {{-- Welcome Section --}}
+                    <div class="space-y-6 mb-6">
+                        {{-- Welcome Text --}}
+                        <div class="space-y-4">
+                            <p class="text-base font-normal text-black dark:text-zinc-100">
+                                Bienvenue dans le configurateur de pièces en tôle. Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
+                            </p>
                         </div>
-                        <flux:text class="text-sm font-medium text-black dark:text-zinc-100">
-                            Bienvenue dans notre configurateur intelligent de création de fichier CAO instantanément et sur-mesure pour la tôlerie.
-                        </flux:text>
-                        <flux:text class="text-sm font-medium text-soft-black dark:text-zinc-400">
-                            Vous pouvez démarrer votre demande de création de fichier CAO (STEP) en décrivant le plus précisément votre pièce ci-dessous.
-                        </flux:text>
+
+                        {{-- Three Options Cards --}}
+                        <div class="space-y-2">
+                            {{-- Option 1: Décrivez votre pièce --}}
+                            <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2">
+                                <div class="shrink-0 w-5 h-5 text-[#565C66] dark:text-zinc-400">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M2.5 2.5H15.833L17.5 4.167V14.167L15.833 15.833H5.833L2.5 17.5V2.5Z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <h3 class="text-sm font-medium text-black dark:text-zinc-100">
+                                        Décrivez votre pièce dans le chat
+                                    </h3>
+                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
+                                        Expliquez directement en langage naturel ce que vous souhaitez concevoir, le système transformera votre description en fichier CAO.
+                                    </p>
+                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
+                                        Testez avec ces exemples :
+                                    </p>
+                                </div>
+                            </div>
+
+                            {{-- Option 2: Importez un plan --}}
+                            <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2">
+                                <div class="shrink-0 w-5 h-5 text-[#565C66] dark:text-zinc-400">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M1.667 1.667H16.667L18.333 3.333V16.667L16.667 18.333H1.667V1.667Z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M2.5 15L6.667 10.833L10 14.167L13.333 10.833L17.5 15" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <h3 class="text-sm font-medium text-black dark:text-zinc-100">
+                                        Importez un plan ou un pdf technique
+                                    </h3>
+                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
+                                        Ajoutez un fichier pour que le chat s'appuie sur votre document existant.
+                                    </p>
+                                    <div class="flex gap-1">
+                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">pdf</span>
+                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">png</span>
+                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">jpg</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Option 3: Ajoutez un fichier CAO --}}
+                            <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2 relative">
+                                <div class="shrink-0 w-5 h-5 text-[#565C66] dark:text-zinc-400">
+                                    <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M2.5 1.667H10L11.667 3.333H17.5V16.667H2.5V1.667Z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm font-medium text-black dark:text-zinc-100">
+                                            Ajoutez un fichier CAO
+                                        </h3>
+                                        <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] dark:bg-[#7B46E4]/10 rounded-sm">Bientôt disponible</span>
+                                    </div>
+                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
+                                        Chargez un fichier CAO existant pour demander des ajustements ou corrections.
+                                    </p>
+                                    <div class="flex gap-1">
+                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">step</span>
+                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">dxf</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 @else
                     {{-- Messages --}}
@@ -79,35 +144,26 @@
                 @if(empty($messages))
                     {{-- Suggestions Pills (Figma Design) --}}
                     <div>
-                        <p class="text-xs font-medium text-soft-black dark:text-zinc-400 mb-3">
-                            Quelques suggestions :
-                        </p>
-
                         <div class="flex flex-wrap gap-2 mb-4">
                             <button
                                 wire:click="sendPredefinedPrompt('Je souhaite un fichier pour une plaque de dimensions 200x100x3mm avec des rayons de 5mm dans chaque coin')"
-                                class="px-4 py-2 rounded-full bg-fichiers-10 text-fichiers text-xs font-bold hover:opacity-80 cursor-pointer  transition-opacity">
-                                📄 Plaque
+                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#F5F3FF] dark:bg-[#8D51FF]/10 text-[#8D51FF] dark:text-[#8D51FF] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
+                                Créer une plaque
                             </button>
                             <button
                                 wire:click="sendPredefinedPrompt('Je veux un fichier pour une platine de 200mm de longueur, 200mm en largeur, épaisseur 5mm. Il faut 4 perçages taraudés M6 dans chaques coins situés à 25mm des bords. Peux tu ajouter des rayons de 15mm dans chaque angle')"
-                                class="px-4 py-2 rounded-full bg-pill-orange-bg text-pill-orange text-xs font-bold hover:opacity-80 cursor-pointer transition-opacity">
-                                ⚙️ Platine taraudée
+                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#EFF6FF] dark:bg-[#2C7FFF]/10 text-[#2C7FFF] dark:text-[#2C7FFF] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
+                                Créer une platine
                             </button>
                             <button
                                 wire:click="sendPredefinedPrompt('Créer un support en forme de L, avec une base de 100 mm, une hauteur de 60 mm, une largeur de 30 mm, d épaisseur 2 mm, avec un pli à 90° et un rayon de pliage intérieur de 2 mm et exterieur de 4mm, comprenant deux trous de 6 mm de diamètre sur la base espacés de 70 mm, centrés en largeur, ainsi qu un trou de 8 mm de diamètre centré sur la partie de 60mm. Ajouter des rayons de 5mm dans chaque coins')"
-                                class="px-4 py-2 rounded-full bg-pill-green-bg text-pill-green text-xs font-bold hover:opacity-80 cursor-pointer  transition-opacity">
-                                📐 Support en L
+                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#ECFDF5] dark:bg-[#00BC7D]/10 text-[#00BC7D] dark:text-[#00BC7D] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
+                                Créer un support
                             </button>
                             <button
                                 wire:click="sendPredefinedPrompt('Je souhaite créer un fichier CAO pour un tube rectangulaire de 1400 mm de long, avec une section de 60 x 30 mm, une épaisseur de 2 mm, des coupes droites à chaque extrémité, un rayon intérieur égal à l épaisseur (2 mm) et un rayon extérieur égal à deux fois l épaisseur (4 mm)')"
-                                class="px-4 py-2 rounded-full bg-pill-cyan-bg text-pill-cyan text-xs font-bold hover:opacity-80 cursor-pointer transition-opacity">
-                                🔲 Tube
-                            </button>
-                            <button
-                                wire:click="sendPredefinedPrompt('Je voudrais une tôle perforée R12 U27,72, en 500 x 1000 mm')"
-                                class="px-4 py-2 rounded-full bg-fichiers-10 text-fichiers text-xs font-bold hover:opacity-80 transition-opacity">
-                                🔘 Tôle perforée
+                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#FFFBEA] dark:bg-[#FF6900]/10 text-[#FF6900] dark:text-[#FF6900] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
+                                Créer un tube
                             </button>
                         </div>
                     </div>
