@@ -2,8 +2,8 @@
 
     {{-- Main Content Area: Chat (left) + Preview (right) --}}
     <div class="flex-1 flex overflow-hidden">
-        {{-- LEFT PANEL: Chat Area --}}
-        <section class="flex-1 flex flex-col bg-white dark:bg-zinc-950 rounded-tl-[24px] rounded-bl-[24px] overflow-hidden">
+        {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
+        <section class="w-[35%] shrink-0 flex flex-col bg-white dark:bg-zinc-950 rounded-tl-[24px] rounded-bl-[24px] overflow-hidden">
             {{-- Header with Breadcrumb --}}
             <header class="px-6 pt-8 pb-6 border-b border-grey-stroke dark:border-zinc-800 shrink-0">
                 <div class="flex items-center gap-2.5 mb-4">
@@ -20,7 +20,7 @@
                 </div>
 
                 <flux:heading size="xl" class="flex items-center gap-3">
-                    <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg')}}" alt="" class="w-10 h-10">
+                    <img src="{{ Vite::asset('resources/images/chat-icon.png')}}" alt="" class="w-10 h-10">
                     <span>Bonjour {{ auth()->user()->firstname }} !</span>
                 </flux:heading>
             </header>
@@ -33,80 +33,120 @@
                  class="flex-1 overflow-y-auto px-6 py-6">
 
                 @if(empty($messages))
-                    {{-- Welcome Section --}}
-                    <div class="space-y-6 mb-6">
-                        {{-- Welcome Text --}}
-                        <div class="space-y-4">
-                            <p class="text-base font-normal text-black dark:text-zinc-100">
-                                Bienvenue dans le configurateur de pièces en tôle. Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
-                            </p>
-                        </div>
-
-                        {{-- Three Options Cards --}}
-                        <div class="space-y-2">
-                            {{-- Option 1: Décrivez votre pièce --}}
-                            <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2">
-                                <div class="shrink-0 w-5 h-5 text-[#565C66] dark:text-zinc-400">
-                                    <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M2.5 2.5H15.833L17.5 4.167V14.167L15.833 15.833H5.833L2.5 17.5V2.5Z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </div>
-                                <div class="flex-1 space-y-2">
-                                    <h3 class="text-sm font-medium text-black dark:text-zinc-100">
-                                        Décrivez votre pièce dans le chat
-                                    </h3>
-                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
-                                        Expliquez directement en langage naturel ce que vous souhaitez concevoir, le système transformera votre description en fichier CAO.
-                                    </p>
-                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
-                                        Testez avec ces exemples :
-                                    </p>
-                                </div>
+                    {{-- Welcome Section - Figma Design --}}
+                    <div class="flex items-start gap-6">
+                        {{-- Content --}}
+                        <div class="flex-1 space-y-4">
+                            {{-- Welcome Message --}}
+                            <div class="space-y-4">
+                                <p class="text-base font-normal text-black dark:text-zinc-100">
+                                    Bienvenue dans le configurateur de pièces en tôle. Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
+                                </p>
                             </div>
 
-                            {{-- Option 2: Importez un plan --}}
-                            <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2">
-                                <div class="shrink-0 w-5 h-5 text-[#565C66] dark:text-zinc-400">
-                                    <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M1.667 1.667H16.667L18.333 3.333V16.667L16.667 18.333H1.667V1.667Z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M2.5 15L6.667 10.833L10 14.167L13.333 10.833L17.5 15" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </div>
-                                <div class="flex-1 space-y-2">
-                                    <h3 class="text-sm font-medium text-black dark:text-zinc-100">
-                                        Importez un plan ou un pdf technique
-                                    </h3>
-                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
-                                        Ajoutez un fichier pour que le chat s'appuie sur votre document existant.
-                                    </p>
-                                    <div class="flex gap-1">
-                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">pdf</span>
-                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">png</span>
-                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">jpg</span>
+                            {{-- 3 Help Blocks --}}
+                            <div class="space-y-2">
+                                {{-- Block 1: Décrivez votre pièce --}}
+                                <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2">
+                                    <div class="shrink-0 w-5 h-5 text-black dark:text-zinc-100">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 space-y-2">
+                                        <p class="text-sm font-medium leading-[1.4] text-black dark:text-zinc-100">
+                                            Décrivez votre pièce dans le chat
+                                        </p>
+                                        <div class="text-xs font-normal leading-[1.4] text-soft-black dark:text-zinc-400 space-y-2">
+                                            <p>
+                                                Expliquez directement en langage naturel ce que vous souhaitez concevoir, le système transformera votre description en fichier CAO.
+                                            </p>
+                                            <p>Testez avec ces exemples :</p>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button wire:click="sendPredefinedPrompt('Je veux une pièce de dimension 500x 250 mm et une épaisseur de 2mm, avec un perçage au centre de diamètre 50mm')"
+                                                    class="cursor-pointer px-3 py-1 rounded bg-fichiers-10 text-fichiers text-xs font-normal hover:opacity-80 transition-opacity">
+                                                📄 Plaque
+                                            </button>
+                                            <button wire:click="sendPredefinedPrompt('Je veux un fichier pour une platine de 200mm de longueur, 200mm en largeur, épaisseur 5mm. Il faut 4 perçages taraudés M6 dans chaques coins situés à 25mm des bords. Peux tu ajouter des rayons de 15mm dans chaque angle')"
+                                                    class="cursor-pointer px-3 py-1 rounded bg-devis-10 text-devis text-xs font-normal hover:opacity-80 transition-opacity">
+                                                ⚙️ Platine taraudée
+                                            </button>
+                                            <button wire:click="sendPredefinedPrompt('Créer un support en forme de L, avec une base de 100 mm, une hauteur de 60 mm, une largeur de 30 mm, d épaisseur 2 mm, avec un pli à 90° et un rayon de pliage intérieur de 2 mm et exterieur de 4mm, comprenant deux trous de 6 mm de diamètre sur la base espacés de 70 mm, centrés en largeur, ainsi qu un trou de 8 mm de diamètre centré sur la partie de 60mm. Ajouter des rayons de 5mm dans chaque coins')"
+                                                    class="cursor-pointer px-3 py-1 rounded bg-pill-green-bg text-pill-green text-xs font-normal hover:opacity-80 transition-opacity">
+                                                📐 Support en L
+                                            </button>
+                                            <button wire:click="sendPredefinedPrompt('Je souhaite créer un fichier CAO pour un tube rectangulaire de 1400 mm de long, avec une section de 60 x 30 mm, une épaisseur de 2 mm, des coupes droites à chaque extrémité, un rayon intérieur égal à l épaisseur (2 mm) et un rayon extérieur égal à deux fois l épaisseur (4 mm)')"
+                                                    class="cursor-pointer px-3 py-1 rounded bg-pill-orange-bg text-pill-orange text-xs font-normal hover:opacity-80 transition-opacity">
+                                                🔲 Tube
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {{-- Option 3: Ajoutez un fichier CAO --}}
-                            <div class="bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2 relative">
-                                <div class="shrink-0 w-5 h-5 text-[#565C66] dark:text-zinc-400">
-                                    <svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M2.5 1.667H10L11.667 3.333H17.5V16.667H2.5V1.667Z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
+                                {{-- Block 2: Importez un plan --}}
+                                <div class="relative bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2">
+                                    <div class="shrink-0 w-5 h-5 text-black dark:text-zinc-100">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 space-y-2">
+                                        <p class="text-sm font-medium leading-[1.4] text-black dark:text-zinc-100">
+                                            Importez un plan ou un pdf technique
+                                        </p>
+                                        <p class="text-xs font-normal leading-[1.4] text-soft-black dark:text-zinc-400">
+                                            Ajoutez un fichier pour que le chat s'appuie sur votre document existant.
+                                        </p>
+                                        <div class="flex gap-1">
+                                            <span class="px-3 py-1 rounded bg-grey-background dark:bg-zinc-800 border-[0.5px] border-grey-stroke dark:border-zinc-700 text-xs font-medium text-soft-black dark:text-zinc-400">
+                                                pdf
+                                            </span>
+                                            <span class="px-3 py-1 rounded bg-grey-background dark:bg-zinc-800 border-[0.5px] border-grey-stroke dark:border-zinc-700 text-xs font-medium text-soft-black dark:text-zinc-400">
+                                                png
+                                            </span>
+                                            <span class="px-3 py-1 rounded bg-grey-background dark:bg-zinc-800 border-[0.5px] border-grey-stroke dark:border-zinc-700 text-xs font-medium text-soft-black dark:text-zinc-400">
+                                                jpg
+                                            </span>
+                                        </div>
+                                        {{-- Badge Bientôt disponible --}}
+                                        <div class="absolute top-0 right-0 px-3 py-1 rounded-sm bg-fichiers-10 dark:bg-fichiers/10">
+                                            <span class="text-xs font-medium text-fichiers dark:text-fichiers">
+                                                Bientôt disponible
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="flex-1 space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <h3 class="text-sm font-medium text-black dark:text-zinc-100">
+
+                                {{-- Block 3: Ajoutez un fichier CAO --}}
+                                <div class="relative bg-white dark:bg-zinc-900 border-[0.5px] border-[#D7DBE0] dark:border-zinc-700 rounded-lg p-4 flex gap-2">
+                                    <div class="shrink-0 w-5 h-5 text-black dark:text-zinc-100">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M20 7h-9M14 17H5M18 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1 space-y-2">
+                                        <p class="text-sm font-medium leading-[1.4] text-black dark:text-zinc-100">
                                             Ajoutez un fichier CAO
-                                        </h3>
-                                        <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] dark:bg-[#7B46E4]/10 rounded-sm">Bientôt disponible</span>
+                                        </p>
+                                        <p class="text-xs font-normal leading-[1.4] text-soft-black dark:text-zinc-400">
+                                            Chargez un fichier CAO existant pour demander des ajustements ou corrections.
+                                        </p>
+                                        <div class="flex gap-1">
+                                            <span class="px-3 py-1 rounded bg-grey-background dark:bg-zinc-800 border-[0.5px] border-grey-stroke dark:border-zinc-700 text-xs font-medium text-soft-black dark:text-zinc-400">
+                                                step
+                                            </span>
+                                            <span class="px-3 py-1 rounded bg-grey-background dark:bg-zinc-800 border-[0.5px] border-grey-stroke dark:border-zinc-700 text-xs font-medium text-soft-black dark:text-zinc-400">
+                                                dxf
+                                            </span>
+                                        </div>
                                     </div>
-                                    <p class="text-xs font-normal text-[#565C66] dark:text-zinc-400 leading-[1.4]">
-                                        Chargez un fichier CAO existant pour demander des ajustements ou corrections.
-                                    </p>
-                                    <div class="flex gap-1">
-                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">step</span>
-                                        <span class="px-3 py-1.5 text-xs font-medium text-[#565C66] dark:text-zinc-400 bg-[#F5F5FA] dark:bg-zinc-800 border-[0.5px] border-[#EBEFF5] dark:border-zinc-700 rounded">dxf</span>
+                                    {{-- Badge Bientôt disponible --}}
+                                    <div class="absolute top-0 right-0 px-3 py-1 rounded-sm bg-fichiers-10 dark:bg-fichiers/10">
+                                        <span class="text-xs font-medium text-fichiers dark:text-fichiers">
+                                            Bientôt disponible
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -120,7 +160,7 @@
                                 @if($msg['role'] === 'user')
                                     👤
                                 @else
-                                    <img src="{{ Vite::asset('resources/images/tolery-cad-logo.svg') }}" alt="" class="w-5 h-5">
+                                    <img src="{{ Vite::asset('resources/images/chat-icon.png') }}" alt="" class="w-5 h-5">
                                 @endif
                             </div>
                             <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">
@@ -140,64 +180,49 @@
             </div>
 
             {{-- Bottom Input Section --}}
-            <footer class="px-6 py-6 border-t border-grey-stroke dark:border-zinc-800 shrink-0 space-y-4">
-                @if(empty($messages))
-                    {{-- Suggestions Pills (Figma Design) --}}
-                    <div>
-                        <div class="flex flex-wrap gap-2 mb-4">
+            <footer class="bg-white border-t border-grey-stroke dark:border-zinc-800 shrink-0">
+                {{-- New Message Input Area (Figma Design) --}}
+                <form wire:submit.prevent="send" class="bg-[#fcfcfc] border-t border-[#ebeff5] px-6 pb-8 pt-6">
+                    <div class="flex flex-col gap-2">
+                        {{-- Text Input --}}
+                        <div class="bg-[#fcfcfc] border border-[#ebeff5] rounded-xl px-4 py-4">
+                            <textarea
+                                id="message"
+                                wire:model.defer="message"
+                                rows="1"
+                                placeholder="Décrivez votre pièce ou posez une question"
+                                x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; } }"
+                                x-init="resize()"
+                                x-on:input="resize()"
+                                x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
+                                class="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-sm font-medium text-black dark:text-zinc-100 placeholder-[#9696b7] resize-none"
+                            ></textarea>
+                        </div>
+
+                        {{-- Buttons Row --}}
+                        <div class="flex items-center justify-between">
+                            {{-- Left: Upload Buttons --}}
+                            <div class="flex items-center gap-4">
+
+                            </div>
+
+                            {{-- Right: Send Button --}}
                             <button
-                                wire:click="sendPredefinedPrompt('Je souhaite un fichier pour une plaque de dimensions 200x100x3mm avec des rayons de 5mm dans chaque coin')"
-                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#F5F3FF] dark:bg-[#8D51FF]/10 text-[#8D51FF] dark:text-[#8D51FF] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
-                                Créer une plaque
-                            </button>
-                            <button
-                                wire:click="sendPredefinedPrompt('Je veux un fichier pour une platine de 200mm de longueur, 200mm en largeur, épaisseur 5mm. Il faut 4 perçages taraudés M6 dans chaques coins situés à 25mm des bords. Peux tu ajouter des rayons de 15mm dans chaque angle')"
-                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#EFF6FF] dark:bg-[#2C7FFF]/10 text-[#2C7FFF] dark:text-[#2C7FFF] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
-                                Créer une platine
-                            </button>
-                            <button
-                                wire:click="sendPredefinedPrompt('Créer un support en forme de L, avec une base de 100 mm, une hauteur de 60 mm, une largeur de 30 mm, d épaisseur 2 mm, avec un pli à 90° et un rayon de pliage intérieur de 2 mm et exterieur de 4mm, comprenant deux trous de 6 mm de diamètre sur la base espacés de 70 mm, centrés en largeur, ainsi qu un trou de 8 mm de diamètre centré sur la partie de 60mm. Ajouter des rayons de 5mm dans chaque coins')"
-                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#ECFDF5] dark:bg-[#00BC7D]/10 text-[#00BC7D] dark:text-[#00BC7D] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
-                                Créer un support
-                            </button>
-                            <button
-                                wire:click="sendPredefinedPrompt('Je souhaite créer un fichier CAO pour un tube rectangulaire de 1400 mm de long, avec une section de 60 x 30 mm, une épaisseur de 2 mm, des coupes droites à chaque extrémité, un rayon intérieur égal à l épaisseur (2 mm) et un rayon extérieur égal à deux fois l épaisseur (4 mm)')"
-                                class="px-3 h-6 rounded inline-flex items-center justify-center bg-[#FFFBEA] dark:bg-[#FF6900]/10 text-[#FF6900] dark:text-[#FF6900] text-xs font-normal hover:opacity-80 cursor-pointer transition-opacity">
-                                Créer un tube
+                                type="submit"
+                                class="cursor-pointer w-6 h-6 hover:opacity-80 transition-opacity flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" class="w-6 h-6">
+                                    <g clip-path="url(#clip0_2847_31394)">
+                                        <path d="M3.4 20.3995L20.85 12.9195C21.66 12.5695 21.66 11.4295 20.85 11.0795L3.4 3.59953C2.74 3.30953 2.01 3.79953 2.01 4.50953L2 9.11953C2 9.61953 2.37 10.0495 2.87 10.1095L17 11.9995L2.87 13.8795C2.37 13.9495 2 14.3795 2 14.8795L2.01 19.4895C2.01 20.1995 2.74 20.6895 3.4 20.3995Z" fill="#565C66"/>
+                                    </g>
+                                    <defs>
+                                        <clipPath id="clip0_2847_31394">
+                                            <rect width="24" height="24" fill="white"/>
+                                        </clipPath>
+                                    </defs>
+                                </svg>
                             </button>
                         </div>
                     </div>
-                @endif
-
-                {{-- Message Input (Figma Design) --}}
-                <form wire:submit.prevent="send" class="space-y-3">
-                    <div class="bg-grey-background dark:bg-zinc-800 rounded-xl p-4 flex items-center gap-4">
-                        <flux:textarea
-                            id="message"
-                            rows="1"
-                            placeholder="Votre message"
-                            wire:model.defer="message"
-                            x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
-                            class="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-black dark:text-zinc-100 placeholder-soft-black dark:placeholder-zinc-500 p-0 resize-none"
-                        />
-                        <button type="submit" class="shrink-0 w-6 h-6 text-devis hover:opacity-80 transition-opacity">
-                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                    </div>
-
-                    {{-- File Upload Button (Figma Design) - Hidden for now --}}
-                    {{-- <button
-                        type="button"
-                        class="w-[220px] h-14 bg-devis-10 dark:bg-devis/10 border-2 border-dashed border-devis rounded-xl flex items-center justify-center gap-2 hover:bg-opacity-80 transition-all">
-                        <svg class="w-6 h-6 text-devis" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H12L14 5H19C19.5304 5 20.0391 5.21071 20.4142 5.58579C20.7893 5.96086 21 6.46957 21 7V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span class="text-xs font-bold text-devis">
-                            Importer fichier
-                        </span>
-                    </button> --}}
                 </form>
             </footer>
         </section>
@@ -299,7 +324,7 @@
                             wire:click="initiateDownload"
                             variant="primary"
                             icon="arrow-down-tray"
-                            class="!bg-violet-600 hover:!bg-violet-700 !text-white shadow-lg">
+                            class="cursor-pointer !bg-violet-600 hover:!bg-violet-700 !text-white shadow-lg">
                             Télécharger mon fichier CAO
                         </flux:button>
                     </div>
@@ -558,19 +583,6 @@
         }
     });
 
-    document.addEventListener('livewire:init', () => {
-        Livewire.on('download-file', (event) => {
-            const url = event.url || event[0]?.url;
-            if (url) {
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = '';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                console.log('[AICAD] File download initiated:', url);
-            }
-        });
-    });
+
 </script>
 @endscript

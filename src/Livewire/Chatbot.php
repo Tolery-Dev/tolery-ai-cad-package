@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Livewire;
 
+use Flux\Flux;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -10,11 +11,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Livewire\Flux\Flux;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
 use Tolery\AiCad\Services\FileAccessService;
+use Tolery\AiCad\Services\ZipGeneratorService;
 
 class Chatbot extends Component
 {
@@ -153,6 +154,18 @@ class Chatbot extends Component
         $this->message = $prompt;
         // Appelle la méthode send normale
         $this->send(app(RateLimiter::class));
+    }
+
+    #[On('open-file-upload')]
+    public function openFileUpload(string $type): void
+    {
+        // TODO: Implement file upload modal/dialog
+        // For now, just dispatch an event to show a toast
+        Flux::toast(
+            variant: 'info',
+            heading: 'Bientôt disponible',
+            text: 'L\'import de fichiers '.strtoupper($type).' sera disponible prochainement.'
+        );
     }
 
     public function send(RateLimiter $limiter): void
@@ -611,13 +624,16 @@ class Chatbot extends Component
      * Initie le téléchargement du fichier CAO
      * Gère la logique d'achat/abonnement si nécessaire
      */
-    public function initiateDownload(): void
+    public function initiateDownload()
     {
+        logger()->info('[CHATBOT] initiateDownload called', ['chat_id' => $this->chat->id]);
+
         /** @var ChatUser $user */
         $user = auth()->user();
         $team = $user->team;
 
         if (! $team) {
+            logger()->error('[CHATBOT] No team found', ['user_id' => $user->id]);
             Flux::toast(
                 variant: 'danger',
                 heading: 'Erreur',
@@ -627,10 +643,18 @@ class Chatbot extends Component
             return;
         }
 
+        logger()->info('[CHATBOT] Team found', ['team_id' => $team->id]);
+
         $fileAccessService = app(FileAccessService::class);
         $status = $fileAccessService->canDownloadChat($team, $this->chat);
 
+        logger()->info('[CHATBOT] Download permission checked', [
+            'can_download' => $status['can_download'],
+            'status' => $status,
+        ]);
+
         if (! $status['can_download']) {
+            logger()->warning('[CHATBOT] Download not allowed, showing purchase modal');
             // Affiche le modal d'achat/abonnement
             $this->showPurchaseModal = true;
             $this->downloadStatus = $status;
@@ -640,107 +664,42 @@ class Chatbot extends Component
 
         // Enregistre le téléchargement
         $fileAccessService->recordChatDownload($team, $this->chat);
+        logger()->info('[CHATBOT] Download recorded');
 
         // Met à jour le statut
         $this->updateDownloadStatus();
 
-        // Déclenche le téléchargement du fichier STEP
-        if ($this->stepExportUrl) {
-            $this->dispatch('download-file', url: $this->stepExportUrl);
+        // Génère le ZIP avec tous les fichiers
+        logger()->info('[CHATBOT] Generating ZIP file');
+        $zipService = app(ZipGeneratorService::class);
+        $result = $zipService->generateChatFilesZip($this->chat);
 
-            Flux::toast(
-                variant: 'success',
-                heading: 'Téléchargement lancé',
-                text: 'Votre fichier CAO est en cours de téléchargement.'
-            );
-        } else {
+        if (! $result['success']) {
+            logger()->error('[CHATBOT] ZIP generation failed', ['error' => $result['error']]);
             Flux::toast(
                 variant: 'danger',
                 heading: 'Erreur',
-                text: 'Aucun fichier STEP disponible pour ce chat.'
+                text: $result['error']
             );
-        }
-    }
-
-    /**
-     * Ferme le modal d'achat/abonnement
-     */
-    public function closePurchaseModal(): void
-    {
-        $this->showPurchaseModal = false;
-    }
-
-    /**
-     * Redirige vers la page d'abonnement
-     */
-    public function redirectToSubscription()
-    {
-        return redirect()->route('billing.subscription');
-    }
-
-    /**
-     * Initie l'achat one-shot du fichier
-     * TODO: À implémenter dans la Phase 3
-     */
-    public function purchaseFile(): void
-    {
-        /** @var ChatUser $user */
-        $user = auth()->user();
-        $team = $user->team;
-
-        if (! $team) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Impossible d\'acheter : aucune équipe associée.',
-            ]);
 
             return;
         }
 
-        try {
-            $fileAccessService = app(FileAccessService::class);
-            $price = $fileAccessService->getOneTimePurchasePrice();
+        logger()->info('[CHATBOT] ZIP generated successfully', [
+            'filename' => $result['filename'],
+            'files' => $result['files'],
+        ]);
 
-            // Créer un Payment Intent Stripe
-            $stripe = new \Stripe\StripeClient(config('cashier.secret'));
-            $paymentIntent = $stripe->paymentIntents->create([
-                'amount' => $price,
-                'currency' => config('cashier.currency', 'eur'),
-                'metadata' => [
-                    'team_id' => (string) $team->id,
-                    'chat_id' => (string) $this->chat->id,
-                    'type' => 'file_purchase',
-                ],
-                'description' => "Achat fichier CAO - Chat #{$this->chat->id}",
-            ]);
+        Flux::toast(
+            variant: 'success',
+            heading: 'Téléchargement lancé',
+            text: 'Votre archive contenant tous les fichiers CAO est en cours de téléchargement.'
+        );
 
-            // Dispatcher l'événement pour ouvrir le modal de paiement
-            $this->dispatch('show-stripe-payment-modal', [
-                'clientSecret' => $paymentIntent->client_secret,
-                'amount' => $price,
-                'chatId' => $this->chat->id,
-                'screenshotUrl' => $this->screenshotUrl,
-            ]);
+        logger()->info('[CHATBOT] Returning download response');
 
-            Log::info('[AICAD] Payment Intent created for file purchase', [
-                'payment_intent_id' => $paymentIntent->id,
-                'team_id' => $team->id,
-                'chat_id' => $this->chat->id,
-                'amount' => $price,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('[AICAD] Failed to create payment intent', [
-                'error' => $e->getMessage(),
-                'team_id' => $team->id,
-                'chat_id' => $this->chat->id,
-            ]);
-
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Erreur lors de la création du paiement. Veuillez réessayer.',
-            ]);
-        }
+        // Retourne le fichier ZIP pour téléchargement
+        return response()->download($result['path'], $result['filename'])->deleteFileAfterSend(true);
     }
 
     #[On('payment-completed')]

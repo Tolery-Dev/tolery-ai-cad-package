@@ -44,10 +44,18 @@ describe('FileAccessService - Download Status', function () {
         $team = ChatTeam::factory()->create();
         $chat = Chat::factory()->create(['team_id' => $team->id]);
 
-        $team->subscriptions()->create([
+        $subscription = $team->subscriptions()->create([
             'type' => 'default',
             'stripe_id' => 'sub_test',
             'stripe_status' => 'active',
+            'stripe_price' => 'price_test',
+            'quantity' => 1,
+        ]);
+
+        // Add subscription item with stripe_product
+        $subscription->items()->create([
+            'stripe_id' => 'si_test',
+            'stripe_product' => $product->stripe_id,
             'stripe_price' => 'price_test',
             'quantity' => 1,
         ]);
@@ -63,7 +71,7 @@ describe('FileAccessService - Download Status', function () {
         $status = $service->canDownloadChat($team, $chat);
 
         expect($status['can_download'])->toBeTrue()
-            ->and($status['reason'])->toBe('quota_available')
+            ->and($status['reason'])->toBe('subscription_with_quota')
             ->and($status['remaining_quota'])->toBe(7)
             ->and($status['total_quota'])->toBe(10);
     });
@@ -81,10 +89,18 @@ describe('FileAccessService - Download Status', function () {
         $team = ChatTeam::factory()->create();
         $chat = Chat::factory()->create(['team_id' => $team->id]);
 
-        $team->subscriptions()->create([
+        $subscription = $team->subscriptions()->create([
             'type' => 'default',
             'stripe_id' => 'sub_test',
             'stripe_status' => 'active',
+            'stripe_price' => 'price_test',
+            'quantity' => 1,
+        ]);
+
+        // Add subscription item with stripe_product
+        $subscription->items()->create([
+            'stripe_id' => 'si_test',
+            'stripe_product' => $product->stripe_id,
             'stripe_price' => 'price_test',
             'quantity' => 1,
         ]);
@@ -103,7 +119,7 @@ describe('FileAccessService - Download Status', function () {
             ->and($status['reason'])->toBe('quota_exceeded')
             ->and($status['remaining_quota'])->toBe(0)
             ->and($status['options']['can_purchase'])->toBeTrue()
-            ->and($status['options']['can_subscribe'])->toBeFalse();
+            ->and($status['options']['can_subscribe'])->toBeTrue();
     });
 
     it('allows download if file was previously purchased', function () {
