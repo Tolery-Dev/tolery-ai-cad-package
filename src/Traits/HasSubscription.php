@@ -16,12 +16,14 @@ trait HasSubscription
 
         $subscription->loadMissing('items');
 
+        /** @var \Laravel\Cashier\SubscriptionItem|null $firstItem */
         $firstItem = $subscription->items->first();
 
         if (! $firstItem) {
             return null;
         }
 
+        /** @phpstan-ignore-next-line - stripe_product is a dynamic attribute from Cashier */
         $productId = $firstItem->stripe_product;
 
         return SubscriptionProduct::query()

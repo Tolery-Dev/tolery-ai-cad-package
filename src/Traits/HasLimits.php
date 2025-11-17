@@ -64,7 +64,9 @@ trait HasLimits
                 $items = $subscription->items;
 
                 if ($items->isNotEmpty()) {
-                    $stripePrice = $items->first()->asStripeSubscriptionItem()->price;
+                    /** @var \Laravel\Cashier\SubscriptionItem $item */
+                    $item = $items->first();
+                    $stripePrice = $item->asStripeSubscriptionItem()->price;
                     $interval = $stripePrice->recurring->interval ?? null;
 
                     if ($interval === 'year') {

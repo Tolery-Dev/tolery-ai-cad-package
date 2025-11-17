@@ -81,6 +81,7 @@ class FileAccessService
             ];
         }
 
+        /** @var \Tolery\AiCad\Models\Limit|null $limit */
         $limit = $team->limits()
             ->where('subscription_product_id', $product->id)
             ->where('end_date', '>', now())
@@ -169,6 +170,7 @@ class FileAccessService
             $product = $team->getSubscriptionProduct();
 
             if ($product) {
+                /** @var \Tolery\AiCad\Models\Limit|null $limit */
                 $limit = $team->limits()
                     ->where('subscription_product_id', $product->id)
                     ->where('end_date', '>', now())
@@ -210,6 +212,7 @@ class FileAccessService
             return null;
         }
 
+        /** @var \Tolery\AiCad\Models\Limit|null $limit */
         $limit = $team->limits()
             ->where('subscription_product_id', $product->id)
             ->where('end_date', '>', now())
