@@ -1,29 +1,46 @@
-<div class="relative h-screen flex bg-grey-background">
+<div class="relative h-screen flex flex-col bg-grey-background">
+
+    {{-- Horizontal Navigation Bar (Figma Design) --}}
+    <header class="flex items-center gap-2.5 px-6 pt-8 pb-6 border-b border-grey-stroke dark:border-zinc-800 bg-white dark:bg-zinc-950 shrink-0">
+        <button
+            onclick="window.location.href='{{ back() }}'"
+            class="w-8 h-8 border border-[#CECECE] dark:border-zinc-700 rounded flex items-center justify-center hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors shrink-0">
+            <svg class="w-4 h-4 text-[#323232] dark:text-zinc-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <div
+            x-data="{ editing: false, name: @entangle('chat.name').live }"
+            class="flex-1">
+            <input
+                x-show="editing"
+                x-model="name"
+                @blur="editing = false"
+                @keydown.enter="editing = false"
+                @keydown.escape="editing = false; name = '{{ $chat->name }}'"
+                type="text"
+                class="text-sm font-semibold text-black dark:text-white bg-transparent border-none focus:ring-0 focus:outline-none p-0 w-full"
+            />
+            <span
+                x-show="!editing"
+                @click="editing = true"
+                class="text-sm font-semibold text-black dark:text-white cursor-pointer hover:text-violet-600 dark:hover:text-violet-400 transition-colors">
+                <span x-text="name"></span>
+            </span>
+        </div>
+    </header>
 
     {{-- Main Content Area: Chat (left) + Preview (right) --}}
     <div class="flex-1 flex overflow-hidden">
         {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
         <section class="w-[35%] shrink-0 flex flex-col bg-white dark:bg-zinc-950 rounded-tl-[24px] rounded-bl-[24px] overflow-hidden">
-            {{-- Header with Breadcrumb --}}
-            <header class="px-6 pt-8 pb-6 border-b border-grey-stroke dark:border-zinc-800 shrink-0">
-                <div class="flex items-center gap-2.5 mb-4">
-                    <button class="w-8 h-8 border border-[#CECECE] dark:border-zinc-700 rounded flex items-center justify-center hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <div class="flex items-center gap-2 text-sm font-semibold text-black dark:text-zinc-100">
-                        <span>Retour</span>
-                        <span class="text-gray-400">/</span>
-                        <span>Conversation</span>
-                    </div>
-                </div>
-
+            {{-- Greeting Header --}}
+            <div class="px-6 pt-6 pb-4 shrink-0">
                 <flux:heading size="xl" class="flex items-center gap-3">
                     <img src="{{ Vite::asset('resources/images/chat-icon.png')}}" alt="" class="w-10 h-10">
                     <span>Bonjour {{ auth()->user()->firstname }} !</span>
                 </flux:heading>
-            </header>
+            </div>
 
             {{-- Messages Area (Scrollable) --}}
             <div id="chat-scroll"
@@ -317,15 +334,15 @@
                     </div>
                 @endif
 
-                {{-- Bouton de téléchargement --}}
+                {{-- Bouton de téléchargement - CTA Principal (Bottom Right) --}}
                 @if($stepExportUrl || $objExportUrl)
-                    <div class="absolute bottom-6 left-6 z-10">
+                    <div class="absolute bottom-8 right-8 z-10">
                         <flux:button
                             wire:click="initiateDownload"
                             variant="primary"
                             icon="arrow-down-tray"
-                            class="cursor-pointer !bg-violet-600 hover:!bg-violet-700 !text-white shadow-lg">
-                            Télécharger mon fichier CAO
+                            class="cursor-pointer !bg-violet-600 hover:!bg-violet-700 !text-white shadow-lg !px-6 !py-3 !text-base !font-semibold">
+                            Télécharger les fichiers
                         </flux:button>
                     </div>
                 @endif
