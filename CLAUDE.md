@@ -93,6 +93,56 @@ php artisan limits:auto-renewal
 - `ResetFrequency` enum: Daily/weekly/monthly limit resets
 - Auto-renewal via scheduled command at 1:00 AM daily
 
+### Predefined Prompts Cache System
+
+**Overview:**
+The package includes an intelligent caching system that dramatically accelerates responses for predefined prompts:
+- **Normal Response**: 1-6 minutes (real API call)
+- **Cached Response**: ~10 seconds (animated simulation with pre-generated files)
+- **Time Savings**: 90-98% reduction for cached prompts
+
+**Key Features:**
+- ⚡ Ultra-fast 10-second simulated streaming for 4 predefined prompts
+- 🔄 Automatic weekly regeneration (Sundays at 2:00 AM)
+- 🧹 Auto-cleanup of old caches (daily at 3:00 AM, 30-day retention)
+- 📊 Analytics tracking (hits count per prompt)
+- 🗄️ Hybrid S3 storage with versioning (handles prompt evolution)
+
+**Commands:**
+```bash
+# Generate cache for all predefined prompts
+php artisan ai-cad:cache-prompts
+
+# Force regeneration
+php artisan ai-cad:cache-prompts --force
+
+# Generate specific prompt (1-4)
+php artisan ai-cad:cache-prompts --prompt=1
+
+# Cleanup old caches
+php artisan ai-cad:cleanup-cache --days=30 --dry-run
+```
+
+**How It Works:**
+1. User sends message matching a predefined prompt (normalized for matching)
+2. `PredefinedPromptCacheService` checks cache via MD5 hash
+3. **Cache HIT**: Dispatches `aicad-start-cached-stream` event → Frontend simulates 5 steps over 10 seconds → Saves cached files to ChatMessage
+4. **Cache MISS**: Standard SSE streaming flow (1-6 minutes)
+
+**Storage:**
+- Cache files stored in: `storage/app/ai-cad-cache/{prompt_hash}/`
+- ChatMessages reference cache paths (not physical copies)
+- Old caches retained 30 days for backward compatibility
+
+**Configuration:**
+```env
+AI_CAD_CACHE_ENABLED=true
+AI_CAD_CACHE_SIMULATION_MS=10000  # 10 seconds
+AI_CAD_CACHE_RETENTION_DAYS=30
+```
+
+**See detailed documentation:** [docs/predefined-prompts-cache.md](docs/predefined-prompts-cache.md)
+
 ### Configuration
 
 **Environment Variables Required:**
@@ -104,11 +154,17 @@ AICAD_API_KEY=your-api-key  # Bearer token for API authentication
 # Onshape Integration (optional)
 ONSHAPE_SECRET_KEY=
 ONSHAPE_ACCESS_KEY=
+
+# Cache System (optional)
+AI_CAD_CACHE_ENABLED=true
+AI_CAD_CACHE_SIMULATION_MS=10000
+AI_CAD_CACHE_RETENTION_DAYS=30
 ```
 
 **Config File:** `config/ai-cad.php`
 - `chat_user_model`: User model class (default: `App\Models\User`)
 - `chat_team_model`: Team model class (default: `App\Models\Team`)
+- `cache`: Predefined prompts cache configuration with 4 default prompts
 
 ### Models & Database
 
