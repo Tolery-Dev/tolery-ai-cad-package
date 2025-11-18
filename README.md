@@ -78,6 +78,10 @@ Optionally, you can publish the views using
 php artisan vendor:publish --tag="ai-cad-views"
 ```
 
+## Documentation
+
+- **[Predefined Prompts Cache System](docs/predefined-prompts-cache.md)** - Accelerate frequently used prompts from 1-6 minutes to ~10 seconds
+
 ## Usage
 
 ### Basic Integration

@@ -81,22 +81,23 @@
                                             <p>Testez avec ces exemples :</p>
                                         </div>
                                         <div class="flex flex-wrap gap-2">
-                                            <button wire:click="sendPredefinedPrompt('Je veux une pièce de dimension 500x 250 mm et une épaisseur de 2mm, avec un perçage au centre de diamètre 50mm')"
-                                                    class="cursor-pointer px-3 py-1 rounded bg-fichiers-10 text-fichiers text-xs font-normal hover:opacity-80 transition-opacity">
-                                                📄 Plaque
-                                            </button>
-                                            <button wire:click="sendPredefinedPrompt('Je veux un fichier pour une platine de 200mm de longueur, 200mm en largeur, épaisseur 5mm. Il faut 4 perçages taraudés M6 dans chaques coins situés à 25mm des bords. Peux tu ajouter des rayons de 15mm dans chaque angle')"
-                                                    class="cursor-pointer px-3 py-1 rounded bg-devis-10 text-devis text-xs font-normal hover:opacity-80 transition-opacity">
-                                                ⚙️ Platine taraudée
-                                            </button>
-                                            <button wire:click="sendPredefinedPrompt('Créer un support en forme de L, avec une base de 100 mm, une hauteur de 60 mm, une largeur de 30 mm, d épaisseur 2 mm, avec un pli à 90° et un rayon de pliage intérieur de 2 mm et exterieur de 4mm, comprenant deux trous de 6 mm de diamètre sur la base espacés de 70 mm, centrés en largeur, ainsi qu un trou de 8 mm de diamètre centré sur la partie de 60mm. Ajouter des rayons de 5mm dans chaque coins')"
-                                                    class="cursor-pointer px-3 py-1 rounded bg-pill-green-bg text-pill-green text-xs font-normal hover:opacity-80 transition-opacity">
-                                                📐 Support en L
-                                            </button>
-                                            <button wire:click="sendPredefinedPrompt('Je souhaite créer un fichier CAO pour un tube rectangulaire de 1400 mm de long, avec une section de 60 x 30 mm, une épaisseur de 2 mm, des coupes droites à chaque extrémité, un rayon intérieur égal à l épaisseur (2 mm) et un rayon extérieur égal à deux fois l épaisseur (4 mm)')"
-                                                    class="cursor-pointer px-3 py-1 rounded bg-pill-orange-bg text-pill-orange text-xs font-normal hover:opacity-80 transition-opacity">
-                                                🔲 Tube
-                                            </button>
+                                            @php
+                                                $buttonColors = [
+                                                    'bg-fichiers-10 text-fichiers',
+                                                    'bg-devis-10 text-devis',
+                                                    'bg-pill-green-bg text-pill-green',
+                                                    'bg-pill-orange-bg text-pill-orange',
+                                                ];
+                                            @endphp
+                                            @foreach($predefinedPrompts as $label => $prompt)
+                                                @php
+                                                    $colorClass = $buttonColors[$loop->index % count($buttonColors)] ?? 'bg-gray-100 text-gray-700';
+                                                @endphp
+                                                <button wire:click="sendPredefinedPrompt('{{ addslashes($prompt) }}')"
+                                                        class="cursor-pointer px-3 py-1 rounded {{ $colorClass }} text-xs font-normal hover:opacity-80 transition-opacity">
+                                                    {{ $label }}
+                                                </button>
+                                            @endforeach
                                         </div>
                                     </div>
                                 </div>
@@ -482,6 +483,11 @@
                 this._onLivewire = ({message, sessionId, isEdit = false}) => comp.startStream(message, sessionId, isEdit);
                 Livewire.on('aicad:startStream', this._onLivewire);
                 Livewire.on('aicad-start-stream', this._onLivewire);
+
+                // Listen for cached stream event
+                this._onCached = ({cachedData, simulationDuration}) => comp.simulateCachedStream(cachedData, simulationDuration);
+                Livewire.on('aicad-start-cached-stream', this._onCached);
+
                 const input = document.querySelector('#message');
                 Livewire.on('tolery-chat-focus-input', () => {
                     if (input) {
@@ -511,6 +517,55 @@
                     this.overall = Math.max(0, Math.min(100, pct));
                 }
                 this.statusText = message || status || 'Processing…';
+            },
+            async simulateCachedStream(cachedData, duration = 10000) {
+                // Simulate the 5-step stream with cached data
+                this.reset();
+                this.open = true;
+                this.cancelable = false; // Don't allow cancel during simulation
+
+                const stepDuration = duration / 5; // 2 seconds per step at 10s total
+                const simulatedSteps = cachedData.simulated_steps || {};
+
+                // Step 1: Analysis
+                await this.animateStep('analysis', simulatedSteps.analysis || ['Analyse en cours...'], stepDuration, 20);
+
+                // Step 2: Parameters
+                await this.animateStep('parameters', simulatedSteps.parameters || ['Calcul des paramètres...'], stepDuration, 40);
+
+                // Step 3: Generation
+                await this.animateStep('generation_code', simulatedSteps.generation_code || ['Génération du code...'], stepDuration, 60);
+
+                // Step 4: Export
+                await this.animateStep('export', simulatedSteps.export || ['Export des fichiers...'], stepDuration, 80);
+
+                // Step 5: Complete
+                await this.animateStep('complete', simulatedSteps.complete || ['Finalisation...'], stepDuration / 2, 95);
+
+                // Mark as complete
+                this.markStep('complete', 'Completed', cachedData.chat_response || 'Pièce prête !', 100);
+
+                // Save the cached data to backend
+                $wire.saveCachedFinal(cachedData);
+
+                // Close modal after brief delay
+                this.cancelable = true;
+                setTimeout(() => this.close(), 800);
+            },
+            async animateStep(stepKey, messages, duration, targetPercentage) {
+                const messageCount = messages.length;
+                const messageDuration = duration / messageCount;
+
+                for (let i = 0; i < messageCount; i++) {
+                    const message = messages[i];
+                    const progress = targetPercentage - ((messageCount - i - 1) * 5); // Gradual increase
+
+                    this.markStep(stepKey, i === messageCount - 1 ? 'completed' : 'active', message, progress);
+
+                    // Add small random variation for natural feel
+                    const jitter = Math.random() * 400 - 200; // ±200ms
+                    await new Promise(resolve => setTimeout(resolve, messageDuration + jitter));
+                }
             },
             async startStream(message, sessionId, isEdit = false) {
                 this.reset();
