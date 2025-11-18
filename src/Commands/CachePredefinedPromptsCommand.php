@@ -52,7 +52,7 @@ class CachePredefinedPromptsCommand extends Command
         if ($promptNumber !== null) {
             $index = (int) $promptNumber - 1;
             if (! isset($prompts[$index])) {
-                $this->error("❌ Invalid prompt number. Must be 1-{count($prompts)}");
+                $this->error('❌ Invalid prompt number. Must be 1-'.count($prompts));
 
                 return self::FAILURE;
             }
