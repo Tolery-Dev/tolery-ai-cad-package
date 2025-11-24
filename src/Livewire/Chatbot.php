@@ -44,7 +44,7 @@ class Chatbot extends Component
 
     protected int $lockSeconds = 12;    // anti double submit
 
-    public ?string $partName = '';
+    public ?string $partName = 'Mon fichier';
 
     /** Export links pour le panneau de configuration */
     public ?string $stepExportUrl = null;
@@ -379,6 +379,11 @@ class Chatbot extends Component
                 'has_step' => ! empty($lastAssistant->ai_step_path),
                 'has_json' => ! empty($lastAssistant->ai_json_edge_path),
             ]);
+
+            // Update export URLs for the view (to hide empty state)
+            $this->updateExportUrls($lastAssistant);
+            $this->dispatchExportLinks($lastAssistant);
+            $this->updateDownloadStatus();
 
             // Refresh UI
             $this->refreshFromDb();

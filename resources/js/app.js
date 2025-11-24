@@ -1035,8 +1035,159 @@ class JsonModelViewer3D {
   }
 }
 
+class FaceSelectionManager {
+  constructor() {
+    this.selections = new Map();
+    this.autoClearAfterSend = true;
+    this.container =
+      document.querySelector("[data-face-selection-chips]") ||
+      document.getElementById("face-selection-chips");
+    this.form = document.querySelector('form[wire\\:submit\\.prevent="send"]');
+    this.input =
+      document.querySelector('[wire\\:model=\"message\"]') ||
+      document.getElementById("message");
+    this.setupListeners();
+  }
+
+  setupListeners() {
+    window.addEventListener("cad-selection", (event) => {
+      const detail = event?.detail ?? null;
+      if (detail && detail.id !== undefined) {
+        this.handleFaceSelectionDetail(detail);
+      }
+    });
+
+    if (this.form) {
+      this.form.addEventListener(
+        "submit",
+        () => {
+          this.injectContextIntoMessage();
+        },
+        { capture: true },
+      );
+    }
+  }
+
+  handleFaceSelectionDetail(detail) {
+    if (!detail) return;
+    const faceId = detail.realFaceId ?? detail.id ?? null;
+    if (faceId === null) return;
+    const context = detail.context || this.buildFallbackContext(detail);
+    const summary = detail.summary || this.buildSummary(detail);
+    const label =
+      detail.realFaceId || detail.id ? `Face ${detail.realFaceId ?? detail.id}` : "Face";
+
+    this.selections.set(faceId, {
+      context,
+      summary,
+      label,
+    });
+    this.renderChips();
+    this.input?.focus();
+  }
+
+  buildFallbackContext(detail) {
+    const centroid = detail.centroid || {};
+    const bbox = detail.bbox || {};
+    return `Face Selection: ID[${detail.realFaceId ?? detail.id}] Position[center(${this.toNumber(
+      centroid.x,
+    )}, ${this.toNumber(centroid.y)}, ${this.toNumber(centroid.z)})] BBox[Size(${this.toNumber(
+      bbox.x,
+    )}, ${this.toNumber(bbox.y)}, ${this.toNumber(bbox.z)})]`;
+  }
+
+  buildSummary(detail) {
+    const parts = [];
+    if (detail.summary) parts.push(detail.summary);
+    if (detail.bbox) {
+      const { x, y, z } = detail.bbox;
+      parts.push(
+        `${this.toNumber(x)}×${this.toNumber(y)}×${this.toNumber(z)} mm`,
+      );
+    }
+    if (detail.area) {
+      parts.push(`~${this.toNumber(detail.area)} mm²`);
+    }
+    return parts.join(" • ");
+  }
+
+  renderChips() {
+    if (!this.container) return;
+    this.container.innerHTML = "";
+    if (this.selections.size === 0) {
+      this.container.classList.add("hidden");
+      return;
+    }
+    this.container.classList.remove("hidden");
+
+    for (const [id, selection] of this.selections.entries()) {
+      const chip = document.createElement("div");
+      chip.className =
+        "inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-xs font-medium shadow-sm dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100";
+      chip.title = selection.summary || selection.context;
+
+      const label = document.createElement("span");
+      label.textContent = selection.label ?? `Face ${id}`;
+      chip.appendChild(label);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className =
+        "ml-1 text-violet-500 hover:text-violet-700 dark:text-violet-200";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.selections.delete(id);
+        this.renderChips();
+      });
+      chip.appendChild(removeBtn);
+
+      this.container.appendChild(chip);
+    }
+  }
+
+  generateContextString() {
+    if (this.selections.size === 0) return "";
+    return Array.from(this.selections.values())
+      .map((sel) => `[FACE_CONTEXT: ${sel.context}]`)
+      .join(" ");
+  }
+
+  applyContextToMessage(message) {
+    const base = (message || "").trim();
+    const ctx = this.generateContextString();
+    if (!ctx) return message;
+    if (base.includes(ctx)) return message;
+    return [base, ctx].filter(Boolean).join(" ");
+  }
+
+  injectContextIntoMessage() {
+    if (!this.input) return;
+    const nextValue = this.applyContextToMessage(this.input.value);
+    if (nextValue === this.input.value) return;
+    this.input.value = nextValue;
+    this.input.dispatchEvent(new Event("input", { bubbles: true }));
+    if (this.autoClearAfterSend) {
+      this.clearSelections();
+    }
+  }
+
+  clearSelections() {
+    this.selections.clear();
+    this.renderChips();
+  }
+
+  toNumber(value) {
+    const n = Number(value);
+    if (Number.isNaN(n)) return "—";
+    return Number.isFinite(n) ? n.toFixed(1) : "—";
+  }
+}
+
 // --- Global wiring ---
 let JSON_VIEWER = null;
+let FACE_SELECTION_MANAGER = null;
 
 function ensureViewer() {
   if (!JSON_VIEWER) {
@@ -1046,6 +1197,20 @@ function ensureViewer() {
     }
   }
   return JSON_VIEWER;
+}
+
+function ensureSelectionManager() {
+  if (!FACE_SELECTION_MANAGER) {
+    const hasContainer =
+      document.querySelector("[data-face-selection-chips]") ||
+      document.getElementById("face-selection-chips");
+    if (hasContainer) {
+      FACE_SELECTION_MANAGER = new FaceSelectionManager();
+      window.selectionManager = FACE_SELECTION_MANAGER;
+      window.faceSelectionManager = FACE_SELECTION_MANAGER;
+    }
+  }
+  return FACE_SELECTION_MANAGER;
 }
 
 // Livewire entry point kept identical: expects { jsonPath }
@@ -1091,6 +1256,10 @@ Livewire.on("toggleMeasureMode", ({ enabled }) => {
 Livewire.on("resetMeasure", () => {
   const v = ensureViewer();
   v.resetMeasure();
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  ensureSelectionManager();
 });
 
 // Boot once so the canvas exists even before data arrives (only if container exists)
