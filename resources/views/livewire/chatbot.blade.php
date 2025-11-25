@@ -5,7 +5,7 @@
     {{-- Main Content Area: Chat (left) + Preview (right) --}}
     <div class="flex-1 flex overflow-hidden">
         {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
-        <section class="w-[35%] shrink-0 flex flex-col bg-white dark:bg-zinc-950 rounded-tl-[24px] rounded-bl-[24px] overflow-hidden">
+        <section class="w-[35%] shrink-0 flex flex-col bg-white dark:bg-zinc-950 rounded-br-lg overflow-hidden">
             {{-- Greeting Header --}}
             <div class="px-6 pt-6 pb-4 shrink-0">
                 <flux:heading size="xl" class="flex items-center gap-3">
@@ -70,11 +70,16 @@
                 this._onCached = ({cachedData, simulationDuration}) => comp.simulateCachedStream(cachedData, simulationDuration);
                 Livewire.on('aicad-start-cached-stream', this._onCached);
 
-                const input = document.querySelector('#message') ?? document.querySelector('[wire\\:model=\"message\"]');
+                // Focus sur le textarea du composer Flux
                 Livewire.on('tolery-chat-focus-input', () => {
-                    if (input) {
-                        input.focus();
-                        input.setSelectionRange(input.value.length, input.value.length);
+                    const composer = document.querySelector('[data-flux-composer]');
+                    const textarea = composer?.querySelector('textarea');
+                    if (textarea) {
+                        textarea.focus();
+                        // setSelectionRange ne fonctionne que sur input/textarea standard
+                        if (typeof textarea.setSelectionRange === 'function') {
+                            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+                        }
                     }
                 });
             },

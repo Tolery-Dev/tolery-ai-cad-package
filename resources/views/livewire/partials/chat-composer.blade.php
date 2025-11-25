@@ -1,6 +1,13 @@
 <footer class="bg-white border-t border-grey-stroke dark:border-zinc-800 shrink-0">
     <form wire:submit.prevent="send" class="bg-[#fcfcfc] border-t border-[#ebeff5] px-6 pb-8 pt-6">
         <div class="flex flex-col gap-2">
+            {{-- Container pour les chips de sélection de faces --}}
+            <div
+                id="face-selection-chips"
+                data-face-selection-chips
+                class="hidden flex flex-wrap gap-2 mb-2">
+            </div>
+
             <flux:composer
                 wire:model="message"
                 submit="send"
@@ -9,11 +16,6 @@
                 x-init="resize()"
                 x-on:input="resize()"
                 x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }">
-                    <div
-                        id="face-selection-chips"
-                        data-face-selection-chips
-                        class="hidden flex flex-wrap gap-2 mb-3">
-                    </div>
             </flux:composer>
 
             <div class="flex items-center justify-between">

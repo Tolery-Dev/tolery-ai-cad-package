@@ -2,33 +2,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const MATERIAL_PRESETS = {
-  acier: {
-    color: "#5A6066", // gris acier plus foncé
-    metalness: 1, // très métallique
-    roughness: 0.4, // semi-mat
-    clearcoat: 0.2, // léger vernis
-    clearcoatRoughness: 0.3,
-    reflectivity: 0.6,
-  },
-  aluminium: {
-    color: "#C5CDD4", // gris-bleu aluminium
-    metalness: 1, // très métallique
-    roughness: 0.2, // très lisse
-    clearcoat: 0.6, // bon vernis
-    clearcoatRoughness: 0.15,
-    reflectivity: 0.85, // reflets prononcés
-  },
-  inox: {
-    color: "#B8BCC2", // gris inox réaliste
-    metalness: 1, // très métallique
-    roughness: 0.35, // brossé linéaire
-    clearcoat: 0.4, // vernis moyen
-    clearcoatRoughness: 0.25,
-    reflectivity: 0.75,
-  },
-};
-
 // --- Minimal viewer class ---
 class JsonModelViewer3D {
   constructor(containerId = "viewer") {
@@ -116,20 +89,27 @@ class JsonModelViewer3D {
     this.measureMaterial = new THREE.LineBasicMaterial({ color: 0x7c3aed });
     this.measureLabelEl = null;
 
-    // material tri-state
-    // matériaux plus clairs (look “maquette”)
+    // material tri-state : rendu métallique type studio
+    const brushedNormal = this.createNormalMap("inox");
     this.materialBase = new THREE.MeshPhysicalMaterial({
-      color: "#DDDEE2", // gris clair
-      metalness: 0.15,
-      roughness: 0.6,
-      clearcoat: 0.9,
-      clearcoatRoughness: 0.15,
+      color: "#b5bec9", // gris métal doux
+      metalness: 1,
+      roughness: 0.28,
+      clearcoat: 0.75,
+      clearcoatRoughness: 0.22,
+      reflectivity: 0.85,
       side: THREE.DoubleSide,
+      normalMap: brushedNormal,
+      normalScale: new THREE.Vector2(0.5, 0.5),
     });
     this.materialHover = this.materialBase.clone();
     this.materialHover.color.set("#2d6cff");
+    this.materialHover.normalMap = brushedNormal;
+    this.materialHover.normalScale = new THREE.Vector2(0.5, 0.5);
     this.materialSelect = this.materialBase.clone();
     this.materialSelect.color.set("#ff3b3b");
+    this.materialSelect.normalMap = brushedNormal;
+    this.materialSelect.normalScale = new THREE.Vector2(0.5, 0.5);
     this.selectedGroupIndex = null;
     this.hoveredGroupIndex = null;
 
@@ -214,11 +194,11 @@ class JsonModelViewer3D {
     // Applique à la scène et aux matériaux
     this.scene.environment = texture;
     this.materialBase.envMap = texture;
-    this.materialBase.envMapIntensity = 2.0; // Augmenté pour reflets plus prononcés
+    this.materialBase.envMapIntensity = 1.6;
     this.materialHover.envMap = texture;
-    this.materialHover.envMapIntensity = 2.0;
+    this.materialHover.envMapIntensity = 1.6;
     this.materialSelect.envMap = texture;
-    this.materialSelect.envMapIntensity = 2.0;
+    this.materialSelect.envMapIntensity = 1.6;
   }
 
   // --- Création de NormalMaps procédurales pour chaque matériau ---
@@ -380,13 +360,16 @@ class JsonModelViewer3D {
 
     // Capture et envoie automatiquement un screenshot après chargement si il n'existe pas déjà
     // Délai de 500ms pour s'assurer que le rendu est stable
-    const screenshotExists = this.container.getAttribute('data-screenshot-exists') === 'true';
+    const screenshotExists =
+      this.container.getAttribute("data-screenshot-exists") === "true";
     if (!screenshotExists) {
       setTimeout(() => {
         this.captureAndSendScreenshot();
       }, 500);
     } else {
-      console.log("[JsonModelViewer3D] Screenshot already exists, skipping capture");
+      console.log(
+        "[JsonModelViewer3D] Screenshot already exists, skipping capture",
+      );
     }
   }
 
@@ -411,60 +394,6 @@ class JsonModelViewer3D {
     if (typeof color === "string") this.edgesColor = color;
     this.buildEdges();
     if (this.edgesLine) this.edgesLine.visible = this.edgesVisible;
-  }
-
-  // --- Material presets ---
-  applyMaterialPreset(preset) {
-    const p = MATERIAL_PRESETS[preset?.toLowerCase?.()] || null;
-    if (!p) return;
-
-    // Applique toutes les propriétés physiques
-    this.materialBase.color.set(p.color);
-    this.materialBase.metalness = p.metalness;
-    this.materialBase.roughness = p.roughness;
-    this.materialBase.clearcoat = p.clearcoat || 0;
-    this.materialBase.clearcoatRoughness = p.clearcoatRoughness || 0;
-    this.materialBase.reflectivity = p.reflectivity || 0.5;
-
-    // Applique la normalMap pour le grain/brossage
-    const normalMap = this.createNormalMap(preset.toLowerCase());
-    this.materialBase.normalMap = normalMap;
-    // Intensité adaptée selon le matériau
-    const normalIntensity = preset.toLowerCase() === "inox" ? 0.5 : 0.3;
-    this.materialBase.normalScale = new THREE.Vector2(
-      normalIntensity,
-      normalIntensity,
-    );
-
-    // Synchronise hover et select (gardent les mêmes propriétés physiques)
-    this.materialHover.metalness = p.metalness;
-    this.materialHover.roughness = p.roughness;
-    this.materialHover.clearcoat = p.clearcoat || 0;
-    this.materialHover.clearcoatRoughness = p.clearcoatRoughness || 0;
-    this.materialHover.reflectivity = p.reflectivity || 0.5;
-    this.materialHover.normalMap = normalMap;
-    this.materialHover.normalScale = new THREE.Vector2(
-      normalIntensity,
-      normalIntensity,
-    );
-
-    this.materialSelect.metalness = p.metalness;
-    this.materialSelect.roughness = p.roughness;
-    this.materialSelect.clearcoat = p.clearcoat || 0;
-    this.materialSelect.clearcoatRoughness = p.clearcoatRoughness || 0;
-    this.materialSelect.reflectivity = p.reflectivity || 0.5;
-    this.materialSelect.normalMap = normalMap;
-    this.materialSelect.normalScale = new THREE.Vector2(
-      normalIntensity,
-      normalIntensity,
-    );
-
-    // Important : force la mise à jour
-    this.materialBase.needsUpdate = true;
-    this.materialHover.needsUpdate = true;
-    this.materialSelect.needsUpdate = true;
-
-    this.updateMaterialStates();
   }
 
   // --- Measure helpers ---
@@ -848,9 +777,8 @@ class JsonModelViewer3D {
     const faceId = fg?.id ?? groupIdx;
     const realId = this.mesh.userData?.realFaceIdsByGroup?.[groupIdx] ?? faceId;
 
-    // Livewire: pré-remplir le chat
-    Livewire?.dispatch?.("chatObjectClick", { objectId: faceId });
-    Livewire?.dispatch?.("chatObjectClickReal", { objectId: realId });
+    // Note: L'ancien système Livewire (chatObjectClick) est remplacé par
+    // le FaceSelectionManager qui gère les chips et l'injection de contexte
 
     // Panneau flottant (centroïde approx + triangles)
     const pos = this.mesh.geometry.getAttribute("position");
@@ -1039,17 +967,36 @@ class FaceSelectionManager {
   constructor() {
     this.selections = new Map();
     this.autoClearAfterSend = true;
-    this.container =
-      document.querySelector("[data-face-selection-chips]") ||
-      document.getElementById("face-selection-chips");
-    this.form = document.querySelector('form[wire\\:submit\\.prevent="send"]');
-    this.input =
-      document.querySelector('[wire\\:model=\"message\"]') ||
-      document.getElementById("message");
+    this.container = null;
+    this.textarea = null;
+    this.initialized = false;
     this.setupListeners();
   }
 
+  /**
+   * Trouve les éléments DOM nécessaires (appelé à chaque utilisation car Livewire peut les recréer)
+   */
+  findElements() {
+    this.container =
+      document.querySelector("[data-face-selection-chips]") ||
+      document.getElementById("face-selection-chips");
+
+    // Le flux:composer génère un textarea interne
+    const composer = document.querySelector("[data-flux-composer]");
+    if (composer) {
+      this.textarea = composer.querySelector("textarea");
+    }
+
+    // Fallback: chercher directement
+    if (!this.textarea) {
+      this.textarea =
+        document.querySelector('form[wire\\:submit\\.prevent="send"] textarea') ||
+        document.getElementById("message");
+    }
+  }
+
   setupListeners() {
+    // Écoute les sélections de faces depuis le viewer 3D
     window.addEventListener("cad-selection", (event) => {
       const detail = event?.detail ?? null;
       if (detail && detail.id !== undefined) {
@@ -1057,43 +1004,95 @@ class FaceSelectionManager {
       }
     });
 
-    if (this.form) {
-      this.form.addEventListener(
-        "submit",
-        () => {
-          this.injectContextIntoMessage();
-        },
-        { capture: true },
-      );
-    }
+    // Intercepte le submit du formulaire AVANT Livewire
+    // C'est la méthode la plus fiable pour injecter le contexte
+    document.addEventListener(
+      "submit",
+      (e) => {
+        const form = e.target;
+        if (
+          form?.matches &&
+          form.matches('form[wire\\:submit\\.prevent="send"]')
+        ) {
+          if (this.selections.size > 0) {
+            this.injectContextIntoTextarea();
+            // Schedule clear après envoi
+            if (this.autoClearAfterSend) {
+              setTimeout(() => this.clearSelections(), 500);
+            }
+          }
+        }
+      },
+      { capture: true }
+    );
+
+    // Écoute aussi l'événement keydown Enter sur le composer
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          const composer = e.target.closest("[data-flux-composer]");
+          if (composer && this.selections.size > 0) {
+            this.injectContextIntoTextarea();
+            // Schedule clear après envoi
+            if (this.autoClearAfterSend) {
+              setTimeout(() => this.clearSelections(), 500);
+            }
+          }
+        }
+      },
+      { capture: true }
+    );
   }
 
   handleFaceSelectionDetail(detail) {
     if (!detail) return;
+    this.findElements();
+
     const faceId = detail.realFaceId ?? detail.id ?? null;
     if (faceId === null) return;
+
     const context = detail.context || this.buildFallbackContext(detail);
     const summary = detail.summary || this.buildSummary(detail);
     const label =
-      detail.realFaceId || detail.id ? `Face ${detail.realFaceId ?? detail.id}` : "Face";
+      detail.realFaceId || detail.id
+        ? `Face ${detail.realFaceId ?? detail.id}`
+        : "Face";
 
+    // Ajoute ou remplace la sélection
     this.selections.set(faceId, {
       context,
       summary,
       label,
+      detail, // Garde le détail complet pour référence
     });
+
     this.renderChips();
-    this.input?.focus();
+
+    // Focus sur le textarea
+    if (this.textarea) {
+      this.textarea.focus();
+    }
+
+    console.log(
+      `[FaceSelectionManager] Face selected: ${faceId}`,
+      this.selections.size,
+      "selections"
+    );
   }
 
   buildFallbackContext(detail) {
     const centroid = detail.centroid || {};
     const bbox = detail.bbox || {};
-    return `Face Selection: ID[${detail.realFaceId ?? detail.id}] Position[center(${this.toNumber(
-      centroid.x,
-    )}, ${this.toNumber(centroid.y)}, ${this.toNumber(centroid.z)})] BBox[Size(${this.toNumber(
-      bbox.x,
-    )}, ${this.toNumber(bbox.y)}, ${this.toNumber(bbox.z)})]`;
+    const area = detail.area;
+
+    let ctx = `Face Selection: ID[${detail.realFaceId ?? detail.id}]`;
+    ctx += ` Position[center(${this.toNumber(centroid.x)}, ${this.toNumber(centroid.y)}, ${this.toNumber(centroid.z)})]`;
+    ctx += ` BBox[Size(${this.toNumber(bbox.x)}, ${this.toNumber(bbox.y)}, ${this.toNumber(bbox.z)})]`;
+    if (area) {
+      ctx += ` Area[${this.toNumber(area)} mm²]`;
+    }
+    return ctx;
   }
 
   buildSummary(detail) {
@@ -1102,7 +1101,7 @@ class FaceSelectionManager {
     if (detail.bbox) {
       const { x, y, z } = detail.bbox;
       parts.push(
-        `${this.toNumber(x)}×${this.toNumber(y)}×${this.toNumber(z)} mm`,
+        `${this.toNumber(x)}×${this.toNumber(y)}×${this.toNumber(z)} mm`
       );
     }
     if (detail.area) {
@@ -1112,34 +1111,49 @@ class FaceSelectionManager {
   }
 
   renderChips() {
-    if (!this.container) return;
+    this.findElements();
+    if (!this.container) {
+      console.warn("[FaceSelectionManager] Chips container not found");
+      return;
+    }
+
     this.container.innerHTML = "";
+
     if (this.selections.size === 0) {
       this.container.classList.add("hidden");
       return;
     }
+
     this.container.classList.remove("hidden");
 
     for (const [id, selection] of this.selections.entries()) {
       const chip = document.createElement("div");
       chip.className =
-        "inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-xs font-medium shadow-sm dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-100";
+        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm font-medium shadow-sm cursor-default transition-all hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200 dark:hover:bg-violet-900/60";
       chip.title = selection.summary || selection.context;
 
+      // Icône cube
+      const icon = document.createElement("span");
+      icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z"/></svg>`;
+      chip.appendChild(icon);
+
+      // Label
       const label = document.createElement("span");
       label.textContent = selection.label ?? `Face ${id}`;
       chip.appendChild(label);
 
+      // Bouton de suppression
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className =
-        "ml-1 text-violet-500 hover:text-violet-700 dark:text-violet-200";
-      removeBtn.innerHTML = "&times;";
+        "ml-1 w-4 h-4 flex items-center justify-center rounded-full text-violet-400 hover:text-violet-600 hover:bg-violet-200 dark:text-violet-300 dark:hover:text-violet-100 dark:hover:bg-violet-700 transition-colors";
+      removeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>`;
       removeBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.selections.delete(id);
         this.renderChips();
+        console.log(`[FaceSelectionManager] Face removed: ${id}`);
       });
       chip.appendChild(removeBtn);
 
@@ -1147,6 +1161,9 @@ class FaceSelectionManager {
     }
   }
 
+  /**
+   * Génère la chaîne de contexte à envoyer au moteur
+   */
   generateContextString() {
     if (this.selections.size === 0) return "";
     return Array.from(this.selections.values())
@@ -1154,28 +1171,49 @@ class FaceSelectionManager {
       .join(" ");
   }
 
-  applyContextToMessage(message) {
-    const base = (message || "").trim();
-    const ctx = this.generateContextString();
-    if (!ctx) return message;
-    if (base.includes(ctx)) return message;
-    return [base, ctx].filter(Boolean).join(" ");
-  }
-
-  injectContextIntoMessage() {
-    if (!this.input) return;
-    const nextValue = this.applyContextToMessage(this.input.value);
-    if (nextValue === this.input.value) return;
-    this.input.value = nextValue;
-    this.input.dispatchEvent(new Event("input", { bubbles: true }));
-    if (this.autoClearAfterSend) {
-      this.clearSelections();
+  /**
+   * Injecte le contexte directement dans le textarea
+   */
+  injectContextIntoTextarea() {
+    this.findElements();
+    if (!this.textarea) {
+      console.warn("[FaceSelectionManager] Textarea not found");
+      return;
     }
+
+    const ctx = this.generateContextString();
+    if (!ctx) return;
+
+    const currentValue = this.textarea.value || "";
+    if (currentValue.includes("[FACE_CONTEXT:")) return;
+
+    const newValue = [currentValue.trim(), ctx].filter(Boolean).join(" ");
+    this.textarea.value = newValue;
+
+    // Déclenche les événements pour que Livewire détecte le changement
+    this.textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    this.textarea.dispatchEvent(new Event("change", { bubbles: true }));
+
+    console.log("[FaceSelectionManager] Context injected into textarea");
   }
 
+  /**
+   * Efface toutes les sélections
+   */
   clearSelections() {
     this.selections.clear();
     this.renderChips();
+    console.log("[FaceSelectionManager] Selections cleared");
+  }
+
+  /**
+   * Retourne les sélections actuelles (pour debug ou API)
+   */
+  getSelections() {
+    return Array.from(this.selections.entries()).map(([id, sel]) => ({
+      id,
+      ...sel,
+    }));
   }
 
   toNumber(value) {
@@ -1230,25 +1268,9 @@ Livewire.on("toggleShowEdges", ({ show, threshold = null, color = null }) => {
   const v = ensureViewer();
   v.toggleEdges(show, threshold, color);
 });
-Livewire.on(
-  "updatedMaterialPreset",
-  ({ preset = null, color = null, metalness = null, roughness = null }) => {
-    const v = ensureViewer();
-    if (preset) v.applyMaterialPreset(preset);
-    if (color) {
-      v.materialBase.color.set(color);
-      v.updateMaterialStates();
-    }
-    if (Number.isFinite(metalness)) {
-      v.materialBase.metalness = +metalness;
-      v.updateMaterialStates();
-    }
-    if (Number.isFinite(roughness)) {
-      v.materialBase.roughness = +roughness;
-      v.updateMaterialStates();
-    }
-  },
-);
+Livewire.on("updatedMaterialPreset", () => {
+  // Matériau figé sur le rendu métallique par défaut, aucun changement nécessaire.
+});
 Livewire.on("toggleMeasureMode", ({ enabled }) => {
   const v = ensureViewer();
   v.setMeasureMode(!!enabled);

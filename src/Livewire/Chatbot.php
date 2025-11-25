@@ -262,34 +262,9 @@ class Chatbot extends Component
         }
     }
 
-    #[On('chatObjectClick')]
-    public function handleObjectClick(string|int|null $objectId = null): void
-    {
-        if ($objectId === null || $objectId === '') {
-            return;
-        }
-
-        // Préremplit le textarea sans envoyer automatiquement
-        $this->message = "Sélection de face {$objectId} — décrivez les modifications souhaitées (ex: perçage Ø10 au centre, chanfrein 1mm, pli à 90°, etc.).";
-
-        // UX: scroll + focus sur l'input côté vue
-        $this->dispatch('tolery-chat-append');
-        $this->dispatch('tolery-chat-focus-input', faceId: (string) $objectId);
-    }
-
-    #[On('chatObjectClickReal')]
-    public function handleObjectClickReal(string|int|null $objectId = null): void
-    {
-        if ($objectId === null || $objectId === '') {
-            return;
-        }
-
-        // Même logique que ci-dessus, mais on privilégie l'identifiant "réel" issu du fichier
-        $this->message = "Sélection de face {$objectId} — décrivez les modifications souhaitées (ex: perçage Ø10 au centre, chanfrein 1mm, pli à 90°, etc.).";
-
-        $this->dispatch('tolery-chat-append');
-        $this->dispatch('tolery-chat-focus-input', faceId: (string) $objectId);
-    }
+    // Note: Les handlers chatObjectClick et chatObjectClickReal ont été remplacés
+    // par le FaceSelectionManager côté JavaScript qui gère les chips de sélection
+    // et l'injection du contexte de face dans le message avant envoi.
 
     /**
      * Sauvegarde un screenshot généré côté client (navigateur)
