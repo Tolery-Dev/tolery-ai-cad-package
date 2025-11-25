@@ -1,10 +1,10 @@
 @forelse ($messages ?? [] as $msg)
     <article class="flex items-start gap-3 mb-4 {{ $msg['role'] === 'user' ? 'flex-row-reverse' : '' }}">
-        <div class="h-8 w-8 shrink-0 rounded-full grid place-items-center {{ $msg['role'] === 'user' ? 'bg-violet-300 text-white' : 'bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200' }}">
+        <div class="h-8 w-8 shrink-0 rounded-full grid place-items-center {{ $msg['role'] === 'user' ? 'bg-violet-300 text-white' : 'dark:bg-zinc-800 dark:text-zinc-200' }}">
             @if($msg['role'] === 'user')
                 👤
             @else
-                <img src="{{ Vite::asset('resources/images/chat-icon.png') }}" alt="" class="w-5 h-5">
+                <img src="{{ Vite::asset('resources/images/chat-icon.png') }}" alt="" class="w-7 h-7">
             @endif
         </div>
         <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">

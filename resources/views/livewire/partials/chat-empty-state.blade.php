@@ -25,11 +25,12 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @php
+                            // Tailwind palette for predefined prompt pills
                             $buttonColors = [
-                                'bg-fichiers-10 text-fichiers',
-                                'bg-devis-10 text-devis',
-                                'bg-pill-green-bg text-pill-green',
-                                'bg-pill-orange-bg text-pill-orange',
+                                'bg-indigo-100 text-indigo-700',
+                                'bg-amber-100 text-amber-700',
+                                'bg-emerald-100 text-emerald-700',
+                                'bg-rose-100 text-rose-700',
                             ];
                         @endphp
                         @foreach($predefinedPrompts as $label => $prompt)
@@ -70,8 +71,8 @@
                             jpg
                         </span>
                     </div>
-                    <div class="absolute top-0 right-0 px-3 py-1 rounded-sm bg-fichiers-10 dark:bg-fichiers/10">
-                        <span class="text-xs font-medium text-fichiers dark:text-fichiers">
+                    <div class="absolute top-0 right-0 rounded-sm bg-purple-10 dark:bg-purple/10">
+                        <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] dark:bg-[#7B46E4]/10 rounded-sm">
                             Bientôt disponible
                         </span>
                     </div>
@@ -100,8 +101,8 @@
                         </span>
                     </div>
                 </div>
-                <div class="absolute top-0 right-0 px-3 py-1 rounded-sm bg-fichiers-10 dark:bg-fichiers/10">
-                    <span class="text-xs font-medium text-fichiers dark:text-fichiers">
+                <div class="absolute top-0 right-0 rounded-sm bg-fichiers-10 dark:bg-purple/10">
+                    <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] dark:bg-[#7B46E4]/10 rounded-sm">
                         Bientôt disponible
                     </span>
                 </div>
