@@ -10,13 +10,6 @@
         <div class="col-span-5 text-xs text-gray-500">35–60° recommandé.</div>
     </div>
     <div class="grid grid-cols-5 items-center gap-3">
-      <label class="col-span-2 text-xs text-gray-600 dark:text-zinc-300">Couleur matière</label>
-      <input type="color"
-             x-model="materialColor"
-             @input.debounce.100ms="Livewire.dispatch('updatedMaterialColor', { color: materialColor })"
-             class="col-span-3 h-8 w-16 p-0 bg-transparent rounded-md border border-gray-200 dark:border-zinc-700">
-    </div>
-    <div class="grid grid-cols-5 items-center gap-3">
         <label class="col-span-2 text-sm text-gray-600">Couleur arêtes</label>
         <flux:input type="color" x-model="edgeColor" @input.debounce.150ms="emitEdgeColor()"
                     class="col-span-3 h-9 w-16 p-0" />

@@ -139,7 +139,12 @@
             {{-- Section téléchargements (si fichiers disponibles) --}}
             <div x-show="hasGeneratedInSession" class="space-y-3">
                 <div class="text-lg font-semibold text-gray-900">Télécharger les fichiers</div>
-                <div class="grid grid-cols-1 gap-2">
+                <template x-if="!hasExports()">
+                    <div class="rounded-lg border border-amber-200 bg-amber-50/70 text-amber-800 px-4 py-3 text-sm">
+                        Abonnez-vous pour récupérer vos créations dès qu'elles sont prêtes.
+                    </div>
+                </template>
+                <div class="grid grid-cols-1 gap-2" x-show="hasExports()">
                     <template x-if="exports.step">
                         <a :href="exports.step"
                            target="_blank"
@@ -248,12 +253,16 @@
                 dragging: false,
 
                 // Flag pour savoir si une pièce a été générée dans cette session
-                hasGeneratedInSession: localStorage.getItem('cadHasGenerated') === 'true',
+                hasGeneratedInSession: Boolean(
+                    config.initialStepUrl ||
+                    config.initialObjUrl ||
+                    config.initialTechnicalDrawingUrl ||
+                    config.initialScreenshotUrl
+                ),
 
                 // Data
                 partName: 'Pièce 001',
                 showEdges: false,
-                material: 'inox', // inox | aluminium | acier
 
                 // Exports disponibles (initialisés depuis Livewire puis mis à jour par événements)
                 exports: {
@@ -306,9 +315,6 @@
                     window.addEventListener('cad-selection', ({detail}) => {
                         this.selection = detail
                     })
-                    // Matériau initial
-                    this.setMaterial(this.material)
-
                     // Écoute les événements d'export depuis Livewire
                     Livewire.on('cad-exports-updated', ({step, obj, technical_drawing, screenshot}) => {
                         this.exports.step = step || null
@@ -317,7 +323,6 @@
                         this.exports.screenshot = screenshot || null
                         // Marque qu'une pièce a été générée dans cette session
                         this.hasGeneratedInSession = true
-                        localStorage.setItem('cadHasGenerated', 'true')
                         // Dispatch browser event for simple panel
                         this.$dispatch('cad-screenshot-updated', { url: screenshot })
                     })
@@ -388,10 +393,6 @@
                 // Features
                 dispatchEdges() {
                     Livewire.dispatch('toggleShowEdges', {show: this.showEdges, threshold: 45, color: '#000000'})
-                },
-                setMaterial(name) {
-                    this.material = name
-                    Livewire.dispatch('updatedMaterialPreset', {preset: name})
                 },
                 toggleMeasure() {
                     this.measureEnabled = !this.measureEnabled

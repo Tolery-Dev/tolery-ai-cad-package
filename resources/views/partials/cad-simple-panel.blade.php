@@ -51,37 +51,6 @@
             <div class="text-xs text-gray-500">Utilisé pour vos notes / devis.</div>
         </div>
 
-        {{-- Matériau (presets) --}}
-        <div class="space-y-2">
-            <flux:heading size="sm" level="3" class="!mb-0">Choisissez votre matériau</flux:heading>
-            <div class="grid grid-cols-3 gap-2">
-                <label class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer"
-                       :class="material === 'steel' ? 'border-violet-500 ring-2 ring-violet-200' : 'border-gray-200'">
-                    <input type="radio" class="sr-only" name="mat" value="steel" x-model="material" @change="applyPreset()" />
-                    <span class="h-4 w-4 rounded-full" style="background:#9ea3a8"></span>
-                    <span class="text-sm">Acier</span>
-                </label>
-                <label class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer"
-                       :class="material === 'aluminum' ? 'border-violet-500 ring-2 ring-violet-200' : 'border-gray-200'">
-                    <input type="radio" class="sr-only" name="mat" value="aluminum" x-model="material" @change="applyPreset()" />
-                    <span class="h-4 w-4 rounded-full" style="background:#bfc5ce"></span>
-                    <span class="text-sm">Alu</span>
-                </label>
-                <label class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer"
-                       :class="material === 'stainless' ? 'border-violet-500 ring-2 ring-violet-200' : 'border-gray-200'">
-                    <input type="radio" class="sr-only" name="mat" value="stainless" x-model="material" @change="applyPreset()" />
-                    <span class="h-4 w-4 rounded-full" style="background:#d5d8dc"></span>
-                    <span class="text-sm">Inox</span>
-                </label>
-            </div>
-            <div class="flex items-center gap-3">
-                <label class="text-xs text-gray-600">Couleur matière</label>
-                <input type="color" x-model="materialColor"
-                       @input.debounce.100ms="emitMaterialColor()"
-                       class="h-8 w-16 p-0 bg-transparent rounded-md border border-gray-200">
-            </div>
-        </div>
-
         {{-- Actions viewer --}}
         <div class="space-y-2">
             <flux:heading size="sm" level="3" class="!mb-0">Affichage</flux:heading>
@@ -166,11 +135,6 @@
 @once
 <script>
 function cadSimplePanel () {
-    const PRESETS = {
-        steel:     { color: '#9ea3a8', metalness: 0.20, roughness: 0.45 },
-        aluminum:  { color: '#bfc5ce', metalness: 0.60, roughness: 0.30 },
-        stainless: { color: '#d5d8dc', metalness: 0.35, roughness: 0.25 },
-    }
     return {
 
         // état panneau
@@ -183,8 +147,6 @@ function cadSimplePanel () {
 
         // state
         partName: '',
-        material: 'steel',
-        materialColor: PRESETS.steel.color,
         measureEnabled: false,
 
         // data shown
@@ -194,14 +156,6 @@ function cadSimplePanel () {
         // actions
         emitPartName() {
             // si tu veux persister : Livewire.dispatch('updatedPartName', { name: this.partName })
-        },
-        applyPreset() {
-            const p = PRESETS[this.material] || PRESETS.steel
-            this.materialColor = p.color
-            Livewire.dispatch('updatedMaterialPreset', p)
-        },
-        emitMaterialColor() {
-            Livewire.dispatch('updatedMaterialColor', { color: this.materialColor })
         },
         recenter() {
             // côté viewer: écoute window "viewer-fit"
