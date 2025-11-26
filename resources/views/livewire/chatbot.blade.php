@@ -5,9 +5,9 @@
     {{-- Main Content Area: Chat (left) + Preview (right) --}}
     <div class="flex-1 flex overflow-hidden">
         {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
-        <section class="w-[35%] shrink-0 flex flex-col bg-white dark:bg-zinc-950 rounded-br-lg overflow-hidden">
+        <section class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl overflow-hidden">
             {{-- Greeting Header --}}
-            <div class="px-6 pt-6 pb-4 shrink-0">
+            <div class="bg-white px-6 pt-6 pb-4 shrink-0">
                 <flux:heading size="xl" class="flex items-center gap-3">
                     <img src="{{ Vite::asset('resources/images/chat-icon.png')}}" alt="" class="w-10 h-10">
                     <span>Bonjour {{ auth()->user()->firstname }} !</span>
@@ -19,7 +19,7 @@
                  x-data="{ scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight } }"
                  x-init="$nextTick(()=>scrollToEnd())"
                  x-on:tolery-chat-append.window="scrollToEnd()"
-                 class="flex-1 overflow-y-auto px-6 py-6">
+                 class="flex-1 overflow-y-auto px-6 py-6 bg-white border-b border-grey-stroke">
 
                 @if(empty($messages))
                     @include('ai-cad::livewire.partials.chat-empty-state')

@@ -1,5 +1,5 @@
-<section class="flex-1 bg-grey-background dark:bg-zinc-900 p-8">
-    <div class="relative h-full w-full bg-white dark:bg-zinc-950 border border-grey-stroke dark:border-zinc-800 rounded overflow-hidden">
+<section class="flex-1 bg-grey-background p-8">
+    <div class="relative h-full w-full bg-white border border-grey-stroke rounded-xl overflow-hidden">
         <div x-data="cadStreamModal()"
              x-show="open"
              x-cloak
@@ -10,7 +10,7 @@
                     <div class="text-sm" x-text="`${completedSteps} out of 5 steps completed`"></div>
                 </div>
 
-                <div class="bg-white dark:bg-zinc-900 p-6 rounded-b-2xl shadow-2xl">
+                <div class="bg-white p-6 rounded-b-2xl shadow-2xl">
                     <div class="flex items-center justify-between gap-6 mb-6">
                         <template x-for="s in steps" :key="s.key">
                             <div class="flex flex-col items-center gap-2 flex-1">

@@ -1,5 +1,5 @@
-<footer class="bg-white border-t border-grey-stroke dark:border-zinc-800 shrink-0">
-    <form wire:submit.prevent="send" class="bg-[#fcfcfc] border-t border-[#ebeff5] px-6 pb-8 pt-6">
+<footer class="bg-white shrink-0">
+    <form wire:submit.prevent="send" class="px-6 pb-8 pt-6">
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
             <div

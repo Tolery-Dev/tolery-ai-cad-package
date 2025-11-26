@@ -89,27 +89,27 @@ class JsonModelViewer3D {
     this.measureMaterial = new THREE.LineBasicMaterial({ color: 0x7c3aed });
     this.measureLabelEl = null;
 
-    // material tri-state : rendu métallique type studio
-    const brushedNormal = this.createNormalMap("inox");
+    // material tri-state : rendu acier C45 usiné CNC (mat, sombre)
+    const cncNormal = this.createNormalMap("cnc");
     this.materialBase = new THREE.MeshPhysicalMaterial({
-      color: "#b5bec9", // gris métal doux
+      color: "#4a4f54", // gris acier anthracite
       metalness: 1,
-      roughness: 0.28,
-      clearcoat: 0.75,
-      clearcoatRoughness: 0.22,
-      reflectivity: 0.85,
+      roughness: 0.55, // mat/brut
+      clearcoat: 0.05, // quasi pas de vernis
+      clearcoatRoughness: 0,
+      reflectivity: 0.7,
       side: THREE.DoubleSide,
-      normalMap: brushedNormal,
-      normalScale: new THREE.Vector2(0.5, 0.5),
+      normalMap: cncNormal,
+      normalScale: new THREE.Vector2(0.6, 0.6),
     });
     this.materialHover = this.materialBase.clone();
     this.materialHover.color.set("#2d6cff");
-    this.materialHover.normalMap = brushedNormal;
-    this.materialHover.normalScale = new THREE.Vector2(0.5, 0.5);
+    this.materialHover.normalMap = cncNormal;
+    this.materialHover.normalScale = new THREE.Vector2(0.6, 0.6);
     this.materialSelect = this.materialBase.clone();
     this.materialSelect.color.set("#ff3b3b");
-    this.materialSelect.normalMap = brushedNormal;
-    this.materialSelect.normalScale = new THREE.Vector2(0.5, 0.5);
+    this.materialSelect.normalMap = cncNormal;
+    this.materialSelect.normalScale = new THREE.Vector2(0.6, 0.6);
     this.selectedGroupIndex = null;
     this.hoveredGroupIndex = null;
 
@@ -194,11 +194,11 @@ class JsonModelViewer3D {
     // Applique à la scène et aux matériaux
     this.scene.environment = texture;
     this.materialBase.envMap = texture;
-    this.materialBase.envMapIntensity = 1.6;
+    this.materialBase.envMapIntensity = 1.0; // réduit pour acier mat
     this.materialHover.envMap = texture;
-    this.materialHover.envMapIntensity = 1.6;
+    this.materialHover.envMapIntensity = 1.0;
     this.materialSelect.envMap = texture;
-    this.materialSelect.envMapIntensity = 1.6;
+    this.materialSelect.envMapIntensity = 1.0;
   }
 
   // --- Création de NormalMaps procédurales pour chaque matériau ---
@@ -271,6 +271,35 @@ class JsonModelViewer3D {
             0,
             Math.min(255, 128 - circular * 0.5 + noise * 0.5),
           );
+        }
+      }
+    } else if (type === "cnc") {
+      // CNC : stries circulaires concentriques prononcées (fraisage CNC acier C45)
+      const centerX = size / 2;
+      const centerY = size / 2;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const i = (y * size + x) * 4;
+          const dx = x - centerX;
+          const dy = y - centerY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          // Stries circulaires concentriques plus marquées
+          const circularMain = Math.sin(dist * 0.35) * 12;
+          // Variation secondaire pour irrégularités
+          const circularSecond = Math.sin(dist * 0.7 + Math.random() * 0.5) * 4;
+          // Micro-bruit pour grain acier
+          const microNoise = (Math.random() - 0.5) * 8;
+
+          // Direction tangentielle pour les stries
+          const angle = Math.atan2(dy, dx);
+          const tangentX = -Math.sin(angle);
+          const tangentY = Math.cos(angle);
+
+          const totalEffect = circularMain + circularSecond + microNoise;
+
+          data[i] = Math.max(0, Math.min(255, 128 + totalEffect * tangentX * 0.8));
+          data[i + 1] = Math.max(0, Math.min(255, 128 + totalEffect * tangentY * 0.8));
         }
       }
     }
