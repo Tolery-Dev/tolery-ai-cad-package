@@ -3,7 +3,7 @@
         <div x-data="cadStreamModal()"
              x-show="open"
              x-cloak
-             class="absolute inset-0 z-50 flex items-start justify-center pt-8 bg-white dark:bg-zinc-950">
+             class="absolute inset-0 z-50 flex items-start justify-center pt-8 bg-white">
             <div class="w-full max-w-4xl mx-4">
                 <div class="bg-gradient-to-r from-violet-600 to-indigo-800 px-6 py-4 text-white flex items-center justify-between rounded-t-2xl">
                     <h3 class="text-lg font-semibold">Processing</h3>
@@ -31,14 +31,14 @@
                                     </svg>
                                 </div>
                                 <span class="text-xs font-medium text-center"
-                                      :class="s.state === 'inactive' ? 'text-gray-400' : 'text-gray-900 dark:text-zinc-100'"
+                                      :class="s.state === 'inactive' ? 'text-gray-400' : 'text-gray-900'"
                                       x-text="s.label">
                                 </span>
                             </div>
                         </template>
                     </div>
 
-                    <div class="w-full h-2 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div class="h-2 bg-gradient-to-r from-violet-600 to-indigo-600 transition-all duration-500 ease-out"
                              :style="`width: ${overall}%`"></div>
                     </div>
@@ -70,14 +70,14 @@
 
         @if(!$objExportUrl && !$stepExportUrl)
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-8">
-                <div class="w-60 h-60 rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/20 dark:to-indigo-900/20 flex items-center justify-center mb-8">
-                    <svg class="w-32 h-32 text-violet-300 dark:text-violet-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div class="w-60 h-60 rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 flex items-center justify-center mb-8">
+                    <svg class="w-32 h-32 text-violet-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <p class="text-sm font-medium text-black dark:text-zinc-100 text-center max-w-[310px]">
+                <p class="text-sm font-medium text-black text-center max-w-[310px]">
                     Votre pièce apparaîtra ici dès qu'elle sera prête.
                 </p>
             </div>

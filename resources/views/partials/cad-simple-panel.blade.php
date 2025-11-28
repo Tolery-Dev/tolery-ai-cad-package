@@ -3,17 +3,17 @@
     :style="`transform: translate(${x}px, ${y}px)`"
     @dblclick.stop="open = !open"
     class="fixed z-40 w-[360px] max-w-[90vw]
-         rounded-2xl border border-violet-500/80 bg-white dark:bg-zinc-900
+         rounded-2xl border border-violet-500/80 bg-white
          ring-1 ring-violet-400/50
          shadow-xl shadow-violet-500/10
          scroll-smooth overflow-hidden select-none"
     :class="open ? '[box-shadow:0_12px_30px_-6px_rgba(124,58,237,0.35),0_6px_18px_-8px_rgba(124,58,237,0.25)]' : ''"
 >
-    <div class="flex items-center justify-between px-4 py-3 bg-violet-50/60 dark:bg-violet-950/20 cursor-move"
+    <div class="flex items-center justify-between px-4 py-3 bg-violet-50/60 cursor-move"
          @mousedown.self="startDrag($event)" @touchstart.self.passive="startDrag($event)">
         <div class="flex items-center gap-2">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
-            <h3 class="text-sm font-semibold text-violet-700 dark:text-violet-300">Paramètres de votre pièce</h3>
+            <h3 class="text-sm font-semibold text-violet-700 ">Paramètres de votre pièce</h3>
         </div>
 
         <button

@@ -298,8 +298,14 @@ class JsonModelViewer3D {
 
           const totalEffect = circularMain + circularSecond + microNoise;
 
-          data[i] = Math.max(0, Math.min(255, 128 + totalEffect * tangentX * 0.8));
-          data[i + 1] = Math.max(0, Math.min(255, 128 + totalEffect * tangentY * 0.8));
+          data[i] = Math.max(
+            0,
+            Math.min(255, 128 + totalEffect * tangentX * 0.8),
+          );
+          data[i + 1] = Math.max(
+            0,
+            Math.min(255, 128 + totalEffect * tangentY * 0.8),
+          );
         }
       }
     }
@@ -1019,8 +1025,9 @@ class FaceSelectionManager {
     // Fallback: chercher directement
     if (!this.textarea) {
       this.textarea =
-        document.querySelector('form[wire\\:submit\\.prevent="send"] textarea') ||
-        document.getElementById("message");
+        document.querySelector(
+          'form[wire\\:submit\\.prevent="send"] textarea',
+        ) || document.getElementById("message");
     }
   }
 
@@ -1052,7 +1059,7 @@ class FaceSelectionManager {
           }
         }
       },
-      { capture: true }
+      { capture: true },
     );
 
     // Écoute aussi l'événement keydown Enter sur le composer
@@ -1070,7 +1077,7 @@ class FaceSelectionManager {
           }
         }
       },
-      { capture: true }
+      { capture: true },
     );
   }
 
@@ -1106,7 +1113,7 @@ class FaceSelectionManager {
     console.log(
       `[FaceSelectionManager] Face selected: ${faceId}`,
       this.selections.size,
-      "selections"
+      "selections",
     );
   }
 
@@ -1130,7 +1137,7 @@ class FaceSelectionManager {
     if (detail.bbox) {
       const { x, y, z } = detail.bbox;
       parts.push(
-        `${this.toNumber(x)}×${this.toNumber(y)}×${this.toNumber(z)} mm`
+        `${this.toNumber(x)}×${this.toNumber(y)}×${this.toNumber(z)} mm`,
       );
     }
     if (detail.area) {
@@ -1175,7 +1182,7 @@ class FaceSelectionManager {
       const removeBtn = document.createElement("button");
       removeBtn.type = "button";
       removeBtn.className =
-        "ml-1 w-4 h-4 flex items-center justify-center rounded-full text-violet-400 hover:text-violet-600 hover:bg-violet-200 dark:text-violet-300 dark:hover:text-violet-100 dark:hover:bg-violet-700 transition-colors";
+        "ml-1 w-4 h-4 flex items-center justify-center rounded-full text-violet-400 hover:text-violet-600 hover:bg-violet-200 transition-colors";
       removeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>`;
       removeBtn.addEventListener("click", (e) => {
         e.preventDefault();

@@ -11,15 +11,15 @@
                 </div>
 
                 @if($screenshotUrl)
-                    <div class="rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                    <div class="rounded-lg overflow-hidden border border-zinc-200">
                         <img src="{{ $screenshotUrl }}" alt="Aperçu du fichier CAO" class="w-full h-48 object-cover">
                     </div>
                 @endif
 
                 @if($amount)
-                    <div class="bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800 rounded-lg p-4">
+                    <div class="bg-violet-50 border border-violet-200 rounded-lg p-4">
                         <div class="flex justify-between items-center">
-                            <span class="text-zinc-700 dark:text-zinc-300">Montant à payer</span>
+                            <span class="text-zinc-700">Montant à payer</span>
                             <span class="text-2xl font-bold text-violet-600">
                                 {{ number_format($amount / 100, 2) }}€
                             </span>
@@ -28,12 +28,12 @@
                 @endif
 
                 @if($clientSecret)
-                    <div class="space-y-4" 
-                         x-data="stripePayment('{{ $clientSecret }}')" 
+                    <div class="space-y-4"
+                         x-data="stripePayment('{{ $clientSecret }}')"
                          x-init="$nextTick(() => initStripe())">
                         <flux:field>
                             <flux:label>Informations de paiement</flux:label>
-                            <div id="card-element" class="p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900">
+                            <div id="card-element" class="p-3 border border-zinc-300 rounded-lg bg-white">
                             </div>
                             <flux:error name="card" />
                         </flux:field>
@@ -44,7 +44,7 @@
                             </flux:callout>
                         @endif
 
-                        <div class="flex gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                        <div class="flex gap-3 justify-end pt-4 border-t border-zinc-200">
                             <flux:button
                                 wire:click="closeModal"
                                 variant="ghost"
@@ -70,7 +70,7 @@
             </div>
         @else
             <div class="text-center py-8">
-                <div class="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+                <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                     <flux:icon.check class="size-8 text-green-600" />
                 </div>
                 <flux:heading size="lg" class="mb-2">Paiement réussi !</flux:heading>

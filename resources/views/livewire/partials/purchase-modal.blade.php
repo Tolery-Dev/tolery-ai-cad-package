@@ -15,16 +15,16 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @if($downloadStatus && isset($downloadStatus['options']['can_subscribe']) && $downloadStatus['options']['can_subscribe'])
-                <flux:card class="border-2 border-violet-200 dark:border-violet-800">
+                <flux:card class="border-2 border-violet-200">
                     <div class="flex flex-col h-full">
                         <div class="flex-1">
-                            <flux:heading size="base" class="mb-2 text-violet-600 dark:text-violet-400">
+                            <flux:heading size="base" class="mb-2 text-violet-600">
                                 S'abonner
                             </flux:heading>
                             <flux:subheading class="mb-4">
                                 Accès illimité aux téléchargements selon votre plan
                             </flux:subheading>
-                            <ul class="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+                            <ul class="space-y-2 text-sm text-zinc-600">
                                 <li class="flex items-start gap-2">
                                     <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
                                     <span>Plusieurs fichiers par mois</span>
@@ -50,7 +50,7 @@
             @endif
 
             @if($downloadStatus && isset($downloadStatus['options']['can_purchase']) && $downloadStatus['options']['can_purchase'])
-                <flux:card class="border-2 border-zinc-200 dark:border-zinc-700">
+                <flux:card class="border-2 border-zinc-200">
                     <div class="flex flex-col h-full">
                         <div class="flex-1">
                             <flux:heading size="base" class="mb-2">
@@ -60,11 +60,11 @@
                                 Paiement unique pour ce fichier uniquement
                             </flux:subheading>
                             @if(isset($downloadStatus['options']['purchase_price']))
-                                <div class="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+                                <div class="text-3xl font-bold text-zinc-900 mb-2">
                                     {{ number_format($downloadStatus['options']['purchase_price'] / 100, 2) }}€
                                 </div>
                             @endif
-                            <ul class="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+                            <ul class="space-y-2 text-sm text-zinc-600">
                                 <li class="flex items-start gap-2">
                                     <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
                                     <span>Téléchargement immédiat</span>
@@ -91,7 +91,7 @@
         </div>
     </div>
 
-    <div class="flex gap-2 justify-end pt-6 border-t border-zinc-200 dark:border-zinc-700">
+    <div class="flex gap-2 justify-end pt-6 border-t border-zinc-200">
         <flux:modal.close>
             <flux:button variant="ghost">
                 Annuler

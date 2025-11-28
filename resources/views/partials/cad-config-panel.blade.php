@@ -18,11 +18,11 @@
         @click="open = !open"
         @mousedown="startDrag($event)"
         @touchstart.passive="startDrag($event)"
-        class="flex items-center justify-between px-4 py-3 bg-violet-50/60 dark:bg-violet-950/20 cursor-pointer hover:bg-violet-100/60 transition-colors"
+        class="flex items-center justify-between px-4 py-3 bg-violet-50/60 cursor-pointer hover:bg-violet-100/60 transition-colors"
     >
         <div class="flex items-center gap-2 pointer-events-none">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
-            <h3 class="text-sm font-semibold text-violet-700 dark:text-violet-300">Configurez votre fichier</h3>
+            <h3 class="text-sm font-semibold text-violet-700 ">Configurez votre fichier</h3>
         </div>
 
         <div class="pointer-events-none">
