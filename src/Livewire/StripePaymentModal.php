@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Livewire;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Tolery\AiCad\Services\AiCadStripe;
 
 class StripePaymentModal extends Component
 {
@@ -23,6 +24,14 @@ class StripePaymentModal extends Component
     public bool $paymentSuccess = false;
 
     public ?string $errorMessage = null;
+
+    /**
+     * Get the Stripe public key for AI-CAD.
+     */
+    public function getStripeKeyProperty(): string
+    {
+        return app(AiCadStripe::class)->getPublicKey();
+    }
 
     #[On('show-stripe-payment-modal')]
     public function showPaymentModal(string $clientSecret, int $amount, int $chatId, ?string $screenshotUrl = null): void
@@ -60,11 +69,8 @@ class StripePaymentModal extends Component
         // Rafraîchir le composant parent pour mettre à jour l'état de téléchargement
         $this->dispatch('payment-completed');
 
-        // Notification de succès
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'message' => 'Paiement effectué avec succès ! Vous pouvez maintenant télécharger votre fichier.',
-        ]);
+        // Notification de succès via Flux toast
+        $this->js("Flux.toast({ heading: 'Paiement réussi !', text: 'Vous pouvez maintenant télécharger votre fichier.', variant: 'success' })");
 
         // Fermer le modal après 2 secondes
         $this->js('setTimeout(() => { $wire.closeModal() }, 2000)');

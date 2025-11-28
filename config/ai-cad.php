@@ -8,11 +8,29 @@ return [
         'secret-key' => env('ONSHAPE_SECRET_KEY'),
         'access-key' => env('ONSHAPE_ACCESS_KEY'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stripe Configuration (AI-CAD specific)
+    |--------------------------------------------------------------------------
+    |
+    | These are separate from the main app's Stripe keys (STRIPE_KEY, etc.)
+    | to support multiple Stripe accounts (different companies).
+    |
+    */
     'stripe' => [
-        'key' => env('STRIPE_KEY'),
-        'secret-key' => env('STRIPE_SECRET'),
-        'webhook-secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'key' => env('AICAD_STRIPE_KEY'),
+        'secret' => env('AICAD_STRIPE_SECRET'),
+        'webhook_secret' => env('AICAD_STRIPE_WEBHOOK_SECRET'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | File Purchase Configuration
+    |--------------------------------------------------------------------------
+    */
+    'file_purchase_price' => env('AICAD_FILE_PURCHASE_PRICE', 999), // Prix en centimes (9.99€ par défaut)
+
     'api' => [
         'base_url' => env('AI_CAD_API_URL', 'https://tolery-dfm-docker-api.cleverapps.io/api-production'), // exemple
         'key' => env('AICAD_API_KEY'),

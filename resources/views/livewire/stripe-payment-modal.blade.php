@@ -97,7 +97,7 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
-            this.stripe = Stripe('{{ config('cashier.key') }}');
+            this.stripe = Stripe('{{ $this->stripeKey }}');
             this.elements = this.stripe.elements();
 
             this.cardElement = this.elements.create('card', {
