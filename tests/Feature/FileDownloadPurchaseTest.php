@@ -8,6 +8,14 @@ use Tolery\AiCad\Models\SubscriptionProduct;
 use Tolery\AiCad\Services\FileAccessService;
 
 beforeEach(function () {
+    // Configure the team model for tests
+    config(['ai-cad.chat_team_model' => ChatTeam::class]);
+
+    // Configure Stripe keys for tests
+    config(['ai-cad.stripe.secret' => 'sk_test_fake']);
+    config(['ai-cad.stripe.key' => 'pk_test_fake']);
+    config(['ai-cad.stripe.webhook_secret' => 'whsec_test_fake']);
+
     SubscriptionProduct::create([
         'stripe_id' => 'prod_test_oneshot',
         'name' => 'One Shot',
@@ -172,7 +180,7 @@ describe('FileAccessService - One-Shot Pricing', function () {
         $service = app(FileAccessService::class);
         $price = $service->getOneTimePurchasePrice();
 
-        expect($price)->toBe(config('ai-cad.file_purchase_price', 999));
+        expect($price)->toBe((int) config('ai-cad.file_purchase_price', 999));
     });
 
     it('returns default price if no one-shot product exists', function () {
@@ -181,7 +189,7 @@ describe('FileAccessService - One-Shot Pricing', function () {
         $service = app(FileAccessService::class);
         $price = $service->getOneTimePurchasePrice();
 
-        expect($price)->toBe(config('ai-cad.file_purchase_price', 999));
+        expect($price)->toBe((int) config('ai-cad.file_purchase_price', 999));
     });
 });
 
@@ -206,8 +214,9 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController;
-        $response = $controller->handlePaymentIntentSucceeded($payload);
+        $controller = app(\Tolery\AiCad\Http\Controllers\StripeWebhookController::class);
+        $method = new \ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
+        $response = $method->invoke($controller, $payload['data']);
 
         expect($response->getStatusCode())->toBe(200);
         expect(FilePurchase::count())->toBe(1);
@@ -249,8 +258,9 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController;
-        $response = $controller->handlePaymentIntentSucceeded($payload);
+        $controller = app(\Tolery\AiCad\Http\Controllers\StripeWebhookController::class);
+        $method = new \ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
+        $response = $method->invoke($controller, $payload['data']);
 
         expect($response->getStatusCode())->toBe(200);
         expect(FilePurchase::count())->toBe(1);
@@ -275,8 +285,9 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = new \Tolery\AiCad\Http\Controllers\StripeWebhookController;
-        $response = $controller->handlePaymentIntentSucceeded($payload);
+        $controller = app(\Tolery\AiCad\Http\Controllers\StripeWebhookController::class);
+        $method = new \ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
+        $response = $method->invoke($controller, $payload['data']);
 
         expect($response->getStatusCode())->toBe(200);
         expect(FilePurchase::count())->toBe(0);

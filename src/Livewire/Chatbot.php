@@ -14,6 +14,7 @@ use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
+use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\FileAccessService;
 use Tolery\AiCad\Services\PredefinedPromptCacheService;
 use Tolery\AiCad\Services\ZipGeneratorService;
@@ -776,14 +777,101 @@ class Chatbot extends Component
         return response()->download($result['path'], $result['filename'])->deleteFileAfterSend(true);
     }
 
+    /**
+     * Redirige vers la page de souscription d'abonnement
+     */
+    public function redirectToSubscription(): void
+    {
+        $this->showPurchaseModal = false;
+
+        // Rediriger vers la page de gestion d'abonnement ToleryCad
+        $this->redirect(route('client.tolerycad.subscription'));
+    }
+
+    /**
+     * Initie l'achat d'un fichier unique via Stripe
+     */
+    public function purchaseFile(): void
+    {
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $team = $user->team;
+
+        if (! $team) {
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Aucune équipe associée à votre compte.'
+            );
+
+            return;
+        }
+
+        $fileAccessService = app(FileAccessService::class);
+        $aiCadStripe = app(AiCadStripe::class);
+
+        // Récupère le prix de l'achat unitaire
+        $amount = $fileAccessService->getOneTimePurchasePrice();
+
+        // Récupère le dernier message assistant pour le screenshot
+        $lastAssistant = $this->findLatestAssistantMessage();
+        $screenshotUrl = $lastAssistant?->getScreenshotUrl();
+
+        try {
+            // Crée un PaymentIntent Stripe avec les métadonnées nécessaires
+            $paymentIntent = $aiCadStripe->createPaymentIntent(
+                $amount,
+                'eur',
+                [
+                    'team_id' => (string) $team->id,
+                    'chat_id' => (string) $this->chat->id,
+                    'type' => 'file_purchase',
+                ]
+            );
+
+            Log::info('[AICAD] PaymentIntent created for file purchase', [
+                'payment_intent_id' => $paymentIntent->id,
+                'team_id' => $team->id,
+                'chat_id' => $this->chat->id,
+                'amount' => $amount,
+            ]);
+
+            // Ferme le modal d'achat/abonnement
+            $this->showPurchaseModal = false;
+
+            // Ouvre le modal de paiement Stripe avec le client_secret
+            $this->dispatch('show-stripe-payment-modal',
+                clientSecret: $paymentIntent->client_secret,
+                amount: $amount,
+                chatId: $this->chat->id,
+                screenshotUrl: $screenshotUrl
+            );
+
+        } catch (\Exception $e) {
+            Log::error('[AICAD] Failed to create PaymentIntent', [
+                'error' => $e->getMessage(),
+                'team_id' => $team->id,
+                'chat_id' => $this->chat->id,
+            ]);
+
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Impossible d\'initialiser le paiement. Veuillez réessayer.'
+            );
+        }
+    }
+
     #[On('payment-completed')]
     public function handlePaymentCompleted(): void
     {
         // Rafraîchir le statut de téléchargement après un paiement réussi
+        $this->updateDownloadStatus();
         $this->refreshFromDb();
 
         Log::info('[AICAD] Download status refreshed after payment', [
             'chat_id' => $this->chat->id,
+            'can_download' => $this->canDownload,
         ]);
     }
 }

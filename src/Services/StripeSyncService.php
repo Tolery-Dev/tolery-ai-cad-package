@@ -2,7 +2,6 @@
 
 namespace Tolery\AiCad\Services;
 
-use Laravel\Cashier\Cashier;
 use Stripe\Exception\ApiErrorException;
 use Stripe\Price;
 use Stripe\Product;
@@ -14,9 +13,10 @@ class StripeSyncService
 {
     protected StripeClient $stripe;
 
-    public function __construct()
-    {
-        $this->stripe = Cashier::stripe();
+    public function __construct(
+        protected AiCadStripe $aiCadStripe
+    ) {
+        $this->stripe = $this->aiCadStripe->client();
     }
 
     /**

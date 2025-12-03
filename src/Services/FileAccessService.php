@@ -11,6 +11,10 @@ use Tolery\AiCad\Models\SubscriptionProduct;
 
 class FileAccessService
 {
+    public function __construct(
+        protected AiCadStripe $aiCadStripe
+    ) {}
+
     /**
      * Vérifie si une team peut télécharger les fichiers d'un chat
      *
@@ -261,16 +265,8 @@ class FileAccessService
                 return config('ai-cad.file_purchase_price', 999);
             }
 
-            // Récupérer le prix depuis Stripe API
-            $stripe = new \Stripe\StripeClient(config('cashier.secret'));
-            $stripeProduct = $stripe->products->retrieve($product->stripe_id);
-
-            // Récupérer le premier prix actif
-            $prices = $stripe->prices->all([
-                'product' => $product->stripe_id,
-                'active' => true,
-                'limit' => 1,
-            ]);
+            // Récupérer le premier prix actif via AiCadStripe
+            $prices = $this->aiCadStripe->listPrices($product->stripe_id, 1);
 
             if (empty($prices->data)) {
                 Log::warning('No active price found for one-shot product', [
@@ -281,6 +277,7 @@ class FileAccessService
                 return config('ai-cad.file_purchase_price', 999);
             }
 
+            /** @var \Stripe\Price $price */
             $price = $prices->data[0];
 
             Log::info('Retrieved one-shot price from Stripe', [
