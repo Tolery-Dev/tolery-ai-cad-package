@@ -10,6 +10,7 @@ use Stripe\Exception\SignatureVerificationException;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
+use Tolery\AiCad\Models\SubscriptionProduct;
 use Tolery\AiCad\Services\AiCadStripe;
 
 /**
@@ -211,5 +212,109 @@ class StripeWebhookController extends Controller
         ]);
 
         return response()->json(['success' => true], 200);
+    }
+
+    /**
+     * Handle checkout.session.completed webhook.
+     *
+     * This is triggered when a Stripe Checkout session is completed successfully.
+     * Creates the subscription record in the database.
+     */
+    protected function handleCheckoutSessionCompleted(array $payload): JsonResponse
+    {
+        try {
+            $session = $payload['object'];
+
+            // Get metadata from checkout session
+            $teamId = $session['metadata']['team_id'] ?? null;
+            $subscriptionProductId = $session['metadata']['subscription_product_id'] ?? null;
+            $stripeSubscriptionId = $session['subscription'] ?? null;
+
+            if (! $teamId || ! $stripeSubscriptionId) {
+                Log::warning('[AICAD Webhook] Missing team_id or subscription in checkout.session.completed', [
+                    'team_id' => $teamId,
+                    'subscription' => $stripeSubscriptionId,
+                    'session_id' => $session['id'] ?? null,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // Get team model from config
+            $teamModel = config('ai-cad.chat_team_model', ChatTeam::class);
+            $team = $teamModel::find($teamId);
+
+            if (! $team) {
+                Log::error('[AICAD Webhook] Team not found', ['team_id' => $teamId]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // Check if subscription already exists (avoid duplicates)
+            $existingSubscription = $team->subscriptions()->where('stripe_id', $stripeSubscriptionId)->first();
+            if ($existingSubscription) {
+                Log::info('[AICAD Webhook] Subscription already exists', [
+                    'team_id' => $teamId,
+                    'stripe_subscription_id' => $stripeSubscriptionId,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // Get Stripe subscription details
+            $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve(
+                $stripeSubscriptionId
+            );
+
+            // Update team's ToleryCad customer ID
+            $team->tolerycad_stripe_id = $session['customer'];
+            $team->save();
+
+            // Create subscription record using Cashier pattern
+            $subscription = $team->subscriptions()->create([
+                'type' => 'default',
+                'stripe_id' => $stripeSubscription->id,
+                'stripe_status' => $stripeSubscription->status,
+                'stripe_price' => $stripeSubscription->items->data[0]->price->id ?? null,
+                'quantity' => 1,
+                'ends_at' => null,
+            ]);
+
+            // Create subscription items (required for getSubscriptionProduct to work)
+            foreach ($stripeSubscription->items->data as $item) {
+                $subscription->items()->create([
+                    'stripe_id' => $item->id,
+                    'stripe_product' => $item->price->product,
+                    'stripe_price' => $item->price->id,
+                    'quantity' => $item->quantity ?? 1,
+                ]);
+            }
+
+            // Set subscription product limits if needed
+            if ($subscriptionProductId) {
+                $product = SubscriptionProduct::find($subscriptionProductId);
+                if ($product && method_exists($team, 'setSubscriptionLimits')) {
+                    $team->setSubscriptionLimits($product);
+                }
+            }
+
+            Log::info('[AICAD Webhook] Subscription created from checkout', [
+                'team_id' => $teamId,
+                'stripe_subscription_id' => $stripeSubscription->id,
+                'stripe_customer_id' => $session['customer'],
+            ]);
+
+            return response()->json(['success' => true], 200);
+
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle checkout.session.completed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'payload' => $payload,
+            ]);
+
+            // Return success to avoid Stripe retrying indefinitely
+            return response()->json(['success' => true], 200);
+        }
     }
 }

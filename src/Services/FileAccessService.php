@@ -277,6 +277,7 @@ class FileAccessService
                 return config('ai-cad.file_purchase_price', 999);
             }
 
+            /** @var \Stripe\Price $price */
             $price = $prices->data[0];
 
             Log::info('Retrieved one-shot price from Stripe', [

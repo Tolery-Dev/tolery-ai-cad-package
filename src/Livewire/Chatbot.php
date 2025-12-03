@@ -784,8 +784,8 @@ class Chatbot extends Component
     {
         $this->showPurchaseModal = false;
 
-        // Rediriger vers la page de gestion d'abonnement AI-CAD
-        $this->redirect(route('client.ai-cad.subscription'));
+        // Rediriger vers la page de gestion d'abonnement ToleryCad
+        $this->redirect(route('client.tolerycad.subscription'));
     }
 
     /**
