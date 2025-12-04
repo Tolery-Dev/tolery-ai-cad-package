@@ -2,7 +2,7 @@
     <div class="flex-1 space-y-4">
         <div class="space-y-4">
             <p class="text-base font-normal text-black">
-                Bienvenue dans le configurateur de pièces en tôle. Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
+                Bienvenue dans le configurateur intelligent de création de fichier CAO (STEP) sur-mesure et instantanément. Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
             </p>
         </div>
 
@@ -13,13 +13,13 @@
                         <path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <div class="flex-1 space-y-2">
+                <div class="flex-1 space-y-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">
-                        Décrivez votre pièce dans le chat
+                        Décrivez votre pièce dans le chat (Text-to-CAD)
                     </p>
                     <div class="text-xs font-normal leading-[1.4] text-soft-black space-y-2">
                         <p>
-                            Expliquez directement en langage naturel ce que vous souhaitez concevoir, le système transformera votre description en fichier CAO.
+                            Expliquez directement en langage naturel ce que vous souhaitez concevoir, notre intelligence artificielle transformera votre description en fichier CAO.
                         </p>
                         <p>Testez avec ces exemples :</p>
                     </div>
@@ -47,18 +47,18 @@
             </div>
 
             <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
-                <div class="shrink-0 w-5 h-5 text-black">
+                <div class="shrink-0 w-5 h-5 text-black pt-4">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <div class="flex-1 space-y-2">
+                <div class="flex-1 space-y-4 pt-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">
-                        Importez un plan ou un pdf technique
+                        Importez un plan ou pdf technique (PDF-to-CAD)
                     </p>
                     <p class="text-xs font-normal leading-[1.4] text-soft-black">
-                        Ajoutez un fichier pour que le chat s'appuie sur votre document existant.
+                        Ajouter le plan ou pdf technique de votre pièce, notre intelligence artificielle transformera votre plan ou pdf en fichier CAO (STEP).
                     </p>
                     <div class="flex gap-1">
                         <span class="px-3 py-1 rounded bg-grey-background border-[0.5px] border-grey-stroke text-xs font-medium text-soft-black">
@@ -71,8 +71,8 @@
                             jpg
                         </span>
                     </div>
-                    <div class="absolute top-0 right-0 rounded-sm bg-purple-10">
-                        <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] rounded-sm">
+                    <div class="absolute top-0 right-0 bg-purple-10">
+                        <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] rounded-tr-sm rounded-bl-sm">
                             Bientôt disponible
                         </span>
                     </div>
@@ -80,17 +80,17 @@
             </div>
 
             <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
-                <div class="shrink-0 w-5 h-5 text-black">
+                <div class="shrink-0 w-5 h-5 text-black pt-4">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M20 7h-9M14 17H5M18 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </div>
-                <div class="flex-1 space-y-2">
+                <div class="flex-1 space-y-4 pt-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">
-                        Ajoutez un fichier CAO
+                        Importez votre fichier CAO (CAD-to-CAD)
                     </p>
                     <p class="text-xs font-normal leading-[1.4] text-soft-black">
-                        Chargez un fichier CAO existant pour demander des ajustements ou corrections.
+                        Ajouter votre fichier CAO existant, notre intelligence artificielle corrigera celui-ci s'il est en erreur ou vous pourrez le modifier directement si besoin.
                     </p>
                     <div class="flex gap-1">
                         <span class="px-3 py-1 rounded bg-grey-background border-[0.5px] border-grey-stroke text-xs font-medium text-soft-black">
@@ -101,8 +101,8 @@
                         </span>
                     </div>
                 </div>
-                <div class="absolute top-0 right-0 rounded-sm bg-fichiers-10">
-                    <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] rounded-sm">
+                <div class="absolute top-0 right-0 bg-fichiers-10">
+                    <span class="px-3 py-1.5 text-xs font-medium text-[#7B46E4] bg-[#F2EDFC] rounded-tr-sm rounded-bl-sm">
                         Bientôt disponible
                     </span>
                 </div>

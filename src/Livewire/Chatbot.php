@@ -699,7 +699,7 @@ class Chatbot extends Component
      * Initie le téléchargement du fichier CAO
      * Gère la logique d'achat/abonnement si nécessaire
      */
-    public function initiateDownload()
+    public function initiateDownload(): void
     {
         logger()->info('[CHATBOT] initiateDownload called', ['chat_id' => $this->chat->id]);
 
@@ -765,16 +765,28 @@ class Chatbot extends Component
             'files' => $result['files'],
         ]);
 
+        // Stocker le ZIP dans un emplacement accessible et créer une URL de téléchargement
+        $publicPath = 'downloads/'.basename($result['path']);
+        Storage::disk('public')->put($publicPath, file_get_contents($result['path']));
+
+        // Supprimer le fichier temporaire
+        @unlink($result['path']);
+
+        // Dispatch un événement JavaScript pour déclencher le téléchargement
+        $downloadUrl = Storage::disk('public')->url($publicPath);
+
+        logger()->info('[CHATBOT] Dispatching download event', [
+            'url' => $downloadUrl,
+            'filename' => $result['filename'],
+        ]);
+
+        $this->dispatch('start-file-download', url: $downloadUrl, filename: $result['filename']);
+
         Flux::toast(
             variant: 'success',
             heading: 'Téléchargement lancé',
             text: 'Votre archive contenant tous les fichiers CAO est en cours de téléchargement.'
         );
-
-        logger()->info('[CHATBOT] Returning download response');
-
-        // Retourne le fichier ZIP pour téléchargement
-        return response()->download($result['path'], $result['filename'])->deleteFileAfterSend(true);
     }
 
     /**

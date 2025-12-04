@@ -134,9 +134,10 @@
                 Recentrer vue
               </flux:button>
             </div>
-            <flux:separator/>
 
-            {{-- Section téléchargements (si fichiers disponibles) --}}
+            {{--
+            Section téléchargements (si fichiers disponibles)
+            <flux:separator/>
             <div x-show="hasGeneratedInSession" class="space-y-3">
                 <div class="text-lg font-semibold text-gray-900">Télécharger les fichiers</div>
                 <template x-if="!hasExports()">
@@ -205,32 +206,31 @@
                         </a>
                     </template>
                 </div>
-
-                    <template x-if="exports.screenshot">
-                        <div class="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-2">
-                            <div class="flex items-center gap-2">
-                                <div class="h-6 w-6 rounded bg-violet-600 text-white grid place-items-center text-xs font-semibold">
-                                    📸
-                                </div>
-                                <div class="text-sm font-medium text-gray-900">Screenshot de la pièce</div>
+                <template x-if="exports.screenshot">
+                    <div class="rounded-lg border border-violet-200 bg-violet-50/50 p-3 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <div class="h-6 w-6 rounded bg-violet-600 text-white grid place-items-center text-xs font-semibold">
+                                📸
                             </div>
-                            <img :src="exports.screenshot"
-                                 alt="Screenshot de la pièce"
-                                 class="w-full h-auto rounded-lg border border-violet-200 shadow-sm"
-                                 loading="lazy">
-                            <a :href="exports.screenshot"
-                               download
-                               class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors">
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                                </svg>
-                                Télécharger
-                            </a>
+                            <div class="text-sm font-medium text-gray-900">Screenshot de la pièce</div>
                         </div>
-                    </template>
+                        <img :src="exports.screenshot"
+                                alt="Screenshot de la pièce"
+                                class="w-full h-auto rounded-lg border border-violet-200 shadow-sm"
+                                loading="lazy">
+                        <a :href="exports.screenshot"
+                            download
+                            class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                            </svg>
+                            Télécharger
+                        </a>
+                    </div>
+                </template>
             </div>
-
-    </div>
+            --}}
+        </div>
     </aside>
 </template>
 
