@@ -204,3 +204,19 @@
 
 {{-- Load Stripe.js outside of Livewire component --}}
 <script src="https://js.stripe.com/v3/"></script>
+
+@script
+<script>
+    // Listen for file download events from this component
+    Livewire.on('start-file-download', ({url, filename}) => {
+        console.log('[AICAD] Starting download:', url, filename);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
+</script>
+@endscript
