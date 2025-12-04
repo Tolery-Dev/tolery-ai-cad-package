@@ -3,9 +3,12 @@
 namespace Tolery\AiCad\Livewire;
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Services\AiCadStripe;
+use Tolery\AiCad\Services\ZipGeneratorService;
 
 class StripePaymentModal extends Component
 {
@@ -68,12 +71,6 @@ class StripePaymentModal extends Component
 
         // Rafraîchir le composant parent pour mettre à jour l'état de téléchargement
         $this->dispatch('payment-completed');
-
-        // Notification de succès via Flux toast
-        $this->js("Flux.toast({ heading: 'Paiement réussi !', text: 'Vous pouvez maintenant télécharger votre fichier.', variant: 'success' })");
-
-        // Fermer le modal après 2 secondes
-        $this->js('setTimeout(() => { $wire.closeModal() }, 2000)');
     }
 
     public function handlePaymentError(string $error): void
@@ -85,6 +82,59 @@ class StripePaymentModal extends Component
             'chat_id' => $this->chatId,
             'error' => $error,
         ]);
+    }
+
+    /**
+     * Download files after successful purchase.
+     * This can be called multiple times since the file was purchased.
+     */
+    public function downloadAfterPurchase(): void
+    {
+        if (! $this->chatId) {
+            Log::error('[AICAD] No chat ID for download after purchase');
+
+            return;
+        }
+
+        $chat = Chat::find($this->chatId);
+
+        if (! $chat) {
+            Log::error('[AICAD] Chat not found for download', ['chat_id' => $this->chatId]);
+
+            return;
+        }
+
+        Log::info('[AICAD] Generating ZIP after purchase', ['chat_id' => $this->chatId]);
+
+        // Génère le ZIP avec tous les fichiers
+        $zipService = app(ZipGeneratorService::class);
+        $result = $zipService->generateChatFilesZip($chat);
+
+        if (! $result['success']) {
+            Log::error('[AICAD] ZIP generation failed after purchase', ['error' => $result['error']]);
+            $this->js("Flux.toast({ heading: 'Erreur', text: '{$result['error']}', variant: 'danger' })");
+
+            return;
+        }
+
+        // Stocker le ZIP dans un emplacement accessible
+        $publicPath = 'downloads/'.basename($result['path']);
+        Storage::disk('public')->put($publicPath, file_get_contents($result['path']));
+
+        // Supprimer le fichier temporaire
+        @unlink($result['path']);
+
+        // Dispatch un événement JavaScript pour déclencher le téléchargement
+        $downloadUrl = Storage::disk('public')->url($publicPath);
+
+        Log::info('[AICAD] Dispatching download after purchase', [
+            'url' => $downloadUrl,
+            'filename' => $result['filename'],
+        ]);
+
+        $this->dispatch('start-file-download', url: $downloadUrl, filename: $result['filename']);
+
+        $this->js("Flux.toast({ heading: 'Téléchargement lancé', text: 'Votre archive est en cours de téléchargement.', variant: 'success' })");
     }
 
     public function render()
