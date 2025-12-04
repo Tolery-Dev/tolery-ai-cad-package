@@ -29,4 +29,7 @@
             </svg>
         </span>
     </div>
+
+    {{-- History Panel Component --}}
+    <livewire:chat-history-panel />
 </header>

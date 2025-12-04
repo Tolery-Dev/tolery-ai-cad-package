@@ -20,6 +20,7 @@ use Tolery\AiCad\Commands\UpdateStripeMetadata;
 use Tolery\AiCad\Jobs\RegeneratePredefinedCacheJob;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
+use Tolery\AiCad\Livewire\ChatHistoryPanel;
 use Tolery\AiCad\Livewire\StripePaymentModal;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\ChatUser;
@@ -65,6 +66,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             Livewire::component('chatbot', Chatbot::class);
             Livewire::component('chat-config', ChatConfig::class);
             Livewire::component('stripe-payment-modal', StripePaymentModal::class);
+            Livewire::component('chat-history-panel', ChatHistoryPanel::class);
         });
 
         return $this;
