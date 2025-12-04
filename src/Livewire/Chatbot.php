@@ -772,15 +772,27 @@ class Chatbot extends Component
         // Supprimer le fichier temporaire
         @unlink($result['path']);
 
-        // Dispatch un événement JavaScript pour déclencher le téléchargement
+        // Déclenche le téléchargement via JavaScript
         $downloadUrl = Storage::disk('public')->url($publicPath);
+        $filename = $result['filename'];
 
-        logger()->info('[CHATBOT] Dispatching download event', [
+        logger()->info('[CHATBOT] Triggering download', [
             'url' => $downloadUrl,
-            'filename' => $result['filename'],
+            'filename' => $filename,
         ]);
 
-        $this->dispatch('start-file-download', url: $downloadUrl, filename: $result['filename']);
+        // Utiliser $this->js() pour déclencher directement le téléchargement
+        $this->js("
+            (function() {
+                const link = document.createElement('a');
+                link.href = '{$downloadUrl}';
+                link.download = '{$filename}';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })();
+        ");
 
         Flux::toast(
             variant: 'success',
