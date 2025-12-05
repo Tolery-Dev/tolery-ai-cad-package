@@ -8,8 +8,8 @@
         <section class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl overflow-hidden">
             {{-- Greeting Header --}}
             <div class="bg-white px-6 pt-6 pb-4 shrink-0">
-                <flux:heading size="xl" class="flex items-center gap-3">
-                    <img src="{{ Vite::asset('resources/images/chat-icon.png')}}" alt="" class="w-10 h-10">
+                <flux:heading size="lg" class="flex items-center gap-2">
+                    <img src="{{ Vite::asset('resources/images/chat-icon.png')}}" alt="" class="w-8 h-8">
                     <span>Bonjour {{ auth()->user()->firstname }} !</span>
                 </flux:heading>
             </div>
@@ -54,11 +54,11 @@
             activeStep: null,
             completedSteps: 0,
             steps: [
-                {key: 'analysis', label: 'Analysis', state: 'inactive'},
-                {key: 'parameters', label: 'Parameters', state: 'inactive'},
-                {key: 'generation_code', label: 'Generation', state: 'inactive'},
+                {key: 'analysis', label: 'Analyse', state: 'inactive'},
+                {key: 'parameters', label: 'Paramètres', state: 'inactive'},
+                {key: 'generation_code', label: 'Génération', state: 'inactive'},
                 {key: 'export', label: 'Export', state: 'inactive'},
-                {key: 'complete', label: 'Complete', state: 'inactive'},
+                {key: 'complete', label: 'Terminé', state: 'inactive'},
             ],
             init() {
                 const comp = this;

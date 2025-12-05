@@ -1,4 +1,4 @@
-<section class="flex-1 bg-grey-background p-8">
+<section class="flex-1 bg-grey-background p-4">
     <div class="relative h-full w-full bg-white border border-grey-stroke rounded-xl overflow-hidden">
         <div x-data="cadStreamModal()"
              x-show="open"
@@ -6,8 +6,8 @@
              class="absolute inset-0 z-50 flex items-start justify-center pt-8 bg-white">
             <div class="w-full max-w-4xl mx-4">
                 <div class="bg-gradient-to-r from-violet-600 to-indigo-800 px-6 py-4 text-white flex items-center justify-between rounded-t-2xl">
-                    <h3 class="text-lg font-semibold">Processing</h3>
-                    <div class="text-sm" x-text="`${completedSteps} out of 5 steps completed`"></div>
+                    <h3 class="text-lg font-semibold">Traitement en cours</h3>
+                    <div class="text-sm" x-text="`${completedSteps} sur 5 étapes terminées`"></div>
                 </div>
 
                 <div class="bg-white p-6 rounded-b-2xl shadow-2xl">
@@ -101,13 +101,13 @@
         @endif
 
         @if($stepExportUrl || $objExportUrl)
-            <div class="absolute bottom-8 right-8 z-10">
+            <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
                 <flux:button
                     wire:click="initiateDownload"
                     variant="primary"
                     icon="arrow-down-tray"
                     class="cursor-pointer !bg-violet-600 hover:!bg-violet-700 !text-white shadow-lg !px-6 !py-3 !text-base !font-semibold">
-                    Télécharger les fichiers
+                    Télécharger votre fichier
                 </flux:button>
             </div>
         @endif

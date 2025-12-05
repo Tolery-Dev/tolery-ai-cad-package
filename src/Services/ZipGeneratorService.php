@@ -47,9 +47,9 @@ class ZipGeneratorService
             'ai_screenshot_path' => $message->ai_screenshot_path,
         ]);
 
-        // Generate ZIP file name
-        $chatName = $chat->name ?? 'fichier-cao';
-        $zipFileName = str($chatName)->slug().'-'.now()->format('YmdHis').'.zip';
+        // Generate ZIP file name: [team_name]_YYYYMMDD_HHMMSS_tolerycad.zip
+        $teamName = $chat->team->name ?? 'team';
+        $zipFileName = str($teamName)->slug().'_'.now()->format('Ymd_His').'_tolerycad.zip';
 
         // Create temporary ZIP file
         $tempZipPath = storage_path('app/temp/'.$zipFileName);

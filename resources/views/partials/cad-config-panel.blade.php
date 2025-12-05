@@ -22,7 +22,7 @@
     >
         <div class="flex items-center gap-2 pointer-events-none">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
-            <h3 class="text-sm font-semibold text-violet-700 ">Configurez votre fichier</h3>
+            <h3 class="text-base font-bold text-violet-700">Configurez votre fichier</h3>
         </div>
 
         <div class="pointer-events-none">
@@ -85,7 +85,7 @@
             {{-- Détails / Dimensions globales --}}
             <div class="rounded-xl bg-violet-50/60 border border-violet-100 p-4">
                 <div class="flex items-center justify-between">
-                    <div class="text-sm font-medium text-gray-700">Détails</div>
+                    <div class="text-base font-semibold text-gray-900">Détails</div>
                 </div>
 
                 <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
