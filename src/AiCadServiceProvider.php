@@ -41,7 +41,6 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->hasRoute('web')
             ->discoversMigrations()
             ->runsMigrations()
-            ->hasAssets()
             ->hasCommands([
                 LimitsAutoRenewal::class,
                 TestApiConnection::class,
@@ -59,6 +58,16 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->registerLivewireComponents()
             ->registerBladeDirective()
             ->scheduleCommandes();
+    }
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        // Publish assets from resources/assets to public/vendor/ai-cad
+        $this->publishes([
+            __DIR__.'/../resources/assets' => public_path('vendor/ai-cad'),
+        ], 'ai-cad-assets');
     }
 
     protected function registerLivewireComponents(): self
