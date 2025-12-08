@@ -20,7 +20,9 @@ vendor/tolery/ai-cad/
     └── assets/
         └── images/
             ├── bot-icon.svg
-            └── cad.svg
+            ├── cad.svg
+            ├── chat.svg
+            └── pdf.svg
 ```
 
 Après publication :
@@ -31,13 +33,17 @@ public/
     └── ai-cad/
         └── images/
             ├── bot-icon.svg
-            └── cad.svg
+            ├── cad.svg
+            ├── chat.svg
+            └── pdf.svg
 ```
 
 ## Assets inclus
 
 - `bot-icon.svg` - Icône du bot ToleryCAD utilisée dans les messages du chat
-- `cad.svg` - Icône CAD avec dégradé violet→indigo pour le bloc PDF-to-CAD
+- `cad.svg` - Icône CAD avec dégradé violet→indigo pour le bloc CAD-to-CAD (import de fichiers CAO)
+- `chat.svg` - Icône de bulle de chat avec dégradé pour le bloc Text-to-CAD (description textuelle)
+- `pdf.svg` - Icône de document PDF avec dégradé pour le bloc PDF-to-CAD (import de plans techniques)
 
 ## Utilisation dans les vues
 
@@ -46,6 +52,8 @@ Les assets sont automatiquement référencés via :
 ```blade
 {{ asset('vendor/ai-cad/images/bot-icon.svg') }}
 {{ asset('vendor/ai-cad/images/cad.svg') }}
+{{ asset('vendor/ai-cad/images/chat.svg') }}
+{{ asset('vendor/ai-cad/images/pdf.svg') }}
 ```
 
 ## Publication automatique
