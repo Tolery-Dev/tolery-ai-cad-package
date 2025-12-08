@@ -7,20 +7,28 @@
         </svg>
     </button>
     <div
-        x-data="{ editing: false, name: @entangle('partName').live }"
+        x-data="{ editing: false, name: @entangle('partName').live, originalName: '{{ $chat->name }}' }"
         class="flex-1">
-        <input
-            x-show="editing"
-            x-model="name"
-            @blur="editing = false"
-            @keydown.enter="editing = false"
-            @keydown.escape="editing = false; name = '{{ $chat->name }}'"
-            type="text"
-            class="text-sm font-semibold text-black bg-transparent border-none focus:ring-0 focus:outline-none p-0 w-full"
-        />
+        <div x-show="editing" class="flex items-center gap-2">
+            <input
+                x-model="name"
+                @keydown.enter="editing = false"
+                @keydown.escape="editing = false; name = originalName"
+                type="text"
+                class="flex-1 text-xl font-semibold text-black bg-transparent border-b-2 border-violet-600 focus:ring-0 focus:outline-none px-2 py-1"
+                x-ref="titleInput"
+            />
+            <button
+                @click="editing = false"
+                class="shrink-0 w-8 h-8 rounded-full bg-violet-600 hover:bg-violet-700 flex items-center justify-center transition-colors">
+                <svg class="w-5 h-5 text-white" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 10L8.5 13.5L15 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
         <span
             x-show="!editing"
-            @click="editing = true"
+            @click="editing = true; originalName = name; $nextTick(() => $refs.titleInput?.focus())"
             class="inline-flex items-center gap-2 text-base font-semibold text-black cursor-pointer hover:text-violet-600 transition-colors">
             <span x-text="name" class="text-xl"></span>
             <svg class="w-5 h-5 text-violet-600" viewBox="0 0 20 20" fill="none" aria-hidden="true">
