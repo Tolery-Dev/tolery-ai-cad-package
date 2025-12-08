@@ -10,7 +10,29 @@ Pour publier les assets du package dans votre application Laravel, exécutez :
 php artisan vendor:publish --tag=ai-cad-assets
 ```
 
-Cela copiera tous les assets depuis `vendor/tolery/ai-cad/public/` vers `public/vendor/ai-cad/`.
+Cela copiera tous les assets depuis `vendor/tolery/ai-cad/resources/assets/` vers `public/vendor/ai-cad/`.
+
+## Structure des assets
+
+```
+vendor/tolery/ai-cad/
+└── resources/
+    └── assets/
+        └── images/
+            ├── bot-icon.svg
+            └── cad.svg
+```
+
+Après publication :
+
+```
+public/
+└── vendor/
+    └── ai-cad/
+        └── images/
+            ├── bot-icon.svg
+            └── cad.svg
+```
 
 ## Assets inclus
 
