@@ -4,7 +4,7 @@
             @if($msg['role'] === 'user')
                 👤
             @else
-                <img src="{{ asset('images/bot-icon.svg') }}" alt="Tolery" class="h-full w-full rounded-full p-1">
+                <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}" alt="Tolery" class="h-full w-full rounded-full p-1">
             @endif
         </div>
         <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">

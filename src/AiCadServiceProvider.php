@@ -41,6 +41,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->hasRoute('web')
             ->discoversMigrations()
             ->runsMigrations()
+            ->hasAssets()
             ->hasCommands([
                 LimitsAutoRenewal::class,
                 TestApiConnection::class,
