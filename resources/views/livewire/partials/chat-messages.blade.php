@@ -4,12 +4,12 @@
             @if($msg['role'] === 'user')
                 👤
             @else
-                <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}" alt="Tolery" class="h-full w-full rounded-full p-1">
+                <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}" alt="Tolery Bot" class="h-8 w-8 rounded-full p-1">
             @endif
         </div>
         <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">
             <div class="text-xs text-gray-500 mb-1">
-                {{ $msg['role'] === 'user' ? 'Vous' : 'Tolery' }}
+                {{ $msg['role'] === 'user' ? 'Vous' : 'Tolery Bot' }}
                 <span class="mx-1">•</span>
                 <time>{{ \Illuminate\Support\Carbon::parse($msg['created_at'] ?? now())->format('H:i') }}</time>
             </div>

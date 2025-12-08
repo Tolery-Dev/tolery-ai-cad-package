@@ -9,7 +9,7 @@
             {{-- Greeting Header --}}
             <div class="bg-white px-6 pt-6 pb-4 shrink-0">
                 <flux:heading size="lg" class="flex items-center gap-2">
-                    <img src="{{ Vite::asset('resources/images/chat-icon.png')}}" alt="" class="w-8 h-8">
+                    <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}" alt="Tolery Bot" class="h-8 w-8 rounded-full p-1">
                     <span>Bonjour {{ auth()->user()->firstname }} !</span>
                 </flux:heading>
             </div>
