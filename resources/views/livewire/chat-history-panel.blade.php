@@ -5,7 +5,7 @@
         variant="ghost"
         size="sm"
         icon="clock"
-        class="text-gray-600 hover:text-gray-900">
+    >
         Historique
     </flux:button>
 
@@ -15,7 +15,6 @@
             {{-- Header --}}
             <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <flux:heading size="lg">Mes fichiers CAO</flux:heading>
-                <flux:button wire:click="closePanel" variant="ghost" size="sm" icon="x-mark" />
             </div>
 
             {{-- Content --}}
@@ -73,7 +72,7 @@
                         <flux:icon.inbox class="size-12 text-gray-300 mx-auto mb-4" />
                         <flux:text class="text-gray-500">Aucun fichier telecharge</flux:text>
                         <flux:text class="text-sm text-gray-400 mt-1">
-                            Vos fichiers CAO apparaitront ici apres telechargement.
+                            Vos fichiers CAO apparaitront ici après téléchargement.
                         </flux:text>
                     </div>
                 @endforelse
