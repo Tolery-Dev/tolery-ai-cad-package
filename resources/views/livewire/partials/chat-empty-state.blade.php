@@ -55,18 +55,7 @@
 
             <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
                 <div class="shrink-0 w-8 h-8 pt-4">
-                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="pdfGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#7b46e4;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
-                            </linearGradient>
-                        </defs>
-                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="url(#pdfGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M14 2v6h6" stroke="url(#pdfGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M9 13h6M9 17h3" stroke="url(#pdfGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <rect x="7" y="9" width="2" height="2" fill="url(#pdfGradient)"/>
-                    </svg>
+                    <img src="{{ asset('images/cad.svg') }}" alt="cad file" class="w-full h-full">
                 </div>
                 <div class="flex-1 space-y-4 pt-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">
