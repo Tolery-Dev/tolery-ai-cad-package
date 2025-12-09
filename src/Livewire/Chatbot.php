@@ -63,6 +63,9 @@ class Chatbot extends Component
 
     public bool $showPurchaseModal = false;
 
+    /** Quota information */
+    public ?array $quotaStatus = null;
+
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -116,6 +119,11 @@ class Chatbot extends Component
             // 4. Initialize download status
             $this->updateDownloadStatus();
         }
+
+        // Load quota status
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
     }
 
     public function updatedEdgesShow($value): void

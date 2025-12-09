@@ -8,8 +8,10 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
 use Tolery\AiCad\Models\Chat;
+use Tolery\AiCad\Models\ChatDownload;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
+use Tolery\AiCad\Models\Limit;
 use Tolery\AiCad\Models\SubscriptionProduct;
 use Tolery\AiCad\Services\AiCadStripe;
 
@@ -152,28 +154,143 @@ class StripeWebhookController extends Controller
 
     /**
      * Handle customer.subscription.created webhook.
+     * This is called when Stripe creates the subscription (may happen before checkout.session.completed)
      */
     protected function handleCustomerSubscriptionCreated(array $payload): JsonResponse
     {
-        Log::info('[AICAD Webhook] Subscription created', [
-            'subscription_id' => $payload['object']['id'] ?? null,
-            'customer' => $payload['object']['customer'] ?? null,
-        ]);
+        try {
+            $subscription = $payload['object'];
 
-        return response()->json(['success' => true], 200);
+            Log::info('[AICAD Webhook] Subscription created event', [
+                'subscription_id' => $subscription['id'] ?? null,
+                'customer' => $subscription['customer'] ?? null,
+                'status' => $subscription['status'] ?? null,
+            ]);
+
+            // Find team by Stripe customer ID
+            $teamModel = config('ai-cad.chat_team_model', ChatTeam::class);
+            $team = $teamModel::where('tolerycad_stripe_id', $subscription['customer'])->first();
+
+            if (! $team) {
+                Log::warning('[AICAD Webhook] Team not found for customer', [
+                    'customer_id' => $subscription['customer'],
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // Get subscription product from Stripe
+            $productStripeId = $subscription['items']['data'][0]['price']['product'] ?? null;
+            if (! $productStripeId) {
+                Log::warning('[AICAD Webhook] No product found in subscription items');
+
+                return response()->json(['success' => true], 200);
+            }
+
+            $subscriptionProduct = SubscriptionProduct::where('stripe_id', $productStripeId)->first();
+            if (! $subscriptionProduct) {
+                Log::warning('[AICAD Webhook] Subscription product not found', [
+                    'stripe_product_id' => $productStripeId,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // Create limit for this subscription
+            $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
+            $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+
+            Log::info('[AICAD Webhook] Limit created for subscription.created event', [
+                'team_id' => $team->id,
+                'product_id' => $subscriptionProduct->id,
+            ]);
+
+            return response()->json(['success' => true], 200);
+
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle customer.subscription.created', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['success' => true], 200);
+        }
     }
 
     /**
      * Handle customer.subscription.updated webhook.
+     * This is called on subscription updates, including billing period renewals
      */
     protected function handleCustomerSubscriptionUpdated(array $payload): JsonResponse
     {
-        Log::info('[AICAD Webhook] Subscription updated', [
-            'subscription_id' => $payload['object']['id'] ?? null,
-            'status' => $payload['object']['status'] ?? null,
-        ]);
+        try {
+            $subscription = $payload['object'];
 
-        return response()->json(['success' => true], 200);
+            Log::info('[AICAD Webhook] Subscription updated event', [
+                'subscription_id' => $subscription['id'] ?? null,
+                'status' => $subscription['status'] ?? null,
+            ]);
+
+            // Find team
+            $teamModel = config('ai-cad.chat_team_model', ChatTeam::class);
+            $team = $teamModel::where('tolerycad_stripe_id', $subscription['customer'])->first();
+
+            if (! $team) {
+                Log::warning('[AICAD Webhook] Team not found for customer', [
+                    'customer_id' => $subscription['customer'],
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // Get subscription product
+            $productStripeId = $subscription['items']['data'][0]['price']['product'] ?? null;
+            if (! $productStripeId) {
+                Log::warning('[AICAD Webhook] No product found in subscription items');
+
+                return response()->json(['success' => true], 200);
+            }
+
+            $subscriptionProduct = SubscriptionProduct::where('stripe_id', $productStripeId)->first();
+            if (! $subscriptionProduct) {
+                Log::warning('[AICAD Webhook] Subscription product not found', [
+                    'stripe_product_id' => $productStripeId,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // Check if we need to create a new limit for a new billing period
+            $currentPeriodStart = \Carbon\Carbon::createFromTimestamp($subscription['current_period_start']);
+            $currentPeriodEnd = \Carbon\Carbon::createFromTimestamp($subscription['current_period_end']);
+
+            $existingLimit = Limit::where('team_id', $team->id)
+                ->where('subscription_product_id', $subscriptionProduct->id)
+                ->where('start_date', '<=', $currentPeriodStart)
+                ->where('end_date', '>=', $currentPeriodEnd)
+                ->first();
+
+            if (! $existingLimit) {
+                // New billing period - create new limit
+                $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
+                $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+
+                Log::info('[AICAD Webhook] New limit created for updated subscription (new billing period)', [
+                    'team_id' => $team->id,
+                    'product_id' => $subscriptionProduct->id,
+                ]);
+            }
+
+            return response()->json(['success' => true], 200);
+
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle customer.subscription.updated', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['success' => true], 200);
+        }
     }
 
     /**
@@ -290,11 +407,15 @@ class StripeWebhookController extends Controller
                 ]);
             }
 
-            // Set subscription product limits if needed
+            // Create the limit for this subscription period
             if ($subscriptionProductId) {
                 $product = SubscriptionProduct::find($subscriptionProductId);
-                if ($product && method_exists($team, 'setSubscriptionLimits')) {
-                    $team->setSubscriptionLimits($product);
+                if ($product) {
+                    $this->createLimitForTeam($team, $product, $stripeSubscription);
+                    Log::info('[AICAD Webhook] Limit created for new subscription', [
+                        'team_id' => $teamId,
+                        'product_id' => $product->id,
+                    ]);
                 }
             }
 
@@ -316,5 +437,52 @@ class StripeWebhookController extends Controller
             // Return success to avoid Stripe retrying indefinitely
             return response()->json(['success' => true], 200);
         }
+    }
+
+    /**
+     * Create a limit for a team based on their subscription
+     */
+    protected function createLimitForTeam(ChatTeam $team, SubscriptionProduct $product, \Stripe\Subscription $subscription): void
+    {
+        $startDate = \Carbon\Carbon::createFromTimestamp($subscription->current_period_start);
+        $endDate = \Carbon\Carbon::createFromTimestamp($subscription->current_period_end);
+
+        // Check if a limit already exists for this period
+        $existingLimit = Limit::where('team_id', $team->id)
+            ->where('subscription_product_id', $product->id)
+            ->where('start_date', '<=', $startDate)
+            ->where('end_date', '>=', $endDate)
+            ->first();
+
+        if ($existingLimit) {
+            Log::info('[AICAD Webhook] Limit already exists for this period', [
+                'limit_id' => $existingLimit->id,
+                'team_id' => $team->id,
+            ]);
+
+            return;
+        }
+
+        // Count existing downloads in this period to initialize used_amount correctly
+        $existingDownloads = ChatDownload::where('team_id', $team->id)
+            ->whereBetween('downloaded_at', [$startDate, $endDate])
+            ->count();
+
+        $limit = new Limit;
+        $limit->subscription_product_id = $product->id;
+        $limit->team_id = $team->id;
+        $limit->used_amount = $existingDownloads;
+        $limit->start_date = $startDate;
+        $limit->end_date = $endDate;
+        $limit->save();
+
+        Log::info('[AICAD Webhook] Limit created', [
+            'limit_id' => $limit->id,
+            'team_id' => $team->id,
+            'product_id' => $product->id,
+            'used_amount' => $existingDownloads,
+            'start_date' => $startDate->toDateTimeString(),
+            'end_date' => $endDate->toDateTimeString(),
+        ]);
     }
 }
