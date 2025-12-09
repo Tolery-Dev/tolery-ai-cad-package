@@ -47,9 +47,9 @@ class ZipGeneratorService
             'ai_screenshot_path' => $message->ai_screenshot_path,
         ]);
 
-        // Generate ZIP file name
-        $chatName = $chat->name ?? 'fichier-cao';
-        $zipFileName = str($chatName)->slug().'-'.now()->format('YmdHis').'.zip';
+        // Generate ZIP file name: [team_name]_YYYYMMDD_HHMMSS_tolerycad.zip
+        $teamName = $chat->team->name ?? 'team';
+        $zipFileName = str($teamName)->slug().'_'.now()->format('Ymd_His').'_tolerycad.zip';
 
         // Create temporary ZIP file
         $tempZipPath = storage_path('app/temp/'.$zipFileName);
@@ -76,24 +76,24 @@ class ZipGeneratorService
 
         $filesAdded = [];
 
-        // Add STEP file
-        if ($stepUrl = $message->getStepUrl()) {
-            $this->addFileToZip($zip, $stepUrl, 'STEP', $filesAdded);
+        // Add STEP file (use raw path, not URL)
+        if ($message->ai_step_path) {
+            $this->addStorageFileToZip($zip, $message->ai_step_path, 'STEP', $filesAdded);
         }
 
-        // Add OBJ file
-        if ($objUrl = $message->getObjUrl()) {
-            $this->addFileToZip($zip, $objUrl, 'OBJ', $filesAdded);
+        // Add OBJ file (use raw path, not URL)
+        if ($message->ai_cad_path) {
+            $this->addStorageFileToZip($zip, $message->ai_cad_path, 'OBJ', $filesAdded);
         }
 
-        // Add Technical Drawing (PDF)
-        if ($technicalDrawingUrl = $message->getTechnicalDrawingUrl()) {
-            $this->addFileToZip($zip, $technicalDrawingUrl, 'PDF', $filesAdded);
+        // Add Technical Drawing (PDF) (use raw path, not URL)
+        if ($message->ai_technical_drawing_path) {
+            $this->addStorageFileToZip($zip, $message->ai_technical_drawing_path, 'PDF', $filesAdded);
         }
 
-        // Add Screenshot (PNG)
-        if ($screenshotUrl = $message->getScreenshotUrl()) {
-            $this->addFileToZip($zip, $screenshotUrl, 'Screenshot', $filesAdded);
+        // Add Screenshot (PNG) (use raw path, not URL)
+        if ($message->ai_screenshot_path) {
+            $this->addStorageFileToZip($zip, $message->ai_screenshot_path, 'Screenshot', $filesAdded);
         }
 
         $zip->close();
@@ -131,116 +131,49 @@ class ZipGeneratorService
     }
 
     /**
-     * Add a file to the ZIP archive
+     * Add a file from Storage to the ZIP archive.
+     * This method reads directly from Storage instead of using URLs,
+     * avoiding SSL issues with local .test domains.
      */
-    private function addFileToZip(ZipArchive $zip, string $path, string $type, array &$filesAdded): void
+    private function addStorageFileToZip(ZipArchive $zip, string $storagePath, string $type, array &$filesAdded): void
     {
-        Log::info("[ZIP GENERATOR] Processing {$type} file", [
-            'original_path' => $path,
-            'is_url' => filter_var($path, FILTER_VALIDATE_URL),
+        Log::info("[ZIP GENERATOR] Processing {$type} file from storage", [
+            'storage_path' => $storagePath,
         ]);
 
-        // If it's a URL (S3), download the content temporarily
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
-            $this->addRemoteFileToZip($zip, $path, $type, $filesAdded);
-
-            return;
-        }
-
-        // Handle local files
-        $resolvedPath = $this->resolveFilePath($path);
-
-        Log::info('[ZIP GENERATOR] Resolved local file', [
-            'resolved_path' => $resolvedPath,
-            'exists' => $resolvedPath ? file_exists($resolvedPath) : false,
-        ]);
-
-        if ($resolvedPath && file_exists($resolvedPath)) {
-            $zip->addFile($resolvedPath, basename($resolvedPath));
-            $filesAdded[] = $type.': '.basename($resolvedPath);
-            Log::info("[ZIP GENERATOR] Added {$type} file to ZIP", ['filename' => basename($resolvedPath)]);
-        } else {
-            Log::warning("[ZIP GENERATOR] {$type} file not found or not accessible", ['path' => $path]);
-        }
-    }
-
-    /**
-     * Add a remote file (S3/URL) to the ZIP archive
-     */
-    private function addRemoteFileToZip(ZipArchive $zip, string $url, string $type, array &$filesAdded): void
-    {
         try {
-            Log::info("[ZIP GENERATOR] Downloading remote {$type} file", ['url' => $url]);
-
-            // Download file content
-            $content = file_get_contents($url);
-
-            if ($content === false) {
-                Log::warning("[ZIP GENERATOR] Failed to download {$type} file", ['url' => $url]);
+            // Check if the file exists in storage
+            if (! Storage::exists($storagePath)) {
+                Log::warning("[ZIP GENERATOR] {$type} file not found in storage", ['path' => $storagePath]);
 
                 return;
             }
 
-            // Extract filename from URL
-            $filename = basename(parse_url($url, PHP_URL_PATH));
+            // Read file content directly from Storage
+            $content = Storage::get($storagePath);
 
-            // Add content directly to ZIP (no temp file needed)
+            if ($content === null) {
+                Log::warning("[ZIP GENERATOR] Failed to read {$type} file from storage", ['path' => $storagePath]);
+
+                return;
+            }
+
+            // Get filename from path
+            $filename = basename($storagePath);
+
+            // Add content directly to ZIP
             $zip->addFromString($filename, $content);
             $filesAdded[] = $type.': '.$filename;
 
-            Log::info("[ZIP GENERATOR] Added remote {$type} file to ZIP", [
+            Log::info("[ZIP GENERATOR] Added {$type} file to ZIP from storage", [
                 'filename' => $filename,
                 'size' => strlen($content),
             ]);
         } catch (\Exception $e) {
-            Log::error("[ZIP GENERATOR] Error downloading {$type} file", [
-                'url' => $url,
+            Log::error("[ZIP GENERATOR] Error reading {$type} file from storage", [
+                'path' => $storagePath,
                 'error' => $e->getMessage(),
             ]);
         }
-    }
-
-    /**
-     * Resolve file path from storage path or URL
-     */
-    private function resolveFilePath(string $path): ?string
-    {
-        // URLs are now handled by addRemoteFileToZip()
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
-            Log::debug('[ZIP GENERATOR] Path is URL, should be handled by addRemoteFileToZip', ['path' => $path]);
-
-            return null;
-        }
-
-        // If it's already an absolute path and exists
-        if (file_exists($path)) {
-            Log::debug('[ZIP GENERATOR] Path exists as absolute', ['path' => $path]);
-
-            return $path;
-        }
-
-        // Try to resolve from storage
-        $storagePath = storage_path('app/'.$path);
-        if (file_exists($storagePath)) {
-            Log::debug('[ZIP GENERATOR] Path found in storage/app', ['path' => $storagePath]);
-
-            return $storagePath;
-        }
-
-        // Try public storage
-        $publicPath = Storage::disk('public')->path($path);
-        if (file_exists($publicPath)) {
-            Log::debug('[ZIP GENERATOR] Path found in public storage', ['path' => $publicPath]);
-
-            return $publicPath;
-        }
-
-        Log::warning('[ZIP GENERATOR] Path not resolved', [
-            'original' => $path,
-            'tried_storage' => $storagePath,
-            'tried_public' => $publicPath,
-        ]);
-
-        return null;
     }
 }

@@ -8,10 +8,8 @@
 
         <div class="space-y-2">
             <div class="bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
-                <div class="shrink-0 w-5 h-5 text-black">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                <div class="shrink-0 w-10 h-10">
+                    <img src="{{ asset('vendor/ai-cad/images/chat.svg') }}" alt="Text to CAD">
                 </div>
                 <div class="flex-1 space-y-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">
@@ -47,11 +45,8 @@
             </div>
 
             <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
-                <div class="shrink-0 w-5 h-5 text-black pt-4">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                <div class="shrink-0 w-10 h-10 pt-4">
+                    <img src="{{ asset('vendor/ai-cad/images/pdf.svg') }}" alt="PDF to CAD">
                 </div>
                 <div class="flex-1 space-y-4 pt-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">
@@ -80,10 +75,8 @@
             </div>
 
             <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
-                <div class="shrink-0 w-5 h-5 text-black pt-4">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 7h-9M14 17H5M18 12H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                <div class="shrink-0 w-10 h-10 pt-4">
+                    <img src="{{ asset('vendor/ai-cad/images/cad.svg') }}" alt="Tolery CAD files">
                 </div>
                 <div class="flex-1 space-y-4 pt-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">

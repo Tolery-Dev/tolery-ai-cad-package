@@ -8,12 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
+ * @property int $id
+ * @property int $team_id
+ * @property int $subscription_product_id
  * @property int $used_amount
  * @property Carbon|null $start_date
  * @property Carbon|null $end_date
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property ChatTeam|null $team
+ * @property SubscriptionProduct|null $product
  */
 class Limit extends Model
 {

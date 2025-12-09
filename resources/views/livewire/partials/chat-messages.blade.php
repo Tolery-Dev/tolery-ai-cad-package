@@ -1,15 +1,19 @@
 @forelse ($messages ?? [] as $msg)
-    <article class="flex items-start gap-3 mb-4 {{ $msg['role'] === 'user' ? 'flex-row-reverse' : '' }}">
-        <div class="h-8 w-8 shrink-0 rounded-full grid place-items-center {{ $msg['role'] === 'user' ? 'bg-violet-300 text-white' : 'dark:bg-zinc-800 dark:text-zinc-200' }}">
+    <article class="flex items-start gap-3 mb-4 {{ $msg['role'] === 'user' ? 'flex-row-reverse' : '' }}"
+             data-is-last="{{ $loop->last ? 'true' : 'false' }}">
+        <div class="h-8 w-8 shrink-0 rounded-full grid place-items-center {{ $msg['role'] === 'user' ? 'bg-violet-300 text-white' : 'bg-gradient-to-br from-violet-100 to-indigo-100' }}">
             @if($msg['role'] === 'user')
                 👤
             @else
-                <img src="{{ Vite::asset('resources/images/chat-icon.png') }}" alt="" class="w-7 h-7">
+                <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}"
+                     alt="Tolery Bot"
+                     class="h-8 w-8 p-1 bot-avatar"
+                     :class="{ 'bot-thinking': isGenerating && $el.closest('article').dataset.isLast === 'true' }">
             @endif
         </div>
         <div class="flex-1 {{ $msg['role'] === 'user' ? 'text-right' : '' }}">
             <div class="text-xs text-gray-500 mb-1">
-                {{ $msg['role'] === 'user' ? 'Vous' : 'Tolery' }}
+                {{ $msg['role'] === 'user' ? 'Vous' : 'Tolery Bot' }}
                 <span class="mx-1">•</span>
                 <time>{{ \Illuminate\Support\Carbon::parse($msg['created_at'] ?? now())->format('H:i') }}</time>
             </div>
