@@ -7,18 +7,29 @@
         {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
         <section class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl overflow-hidden">
             {{-- Greeting Header --}}
-            <div class="bg-white px-6 pt-6 pb-4 shrink-0">
+            <div class="bg-white px-6 pt-6 pb-4 shrink-0"
+                 x-data="{ isGenerating: false }"
+                 @cad-generation-started.window="isGenerating = true"
+                 @cad-generation-ended.window="isGenerating = false">
                 <flux:heading size="lg" class="flex items-center gap-2">
-                    <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}" alt="Tolery Bot" class="h-8 w-8 rounded-full p-1">
+                    <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}"
+                         alt="Tolery Bot"
+                         class="h-8 w-8 p-1 bot-avatar"
+                         :class="{ 'bot-thinking': isGenerating }">
                     <span>Bonjour {{ auth()->user()->firstname }} !</span>
                 </flux:heading>
             </div>
 
             {{-- Messages Area (Scrollable) --}}
             <div id="chat-scroll"
-                 x-data="{ scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight } }"
+                 x-data="{
+                     scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight },
+                     isGenerating: false
+                 }"
                  x-init="$nextTick(()=>scrollToEnd())"
                  x-on:tolery-chat-append.window="scrollToEnd()"
+                 @cad-generation-started.window="isGenerating = true"
+                 @cad-generation-ended.window="isGenerating = false"
                  class="flex-1 overflow-y-auto px-6 py-6 bg-white border-b border-grey-stroke">
 
                 @if(empty($messages))
@@ -41,6 +52,43 @@
     {{-- Modal Achat/Abonnement --}}
     @include('ai-cad::livewire.partials.purchase-modal')
 </div>
+
+@push('styles')
+<style>
+    @keyframes bot-thinking {
+        0%, 100% {
+            transform: scale(1) rotate(0deg);
+        }
+        25% {
+            transform: scale(1.1) rotate(-5deg);
+        }
+        50% {
+            transform: scale(1.15) rotate(5deg);
+        }
+        75% {
+            transform: scale(1.1) rotate(-5deg);
+        }
+    }
+
+    @keyframes bot-pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.6;
+        }
+    }
+
+    .bot-avatar {
+        transition: all 0.3s ease-in-out;
+    }
+
+    .bot-thinking {
+        animation: bot-thinking 1.5s ease-in-out infinite, bot-pulse 2s ease-in-out infinite;
+        filter: drop-shadow(0 0 8px rgba(123, 70, 228, 0.4));
+    }
+</style>
+@endpush
 
 @script
 <script>
@@ -109,6 +157,7 @@
                 // Simulate the 5-step stream with cached data
                 this.reset();
                 this.open = true;
+                window.dispatchEvent(new CustomEvent('cad-generation-started'));
                 this.cancelable = false; // Don't allow cancel during simulation
 
                 const stepDuration = duration / 5; // 2 seconds per step at 10s total
@@ -138,6 +187,7 @@
                 // Close modal after brief delay
                 this.cancelable = true;
                 setTimeout(() => this.close(), 800);
+                window.dispatchEvent(new CustomEvent('cad-generation-ended'));
             },
             async animateStep(stepKey, messages, duration, targetPercentage) {
                 const messageCount = messages.length;
@@ -157,6 +207,7 @@
             async startStream(message, sessionId, isEdit = false) {
                 this.reset();
                 this.open = true;
+                window.dispatchEvent(new CustomEvent('cad-generation-started'));
                 this.cancelable = true;
                 this.controller = new AbortController();
 
@@ -216,6 +267,7 @@
                                     $wire.refreshFromDb();
                                     this.cancelable = true;
                                     setTimeout(() => this.close(), 800);
+                                    window.dispatchEvent(new CustomEvent('cad-generation-ended'));
                                     continue;
                                 }
 
@@ -238,6 +290,7 @@
                     this.controller?.abort();
                 } catch {}
                 this.open = false;
+                window.dispatchEvent(new CustomEvent('cad-generation-ended'));
             }
         }
     });

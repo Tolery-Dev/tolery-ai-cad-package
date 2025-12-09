@@ -441,11 +441,19 @@ class StripeWebhookController extends Controller
 
     /**
      * Create a limit for a team based on their subscription
+     *
+     * @param  \Stripe\Subscription  $subscription  Subscription object with current_period_start and current_period_end properties
      */
     protected function createLimitForTeam(ChatTeam $team, SubscriptionProduct $product, \Stripe\Subscription $subscription): void
     {
-        $startDate = \Carbon\Carbon::createFromTimestamp($subscription->current_period_start);
-        $endDate = \Carbon\Carbon::createFromTimestamp($subscription->current_period_end);
+        // PHPStan doesn't recognize dynamic Stripe properties, but they exist at runtime
+        /** @phpstan-ignore property.notFound */
+        $currentPeriodStart = $subscription->current_period_start;
+        /** @phpstan-ignore property.notFound */
+        $currentPeriodEnd = $subscription->current_period_end;
+
+        $startDate = \Carbon\Carbon::createFromTimestamp($currentPeriodStart);
+        $endDate = \Carbon\Carbon::createFromTimestamp($currentPeriodEnd);
 
         // Check if a limit already exists for this period
         $existingLimit = Limit::where('team_id', $team->id)
