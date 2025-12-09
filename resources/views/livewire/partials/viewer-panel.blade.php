@@ -99,8 +99,9 @@
                 <flux:button
                     wire:click="initiateDownload"
                     variant="primary"
+                    color="purple"
                     icon="arrow-down-tray"
-                    class="cursor-pointer !bg-violet-600 hover:!bg-violet-700 !text-white shadow-lg !px-6 !py-3 !text-base !font-semibold">
+                    class="cursor-pointer shadow-lg !px-6 !py-3 !text-base !font-semibold">
                     Télécharger votre fichier
                 </flux:button>
             </div>

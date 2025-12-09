@@ -20,8 +20,9 @@
                     <flux:button
                         wire:click="downloadAfterPurchase"
                         variant="primary"
+                        color="purple"
                         icon="arrow-down-tray"
-                        class="w-full !bg-violet-600 hover:!bg-violet-700">
+                        class="w-full">
                         Télécharger les fichiers
                     </flux:button>
                     <flux:button
@@ -177,7 +178,7 @@
                             <flux:button
                                 @click="handlePayment()"
                                 variant="primary"
-                                class="!bg-violet-600 hover:!bg-violet-700"
+                                color="purple"
                                 x-bind:disabled="processing">
                                 <span x-show="!processing">
                                     Payer {{ $amount ? number_format($amount / 100, 2) : '' }}€

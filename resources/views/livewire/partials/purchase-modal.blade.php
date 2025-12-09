@@ -42,7 +42,8 @@
                         <flux:button
                             wire:click="redirectToSubscription"
                             variant="primary"
-                            class="mt-4 w-full !bg-violet-600 hover:!bg-violet-700">
+                            color="purple"
+                            class="mt-4 w-full">
                             Voir les plans
                         </flux:button>
                     </div>
