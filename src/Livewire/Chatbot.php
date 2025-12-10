@@ -95,12 +95,10 @@ class Chatbot extends Component
         // Charge l'historique depuis la DB
         $this->messages = $this->mapDbMessagesToArray();
 
-        $objToDisplay = $this->chat->messages->isEmpty() ?
-            null
-            :
-            $this->chat->messages
-                ->whereNotNull('ai_cad_path')
-                ->last();
+        $objToDisplay = $this->chat->messages()
+            ->whereNotNull('ai_cad_path')
+            ->orderByDesc('created_at')
+            ->first();
 
         if ($objToDisplay) {
             // 1. JSON tessellé pour la sélection de faces
