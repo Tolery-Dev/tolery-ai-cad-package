@@ -19,7 +19,7 @@ readonly class AICADClient
      *
      * @throws \RuntimeException
      */
-    public function streamDirectlyToOutput(string $message, ?string $projectId = null, int $timeoutSec = 600): void
+    public function streamDirectlyToOutput(string $message, ?string $projectId = null, bool $isEditRequest = false, int $timeoutSec = 600): void
     {
         $url = $this->endpoint('/api/generate-cad-stream');
 
@@ -30,14 +30,21 @@ readonly class AICADClient
         ];
 
         if ($projectId !== null) {
-            $queryParams['project_id'] = $projectId;
+            $queryParams['session_id'] = $projectId;
+        }
+
+        if ($isEditRequest) {
+            $queryParams['is_edit_request'] = 'true';
         }
 
         $fullUrl = $url.'?'.http_build_query($queryParams);
         $bearerToken = config('ai-cad.api.key', '');
 
-        Log::info('AICADClient: Starting curl SSE stream', [
-            'url' => $fullUrl,
+        Log::info('[AICAD] AICADClient: Calling external API with session_id', [
+            'url' => $url,
+            'project_id' => $projectId,
+            'session_id_provided' => $projectId !== null,
+            'is_edit_request' => $isEditRequest,
             'timeout' => $timeoutSec,
             'has_token' => ! empty($bearerToken),
         ]);
@@ -135,7 +142,7 @@ readonly class AICADClient
      * This method yields parsed SSE events as arrays (for CLI commands).
      * For web requests, use streamDirectlyToOutput() instead.
      *
-     * Query parameters: message, project_id (optional), stream=true
+     * Query parameters: message, session_id (optional), stream=true
      *
      * Events (exemples reçus):
      *  - {"step":"analysis","status":"Analyzing user requirements...","overall_percentage":10,...}
@@ -159,7 +166,7 @@ readonly class AICADClient
         ];
 
         if ($projectId !== null) {
-            $queryParams['project_id'] = $projectId;
+            $queryParams['session_id'] = $projectId;
         }
 
         $resp = $this->http($timeoutSec)
