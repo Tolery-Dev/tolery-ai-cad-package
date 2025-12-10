@@ -31,8 +31,9 @@ class StreamController extends Controller
 
         $message = $validated['message'];
         $sessionId = $validated['session_id'] ?? null;
+        $isEditRequest = $validated['is_edit_request'] ?? false;
 
-        return new StreamedResponse(function () use ($message, $sessionId) {
+        return new StreamedResponse(function () use ($message, $sessionId, $isEditRequest) {
             // PHP Configuration: Disable timeouts and enable continuous execution
             set_time_limit(0);              // No PHP timeout
             ignore_user_abort(true);        // Keep running if client disconnects
@@ -55,9 +56,11 @@ class StreamController extends Controller
             echo ": connected\n\n";
             flush();
 
-            Log::info('StreamController: Starting SSE stream (direct mode)', [
+            Log::info('[AICAD] StreamController: Received request from frontend', [
                 'message' => substr($message, 0, 100),
                 'session_id' => $sessionId,
+                'session_id_empty' => empty($sessionId),
+                'is_edit_request' => $isEditRequest,
                 'php_version' => PHP_VERSION,
                 'sapi' => php_sapi_name(),
             ]);
@@ -65,7 +68,7 @@ class StreamController extends Controller
             try {
                 // Direct streaming: AICADClient will echo SSE events directly to output
                 // No Generator, no foreach loop, no nested streaming
-                $this->client->streamDirectlyToOutput($message, $sessionId, 600);
+                $this->client->streamDirectlyToOutput($message, $sessionId, $isEditRequest, 600);
 
                 Log::info('StreamController: Stream completed successfully');
 

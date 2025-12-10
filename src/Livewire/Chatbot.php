@@ -261,6 +261,12 @@ class Chatbot extends Component
                 );
             } else {
                 // Démarre le stream côté navigateur: ouverture du modal + progression live
+                logger()->info('[AICAD] Dispatching stream to frontend', [
+                    'chat_id' => $this->chat->id,
+                    'session_id' => $this->chat->session_id,
+                    'is_edit' => $isEdit,
+                ]);
+
                 $this->dispatch('aicad-start-stream', message: $userText, sessionId: (string) $this->chat->session_id, isEdit: $isEdit);
             }
 
@@ -441,8 +447,22 @@ class Chatbot extends Component
 
         // Save session_id
         if (isset($final['session_id']) && $this->chat->session_id !== $final['session_id']) {
+            $oldSessionId = $this->chat->session_id;
             $this->chat->session_id = $final['session_id'];
             $this->chat->save();
+            $this->chat->refresh(); // Rafraîchit le modèle depuis la DB pour éviter la staleness
+
+            logger()->info('[AICAD] Session ID updated in DB', [
+                'chat_id' => $this->chat->id,
+                'old_session_id' => $oldSessionId,
+                'new_session_id' => $this->chat->session_id,
+            ]);
+        } else {
+            logger()->info('[AICAD] Session ID unchanged', [
+                'chat_id' => $this->chat->id,
+                'session_id' => $this->chat->session_id,
+                'received_session_id' => $final['session_id'] ?? null,
+            ]);
         }
 
         /** @var ChatMessage|null $asst */
