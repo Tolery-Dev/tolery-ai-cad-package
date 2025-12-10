@@ -1,4 +1,29 @@
-<div class="relative h-screen flex flex-col bg-grey-background">
+<div class="relative h-screen flex flex-col bg-grey-background"
+     x-data="{
+         isGenerating: false,
+         init() {
+             // Écouter les événements de génération
+             window.addEventListener('cad-generation-started', () => {
+                 this.isGenerating = true;
+                 console.log('[RELOAD PROTECTION] Generation started, protection enabled');
+             });
+
+             window.addEventListener('cad-generation-ended', () => {
+                 this.isGenerating = false;
+                 console.log('[RELOAD PROTECTION] Generation ended, protection disabled');
+             });
+
+             // Protection contre le reload/fermeture pendant la génération
+             window.addEventListener('beforeunload', (e) => {
+                 if (this.isGenerating) {
+                     console.log('[RELOAD PROTECTION] Blocking reload/close attempt');
+                     e.preventDefault();
+                     e.returnValue = ''; // Chrome nécessite returnValue
+                     return ''; // Firefox/Safari
+                 }
+             });
+         }
+     }">
 
     @include('ai-cad::livewire.partials.chat-header')
 

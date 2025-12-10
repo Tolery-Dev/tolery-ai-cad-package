@@ -95,7 +95,14 @@
         @endif
 
         @if($stepExportUrl || $objExportUrl)
-            <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+            <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
+                @if ($currentVersion = $this->getCurrentVersionLabel())
+                    <div class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-700 bg-white/90 backdrop-blur-sm rounded-full shadow-md border border-purple-200">
+                        <flux:icon.cube-transparent class="size-4" />
+                        <span>{{ $currentVersion }}</span>
+                    </div>
+                @endif
+
                 <flux:button
                     wire:click="initiateDownload"
                     variant="primary"

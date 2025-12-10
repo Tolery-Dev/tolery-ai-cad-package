@@ -42,7 +42,7 @@ readonly class AICADClient
 
         Log::info('[AICAD] AICADClient: Calling external API with session_id', [
             'url' => $url,
-            'project_id' => $projectId,
+            'session_id' => $projectId,
             'session_id_provided' => $projectId !== null,
             'is_edit_request' => $isEditRequest,
             'timeout' => $timeoutSec,
