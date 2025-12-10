@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
 /**
+ * @property int $id
+ * @property int $chat_id
+ * @property int|null $user_id
  * @property string $role
  * @property string $message
  * @property string|null $ai_cad_path
