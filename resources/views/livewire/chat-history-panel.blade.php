@@ -6,7 +6,7 @@
         size="sm"
         icon="clock"
     >
-        Historique
+        <div>Historique</div>
     </flux:button>
 
     {{-- Slide-over panel --}}
@@ -22,8 +22,12 @@
                 @forelse ($this->history as $item)
                     @php
                         $chat = $item['chat'];
-                        $latestMessage = $chat->messages->first();
+                        $latestMessage = $chat->messages()
+                            ->whereNotNull('ai_cad_path')
+                            ->orderByDesc('created_at')
+                            ->first();
                         $screenshotUrl = $latestMessage?->getScreenshotUrl();
+                        $versionLabel = $latestMessage?->getVersionLabel();
                     @endphp
                     <div class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                         <div class="flex gap-3 p-3">
@@ -40,9 +44,17 @@
 
                             {{-- Info --}}
                             <div class="flex-grow min-w-0">
-                                <p class="font-medium text-sm text-gray-900 truncate">
-                                    {{ $chat->name ?? 'Fichier CAO #' . $chat->id }}
-                                </p>
+                                <div class="flex items-center gap-2">
+                                    <p class="font-medium text-sm text-gray-900 truncate">
+                                        {{ $chat->name ?? 'Fichier CAO #' . $chat->id }}
+                                    </p>
+                                    @if ($versionLabel)
+                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full flex-shrink-0">
+                                            <flux:icon.cube-transparent class="size-3" />
+                                            {{ $versionLabel }}
+                                        </span>
+                                    @endif
+                                </div>
                                 <p class="text-xs text-gray-500 mt-0.5">
                                     {{ $item['date']->format('d/m/Y H:i') }}
                                 </p>

@@ -232,21 +232,25 @@ class Chatbot extends Component
 
             // Persiste + UI (utilisateur)
             $mUser = $this->storeMessage('user', $userText);
+            $mUser->load('user'); // Charger la relation user
             $this->messages[] = [
                 'role' => 'user',
                 'content' => $userText,
                 'created_at' => Carbon::parse($mUser->created_at)->toIso8601String(),
                 'screenshot_url' => null,
+                'user' => $mUser->user,
             ];
             $this->dispatch('tolery-chat-append');
 
             // Placeholder assistant "AI thinking…"
             $mAsst = $this->storeMessage('assistant', 'AI thinking…');
+            $mAsst->load('user'); // Charger la relation user
             $this->messages[] = [
                 'role' => 'assistant',
                 'content' => 'AI thinking…',
                 'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
                 'screenshot_url' => null,
+                'user' => $mAsst->user,
             ];
             $this->streamingIndex = array_key_last($this->messages);
             $this->lastRefreshAt = microtime(true);
@@ -641,28 +645,37 @@ class Chatbot extends Component
 
     protected function mapDbMessagesToArray(): array
     {
-        return $this->chat->messages()->orderBy('created_at')->get()
+        return $this->chat->messages()->with('user')->orderBy('created_at')->get()
             ->map(fn (ChatMessage $m) => [
+                'id' => $m->id,
                 'role' => $m->role,
                 'content' => (string) $m->message,
                 'created_at' => Carbon::parse($m->created_at)->toIso8601String(),
                 'screenshot_url' => $m->getScreenshotUrl(),
+                'version' => $m->getVersionLabel(), // "v1", "v2", "v3" ou null
+                'user' => $m->user, // Pour afficher l'avatar
             ])->all();
     }
 
     protected function storeMessage(string $role, string $content): ChatMessage
     {
-        return $this->chat->messages()->create(['role' => $role, 'message' => $content]);
+        return $this->chat->messages()->create([
+            'role' => $role,
+            'message' => $content,
+            'user_id' => auth()->id(),
+        ]);
     }
 
     protected function appendAssistant(string $text): void
     {
         $m = $this->storeMessage('assistant', $text);
+        $m->load('user'); // Charger la relation user
         $this->messages[] = [
             'role' => 'assistant',
             'content' => $text,
             'created_at' => Carbon::parse($m->created_at)->toIso8601String(),
             'screenshot_url' => null,
+            'user' => $m->user,
         ];
     }
 
@@ -923,5 +936,171 @@ class Chatbot extends Component
             'chat_id' => $this->chat->id,
             'can_download' => $this->canDownload,
         ]);
+    }
+
+    /* ----------------- Version Helpers ----------------- */
+
+    /**
+     * Get the version label of the current (latest) version.
+     */
+    public function getCurrentVersionLabel(): ?string
+    {
+        $lastAssistant = $this->chat->messages()
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->whereNotNull('ai_cad_path')
+            ->orderByDesc('created_at')
+            ->first();
+
+        return $lastAssistant?->getVersionLabel();
+    }
+
+    /**
+     * Get all available versions with their metadata.
+     *
+     * @return array<int, array{id: int, label: string, date: string}>
+     */
+    public function getAvailableVersions(): array
+    {
+        return $this->chat->messages()
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->whereNotNull('ai_cad_path')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(fn (ChatMessage $msg) => [
+                'id' => $msg->id,
+                'label' => $msg->getVersionLabel(),
+                'date' => $msg->created_at->format('d/m/Y H:i'),
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Download files from a specific version (message).
+     */
+    public function downloadVersion(int $messageId): void
+    {
+        logger()->info('[CHATBOT] downloadVersion called', [
+            'message_id' => $messageId,
+            'chat_id' => $this->chat->id,
+        ]);
+
+        // Find the message and verify it belongs to this chat
+        $message = ChatMessage::where('chat_id', $this->chat->id)
+            ->where('id', $messageId)
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->whereNotNull('ai_cad_path')
+            ->first();
+
+        if (! $message) {
+            logger()->error('[CHATBOT] Message not found or invalid', ['message_id' => $messageId]);
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Version introuvable.'
+            );
+
+            return;
+        }
+
+        // Check download permission (same as initiateDownload)
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $team = $user->team;
+
+        if (! $team) {
+            logger()->error('[CHATBOT] No team found for version download', ['user_id' => $user->id]);
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Impossible de télécharger : aucune équipe associée.'
+            );
+
+            return;
+        }
+
+        logger()->info('[CHATBOT] Team found for version download', ['team_id' => $team->id]);
+
+        $fileAccessService = app(FileAccessService::class);
+        $status = $fileAccessService->canDownloadChat($team, $this->chat);
+
+        logger()->info('[CHATBOT] Download permission checked for version', [
+            'can_download' => $status['can_download'],
+            'status' => $status,
+            'version' => $message->getVersionLabel(),
+        ]);
+
+        if (! $status['can_download']) {
+            logger()->warning('[CHATBOT] Download not allowed for version, showing purchase modal');
+            // Affiche le modal d'achat/abonnement
+            $this->showPurchaseModal = true;
+            $this->downloadStatus = $status;
+
+            return;
+        }
+
+        // Enregistre le téléchargement (décompte le crédit)
+        $fileAccessService->recordChatDownload($team, $this->chat);
+        logger()->info('[CHATBOT] Version download recorded', ['version' => $message->getVersionLabel()]);
+
+        // Met à jour le statut
+        $this->updateDownloadStatus();
+
+        // Generate ZIP for this specific message
+        logger()->info('[CHATBOT] Generating ZIP for version', ['version' => $message->getVersionLabel()]);
+        $zipService = app(ZipGeneratorService::class);
+        $result = $zipService->generateMessageFilesZip($message);
+
+        if (! $result['success']) {
+            logger()->error('[CHATBOT] ZIP generation failed', ['error' => $result['error']]);
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: $result['error']
+            );
+
+            return;
+        }
+
+        logger()->info('[CHATBOT] ZIP generated successfully for version', [
+            'version' => $message->getVersionLabel(),
+            'filename' => $result['filename'],
+            'files' => $result['files'],
+        ]);
+
+        // Store ZIP in accessible location and create download URL
+        $publicPath = 'downloads/'.basename($result['path']);
+        Storage::disk('public')->put($publicPath, file_get_contents($result['path']));
+
+        // Delete temporary file
+        @unlink($result['path']);
+
+        // Trigger download via JavaScript
+        $downloadUrl = Storage::disk('public')->url($publicPath);
+        $filename = $result['filename'];
+
+        logger()->info('[CHATBOT] Triggering version download', [
+            'url' => $downloadUrl,
+            'filename' => $filename,
+            'version' => $message->getVersionLabel(),
+        ]);
+
+        // Use $this->js() to trigger download directly
+        $this->js("
+            (function() {
+                const link = document.createElement('a');
+                link.href = '{$downloadUrl}';
+                link.download = '{$filename}';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })();
+        ");
+
+        Flux::toast(
+            variant: 'success',
+            heading: 'Téléchargement lancé',
+            text: "Version {$message->getVersionLabel()} en cours de téléchargement."
+        );
     }
 }

@@ -30,7 +30,7 @@
             <svg xmlns="http://www.w3.org/2000/svg"
                  viewBox="0 0 24 24" fill="currentColor"
                  class="h-5 w-5 text-violet-700 transition-transform duration-200"
-                 :class="open ? 'rotate-180' : ''">
+                 :class="open ? '' : 'rotate-180'">
                 <path fill-rule="evenodd"
                       d="M12 8.47a.75.75 0 0 1 .53.22l5 5a.75.75 0 1 1-1.06 1.06L12 10.31l-4.47 4.47a.75.75 0 0 1-1.06-1.06l5-5a.75.75 0 0 1 .53-.22z"
                       clip-rule="evenodd"/>
