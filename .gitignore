@@ -34,3 +34,4 @@ phpstan.neon
 # Compiled/Built files
 /dist
 **/dist/
+!/resources/dist
