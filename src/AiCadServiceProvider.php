@@ -38,6 +38,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->name('ai-cad')
             ->hasConfigFile('ai-cad')
             ->hasViews('ai-cad')
+            ->hasAssets()
             ->hasRoute('web')
             ->discoversMigrations()
             ->runsMigrations()
@@ -63,11 +64,6 @@ class AiCadServiceProvider extends PackageServiceProvider
     public function boot(): void
     {
         parent::boot();
-
-        // Publish assets from resources/assets to public/vendor/ai-cad
-        $this->publishes([
-            __DIR__.'/../resources/assets' => public_path('vendor/ai-cad'),
-        ], 'ai-cad-assets');
     }
 
     protected function registerLivewireComponents(): self
