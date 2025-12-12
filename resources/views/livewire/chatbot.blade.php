@@ -238,6 +238,15 @@
 
                 const url = @js(route('ai-cad.stream.generate-cad'));
 
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('[AICAD] 🚀 NEW CAD GENERATION REQUEST');
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('[AICAD] 🔑 Session ID:', sessionId || 'NEW SESSION (no ID provided)');
+                console.log('[AICAD] 📝 Message:', message?.substring(0, 150) + (message?.length > 150 ? '...' : ''));
+                console.log('[AICAD] ✏️  Is Edit Request:', isEdit ? 'YES' : 'NO');
+                console.log('[AICAD] 📍 API Endpoint:', url);
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
                 try {
                     const res = await fetch(url, {
                         method: 'POST',
@@ -287,6 +296,37 @@
 
                                 if (payload.final_response) {
                                     const resp = payload.final_response || {};
+
+                                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                    console.log('[AICAD] ✅ GENERATION COMPLETED - Final Response Received');
+                                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                    console.log('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
+                                    if (resp.obj_export) {
+                                        console.log('[AICAD] 📦 OBJ File:', resp.obj_export);
+                                    }
+                                    if (resp.step_export) {
+                                        console.log('[AICAD] 📐 STEP File:', resp.step_export);
+                                    }
+                                    if (resp.tessellated_export) {
+                                        console.log('[AICAD] 🔺 Tessellated File:', resp.tessellated_export);
+                                    }
+                                    if (resp.attribute_and_transientid_map) {
+                                        console.log('[AICAD] 🗺️  Attribute Map:', resp.attribute_and_transientid_map);
+                                    }
+                                    if (resp.technical_drawing) {
+                                        console.log('[AICAD] 📄 Technical Drawing:', resp.technical_drawing);
+                                    }
+                                    if (resp.screenshot) {
+                                        console.log('[AICAD] 📸 Screenshot:', resp.screenshot);
+                                    }
+                                    if (resp.manufacturing_errors && resp.manufacturing_errors.length > 0) {
+                                        console.warn('[AICAD] ⚠️  Manufacturing Errors:', resp.manufacturing_errors);
+                                    }
+                                    if (resp.chat_response) {
+                                        console.log('[AICAD] 💬 Chat Response:', resp.chat_response.substring(0, 200) + (resp.chat_response.length > 200 ? '...' : ''));
+                                    }
+                                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
                                     $wire.saveStreamFinal(resp)
                                     this.markStep('complete', 'Completed', resp.chat_response || 'Completed', 100);
                                     $wire.refreshFromDb();
@@ -305,7 +345,13 @@
                         }
                     }
                 } catch (e) {
-                    console.error(e);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.error('[AICAD] ❌ STREAM ERROR');
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.error('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
+                    console.error('[AICAD] ⚠️  Error:', e.message);
+                    console.error('[AICAD] 📍 Stack:', e.stack);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     this.statusText = 'Stream connection error. Retrying soon…';
                     this.cancelable = true;
                 }
