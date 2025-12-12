@@ -1028,7 +1028,7 @@ class Chatbot extends Component
         logger()->info('[CHATBOT] Team found for version download', ['team_id' => $team->id]);
 
         $fileAccessService = app(FileAccessService::class);
-        $status = $fileAccessService->canDownloadChat($team, $this->chat);
+        $status = $fileAccessService->canDownloadMessage($team, $this->chat, $message);
 
         logger()->info('[CHATBOT] Download permission checked for version', [
             'can_download' => $status['can_download'],
@@ -1038,17 +1038,16 @@ class Chatbot extends Component
 
         if (! $status['can_download']) {
             logger()->warning('[CHATBOT] Download not allowed for version, showing purchase modal');
-            // Affiche le modal d'achat/abonnement
+            // Affiche le modal d'achat/abonnement avec les options
             $this->showPurchaseModal = true;
             $this->downloadStatus = $status;
 
             return;
         }
 
-        // Enregistre le téléchargement du chat (décompte le crédit uniquement si première fois)
-        // Le chat sera marqué comme téléchargé, permettant toutes les versions futures gratuitement
-        $fileAccessService->recordChatDownload($team, $this->chat);
-        logger()->info('[CHATBOT] Chat download recorded for version', ['version' => $message->getVersionLabel()]);
+        // Enregistre le téléchargement de cette version spécifique (décompte le crédit)
+        $fileAccessService->recordMessageDownload($team, $this->chat, $message);
+        logger()->info('[CHATBOT] Version download recorded', ['version' => $message->getVersionLabel()]);
 
         // Met à jour le statut
         $this->updateDownloadStatus();
