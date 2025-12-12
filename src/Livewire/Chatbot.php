@@ -1045,7 +1045,8 @@ class Chatbot extends Component
             return;
         }
 
-        // Enregistre le téléchargement de cette version spécifique (décompte le crédit)
+        // Enregistre le téléchargement de cette version spécifique (décompte 1 quota si jamais téléchargée)
+        // Chaque version téléchargée consomme 1 quota. Re-télécharger la même version ne coûte rien.
         $fileAccessService->recordMessageDownload($team, $this->chat, $message);
         logger()->info('[CHATBOT] Version download recorded', ['version' => $message->getVersionLabel()]);
 
