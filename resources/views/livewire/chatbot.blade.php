@@ -198,7 +198,7 @@
             },
             reset() {
                 this.overall = 0;
-                this.statusText = 'Initializing…';
+                this.statusText = 'Initialisation...';
                 this.activeStep = null;
                 this.completedSteps = 0;
                 this.steps.forEach(s => s.state = 'inactive');
@@ -375,7 +375,10 @@
                                     // Wait for message to be saved before refreshing
                                     await $wire.saveStreamFinal(resp);
                                     this.markStep('complete', 'Completed', resp.chat_response || 'Completed', 100);
-                                    await $wire.refreshFromDb();
+
+                                    // Force Livewire component refresh to update UI
+                                    await $wire.$refresh();
+
                                     this.cancelable = true;
                                     setTimeout(() => this.close(), 800);
                                     window.dispatchEvent(new CustomEvent('cad-generation-ended'));

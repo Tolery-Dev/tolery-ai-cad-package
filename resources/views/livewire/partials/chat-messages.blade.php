@@ -59,25 +59,28 @@
                                 `<span>${label}</span>` +
                                 `</span>`;
                         });
+                    },
+                    parseContent() {
+                        const base64 = this.$el.dataset.messageContent;
+                        const binary = atob(base64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) {
+                            bytes[i] = binary.charCodeAt(i);
+                        }
+                        const content = new TextDecoder('utf-8').decode(bytes);
+
+                        // Check if this is a typing indicator
+                        if (content === '[TYPING_INDICATOR]') {
+                            this.isTyping = true;
+                            this.parsedContent = '';
+                        } else {
+                            this.isTyping = false;
+                            this.parsedContent = this.parseFaceContext(content);
+                        }
                     }
                 }"
-                x-init="
-                    const base64 = $el.dataset.messageContent;
-                    const binary = atob(base64);
-                    const bytes = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i++) {
-                        bytes[i] = binary.charCodeAt(i);
-                    }
-                    const content = new TextDecoder('utf-8').decode(bytes);
-
-                    // Check if this is a typing indicator
-                    if (content === '[TYPING_INDICATOR]') {
-                        isTyping = true;
-                        parsedContent = '';
-                    } else {
-                        parsedContent = parseFaceContext(content);
-                    }
-                ">
+                x-init="parseContent()"
+                x-effect="parseContent()">
                 {{-- Typing indicator --}}
                 <div x-show="isTyping" class="typing-indicator">
                     <span></span>
