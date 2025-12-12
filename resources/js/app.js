@@ -5,7 +5,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 // --- Minimal viewer class ---
 class JsonModelViewer3D {
   constructor(containerId = "viewer") {
+    console.log('[JsonModelViewer3D] Constructor called with containerId:', containerId);
     this.container = document.getElementById(containerId);
+    console.log('[JsonModelViewer3D] Container found:', this.container);
     if (!this.container) {
       console.error("[JsonModelViewer3D] container not found:", containerId);
       return;
@@ -133,7 +135,9 @@ class JsonModelViewer3D {
     this.animate();
 
     // Force initial resize after DOM is ready to ensure canvas takes full container width
-    setTimeout(() => this.onResize(), 100);
+    setTimeout(() => {
+      this.onResize();
+    }, 100);
   }
 
   // --- Environment Map pour reflets réalistes ---
@@ -672,7 +676,7 @@ class JsonModelViewer3D {
 
   // --- Helpers ---
   fitCamera(fill = 0.92) {
-    // fill = fraction de l’écran à occuper (0..1)
+    // fill = fraction de l'écran à occuper (0..1)
     const box = new THREE.Box3().setFromObject(this.modelGroup);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
@@ -1258,6 +1262,43 @@ class FaceSelectionManager {
     return Number.isFinite(n) ? n.toFixed(1) : "—";
   }
 }
+
+/**
+ * Utility to parse face context patterns and generate chip HTML
+ */
+class FaceContextParser {
+  static PATTERN = /\[FACE_CONTEXT:\s*(.+?)\]\]/g;
+
+  static parse(content) {
+    if (!content) return content;
+
+    return content.replace(this.PATTERN, (match, faceContext) => {
+      console.log('[FaceContextParser] Match found:', match);
+      console.log('[FaceContextParser] Captured context:', faceContext);
+      return this.createChipHTML(faceContext);
+    });
+  }
+
+  static createChipHTML(faceContext) {
+    // Extract face ID from context (e.g., "Face Selection: ID[JfB] ...")
+    const idMatch = faceContext.match(/ID\[([^\]]+)\]/);
+    console.log('[FaceContextParser] ID match:', idMatch);
+    const faceId = idMatch ? idMatch[1] : 'Unknown';
+    const label = `Face ${faceId}`;
+    console.log('[FaceContextParser] Final label:', label);
+
+    // Create chip HTML identical to composer chips
+    return `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm font-medium">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+      </svg>
+      <span>${label}</span>
+    </span>`;
+  }
+}
+
+// Export for use in Blade templates
+window.FaceContextParser = FaceContextParser;
 
 // --- Global wiring ---
 let JSON_VIEWER = null;
