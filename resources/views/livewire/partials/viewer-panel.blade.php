@@ -6,7 +6,7 @@
              class="absolute inset-0 z-50 flex items-start justify-center pt-8 bg-white">
             <div class="w-full max-w-4xl mx-4">
                 <div class="bg-gradient-to-r from-violet-600 to-indigo-800 px-6 py-4 text-white flex items-center justify-between rounded-t-2xl">
-                    <h3 class="text-lg font-semibold">Traitement en cours</h3>
+                    <h3 class="text-lg font-semibold">Création de votre fichier CAO en cours</h3>
                     <div class="text-sm" x-text="`${completedSteps} sur 5 étapes terminées`"></div>
                 </div>
 
@@ -81,12 +81,8 @@
 
         @if(!$objExportUrl && !$stepExportUrl)
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-8">
-                <div class="w-60 h-60 rounded-full bg-gradient-to-br from-violet-100 to-indigo-100 flex items-center justify-center mb-8">
-                    <svg class="w-32 h-32 text-violet-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                <div class="w-80 h-auto flex items-center justify-center mb-8">
+                    <img src="{{ asset('vendor/ai-cad/images/tolery-large-logo.svg') }}" alt="ToleryCAD" />
                 </div>
                 <p class="text-sm font-medium text-black text-center max-w-[310px]">
                     Votre pièce apparaîtra ici dès qu'elle sera prête.

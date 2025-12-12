@@ -82,7 +82,7 @@
                 @empty
                     <div class="text-center py-12">
                         <flux:icon.inbox class="size-12 text-gray-300 mx-auto mb-4" />
-                        <flux:text class="text-gray-500">Aucun fichier telecharge</flux:text>
+                        <flux:text class="text-gray-500">Aucun fichier téléchargé</flux:text>
                         <flux:text class="text-sm text-gray-400 mt-1">
                             Vos fichiers CAO apparaitront ici après téléchargement.
                         </flux:text>

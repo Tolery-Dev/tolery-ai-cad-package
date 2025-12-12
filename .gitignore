@@ -34,3 +34,5 @@ phpstan.neon
 # Compiled/Built files
 /dist
 **/dist/
+
+resources/assets/images/.DS_Store

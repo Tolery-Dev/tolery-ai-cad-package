@@ -17,7 +17,7 @@
                     </p>
                     <div class="text-xs font-normal leading-[1.4] text-soft-black space-y-2">
                         <p>
-                            Expliquez directement en langage naturel ce que vous souhaitez concevoir, notre intelligence artificielle transformera votre description en fichier CAO.
+                            Expliquer directement en langage naturel ce que vous souhaitez concevoir, notre intelligence artificielle transformera votre description en fichier CAO.
                         </p>
                         <p>Testez avec ces exemples :</p>
                     </div>
