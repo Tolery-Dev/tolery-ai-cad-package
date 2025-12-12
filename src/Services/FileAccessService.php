@@ -202,6 +202,64 @@ class FileAccessService
     }
 
     /**
+     * Enregistre le téléchargement d'une version spécifique (message)
+     */
+    public function recordMessageDownload(ChatTeam $team, Chat $chat, ChatMessage $message): void
+    {
+        // Vérifie que cette version n'a pas déjà été téléchargée
+        if (ChatDownload::isMessageDownloaded($team, $chat, $message)) {
+            Log::info('Message version already downloaded, skipping record', [
+                'team_id' => $team->id,
+                'chat_id' => $chat->id,
+                'message_id' => $message->id,
+            ]);
+
+            return;
+        }
+
+        // Crée le record de téléchargement pour cette version
+        ChatDownload::create([
+            'team_id' => $team->id,
+            'chat_id' => $chat->id,
+            'message_id' => $message->id,
+            'downloaded_at' => now(),
+        ]);
+
+        // Si abonné, incrémente le compteur
+        if ($team->subscribed()) {
+            $product = $team->getSubscriptionProduct();
+
+            if ($product) {
+                /** @var \Tolery\AiCad\Models\Limit|null $limit */
+                $limit = $team->limits()
+                    ->where('subscription_product_id', $product->id)
+                    ->where('end_date', '>', now())
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                if ($limit) {
+                    $limit->used_amount += 1;
+                    $limit->save();
+
+                    Log::info('Incremented subscription quota for message download', [
+                        'team_id' => $team->id,
+                        'chat_id' => $chat->id,
+                        'message_id' => $message->id,
+                        'used_amount' => $limit->used_amount,
+                        'files_allowed' => $product->files_allowed,
+                    ]);
+                }
+            }
+        }
+
+        Log::info('Message version download recorded', [
+            'team_id' => $team->id,
+            'chat_id' => $chat->id,
+            'message_id' => $message->id,
+        ]);
+    }
+
+    /**
      * Obtient le statut du quota pour affichage UI
      */
     public function getQuotaStatus(ChatTeam $team): ?array

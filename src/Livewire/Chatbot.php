@@ -726,6 +726,7 @@ class Chatbot extends Component
         if (! $team) {
             $this->canDownload = false;
             $this->downloadStatus = null;
+            $this->quotaStatus = null;
 
             return;
         }
@@ -735,6 +736,9 @@ class Chatbot extends Component
 
         $this->canDownload = $status['can_download'];
         $this->downloadStatus = $status;
+
+        // Met à jour le quota affiché dans le header
+        $this->quotaStatus = $fileAccessService->getQuotaStatus($team);
     }
 
     /**
@@ -1041,8 +1045,8 @@ class Chatbot extends Component
             return;
         }
 
-        // Enregistre le téléchargement (décompte le crédit)
-        $fileAccessService->recordChatDownload($team, $this->chat);
+        // Enregistre le téléchargement de cette version spécifique (décompte le crédit)
+        $fileAccessService->recordMessageDownload($team, $this->chat, $message);
         logger()->info('[CHATBOT] Version download recorded', ['version' => $message->getVersionLabel()]);
 
         // Met à jour le statut
