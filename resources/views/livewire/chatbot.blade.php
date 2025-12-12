@@ -112,6 +112,46 @@
         animation: bot-thinking 1.5s ease-in-out infinite, bot-pulse 2s ease-in-out infinite;
         filter: drop-shadow(0 0 8px rgba(123, 70, 228, 0.4));
     }
+
+    /* Typing indicator animation (3 dots) */
+    .typing-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 0;
+    }
+
+    .typing-indicator span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #6b7280;
+        animation: typing-dot 1.4s ease-in-out infinite;
+    }
+
+    .typing-indicator span:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typing-dot {
+        0%, 60%, 100% {
+            transform: translateY(0);
+            opacity: 0.7;
+        }
+        30% {
+            transform: translateY(-10px);
+            opacity: 1;
+        }
+    }
 </style>
 @endpush
 
@@ -332,9 +372,10 @@
                                     }
                                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-                                    $wire.saveStreamFinal(resp)
+                                    // Wait for message to be saved before refreshing
+                                    await $wire.saveStreamFinal(resp);
                                     this.markStep('complete', 'Completed', resp.chat_response || 'Completed', 100);
-                                    $wire.refreshFromDb();
+                                    await $wire.refreshFromDb();
                                     this.cancelable = true;
                                     setTimeout(() => this.close(), 800);
                                     window.dispatchEvent(new CustomEvent('cad-generation-ended'));

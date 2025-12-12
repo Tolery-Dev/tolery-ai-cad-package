@@ -242,12 +242,12 @@ class Chatbot extends Component
             ];
             $this->dispatch('tolery-chat-append');
 
-            // Placeholder assistant "AI thinking…"
-            $mAsst = $this->storeMessage('assistant', 'AI thinking…');
+            // Placeholder assistant with typing indicator
+            $mAsst = $this->storeMessage('assistant', '[TYPING_INDICATOR]');
             $mAsst->load('user'); // Charger la relation user
             $this->messages[] = [
                 'role' => 'assistant',
-                'content' => 'AI thinking…',
+                'content' => '[TYPING_INDICATOR]',
                 'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
                 'screenshot_url' => null,
                 'user' => $mAsst->user,
@@ -488,16 +488,13 @@ class Chatbot extends Component
 
         $asst->save();
 
-        // Refresh UI with updated message from DB
-        $this->refreshFromDb();
-
         // Déclenche le rafraîchissement UI (scroll + viewer) puis chargement des assets
         $this->dispatch('tolery-chat-append');
         $this->dispatchViewerEvents($asst);
     }
 
     /**
-     * Récupère le dernier message assistant inséré (placeholder "AI thinking…").
+     * Récupère le dernier message assistant inséré (placeholder avec typing indicator).
      */
     private function findLatestAssistantMessage(): ?ChatMessage
     {

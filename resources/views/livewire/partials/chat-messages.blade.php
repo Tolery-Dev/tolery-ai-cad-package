@@ -39,6 +39,7 @@
                 class="{{ $msg['role'] === 'user' ? 'inline-block border border-gray-100 bg-gray-50' : 'inline-block bg-gray-100 text-gray-900' }} rounded-xl px-3 py-2"
                 data-message-content="{{ base64_encode($msg['content'] ?? '') }}"
                 x-data="{
+                    isTyping: false,
                     parsedContent: '',
                     parseFaceContext(text) {
                         if (!text) return text;
@@ -68,9 +69,24 @@
                         bytes[i] = binary.charCodeAt(i);
                     }
                     const content = new TextDecoder('utf-8').decode(bytes);
-                    parsedContent = parseFaceContext(content);
-                "
-                x-html="parsedContent.replace(/\n/g, '<br>')">
+
+                    // Check if this is a typing indicator
+                    if (content === '[TYPING_INDICATOR]') {
+                        isTyping = true;
+                        parsedContent = '';
+                    } else {
+                        parsedContent = parseFaceContext(content);
+                    }
+                ">
+                {{-- Typing indicator --}}
+                <div x-show="isTyping" class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                {{-- Normal message content --}}
+                <div x-show="!isTyping" x-html="parsedContent.replace(/\n/g, '<br>')"></div>
             </div>
         </div>
     </article>
