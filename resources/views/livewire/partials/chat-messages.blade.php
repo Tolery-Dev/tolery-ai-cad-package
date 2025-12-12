@@ -37,8 +37,9 @@
             </div>
             <div
                 class="{{ $msg['role'] === 'user' ? 'inline-block border border-gray-100 bg-gray-50' : 'inline-block bg-gray-100 text-gray-900' }} rounded-xl px-3 py-2"
-                data-message-content="{{ base64_encode($msg['content'] ?? '') }}"
+                wire:key="message-content-{{ $msg['id'] ?? $loop->index }}"
                 x-data="{
+                    content: @js($msg['content'] ?? ''),
                     isTyping: false,
                     parsedContent: '',
                     parseFaceContext(text) {
@@ -61,26 +62,19 @@
                         });
                     },
                     parseContent() {
-                        const base64 = this.$el.dataset.messageContent;
-                        const binary = atob(base64);
-                        const bytes = new Uint8Array(binary.length);
-                        for (let i = 0; i < binary.length; i++) {
-                            bytes[i] = binary.charCodeAt(i);
-                        }
-                        const content = new TextDecoder('utf-8').decode(bytes);
-
                         // Check if this is a typing indicator
-                        if (content === '[TYPING_INDICATOR]') {
+                        if (this.content === '[TYPING_INDICATOR]') {
                             this.isTyping = true;
                             this.parsedContent = '';
                         } else {
                             this.isTyping = false;
-                            this.parsedContent = this.parseFaceContext(content);
+                            this.parsedContent = this.parseFaceContext(this.content);
                         }
                     }
                 }"
                 x-init="parseContent()"
-                x-effect="parseContent()">
+                x-effect="parseContent()"
+                @tolery-chat-append.window="content = @js($msg['content'] ?? ''); parseContent();">
                 {{-- Typing indicator --}}
                 <div x-show="isTyping" class="typing-indicator">
                     <span></span>
