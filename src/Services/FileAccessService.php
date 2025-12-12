@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Services;
 use Illuminate\Support\Facades\Log;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
+use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\SubscriptionProduct;
