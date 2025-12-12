@@ -488,6 +488,9 @@ class Chatbot extends Component
 
         $asst->save();
 
+        // Refresh UI with updated message from DB
+        $this->refreshFromDb();
+
         // Déclenche le rafraîchissement UI (scroll + viewer) puis chargement des assets
         $this->dispatch('tolery-chat-append');
         $this->dispatchViewerEvents($asst);

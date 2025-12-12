@@ -297,10 +297,15 @@
                                 if (payload.final_response) {
                                     const resp = payload.final_response || {};
 
+                                    // Extract session_id from various possible locations
+                                    const extractedSessionId = resp.session_id || payload.session_id || sessionId;
+
                                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                                     console.log('[AICAD] ✅ GENERATION COMPLETED - Final Response Received');
                                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                                    console.log('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
+                                    console.log('[AICAD] 🔑 Session ID:', extractedSessionId || 'N/A');
+                                    console.log('[AICAD] 🔍 Full payload keys:', Object.keys(payload));
+                                    console.log('[AICAD] 🔍 Response keys:', Object.keys(resp));
                                     if (resp.obj_export) {
                                         console.log('[AICAD] 📦 OBJ File:', resp.obj_export);
                                     }
