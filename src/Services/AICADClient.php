@@ -40,17 +40,20 @@ readonly class AICADClient
         $fullUrl = $url.'?'.http_build_query($queryParams);
         $bearerToken = config('ai-cad.api.key', '');
 
-        Log::info('[AICAD] AICADClient: Calling external API with session_id', [
-            'url' => $url,
-            'session_id' => $projectId,
-            'session_id_provided' => $projectId !== null,
-            'is_edit_request' => $isEditRequest,
-            'timeout' => $timeoutSec,
-            'has_token' => ! empty($bearerToken),
-        ]);
+        Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Log::info('[AICAD] 🚀 NEW CAD GENERATION REQUEST');
+        Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Log::info('[AICAD] 📍 API Endpoint: '.$fullUrl);
+        Log::info('[AICAD] 🔑 Session ID: '.($projectId ?? 'NEW SESSION (no ID provided)'));
+        Log::info('[AICAD] 📝 Message: '.substr($message, 0, 150).(strlen($message) > 150 ? '...' : ''));
+        Log::info('[AICAD] ✏️  Is Edit Request: '.($isEditRequest ? 'YES' : 'NO'));
+        Log::info('[AICAD] ⏱️  Timeout: '.$timeoutSec.'s');
+        Log::info('[AICAD] 🔐 Auth Token: '.(! empty($bearerToken) ? 'Present ('.strlen($bearerToken).' chars)' : 'MISSING'));
+        Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         $eventCount = 0;
         $bytesReceived = 0;
+        $buffer = ''; // Buffer to parse SSE events for debugging
 
         // Initialize curl
         $ch = curl_init($fullUrl);
@@ -63,7 +66,7 @@ readonly class AICADClient
             CURLOPT_TIMEOUT => $timeoutSec,
             CURLOPT_CONNECTTIMEOUT => 30,
             CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_WRITEFUNCTION => function ($ch, $data) use (&$eventCount, &$bytesReceived) {
+            CURLOPT_WRITEFUNCTION => function ($ch, $data) use (&$eventCount, &$bytesReceived, &$buffer, $projectId) {
                 $length = strlen($data);
                 $bytesReceived += $length;
 
@@ -77,7 +80,60 @@ readonly class AICADClient
 
                     // Log every 10th event
                     if ($eventCount % 10 === 0) {
-                        Log::debug("AICADClient: Streamed {$eventCount} events ({$bytesReceived} bytes)");
+                        Log::debug("[AICAD] 📊 Progress: {$eventCount} events streamed ({$bytesReceived} bytes)");
+                    }
+                }
+
+                // Parse SSE events to extract final_response URLs
+                $buffer .= $data;
+                while (($pos = strpos($buffer, "\n\n")) !== false) {
+                    $packet = substr($buffer, 0, $pos);
+                    $buffer = substr($buffer, $pos + 2);
+
+                    // Look for data: lines
+                    foreach (explode("\n", $packet) as $line) {
+                        $line = ltrim($line);
+                        if (str_starts_with($line, 'data:')) {
+                            $json = trim(substr($line, 5));
+                            if ($json !== '' && $json !== '[DONE]') {
+                                $payload = json_decode($json, true);
+
+                                // Log final_response with file URLs
+                                if (is_array($payload) && isset($payload['final_response'])) {
+                                    $final = $payload['final_response'];
+                                    Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                    Log::info('[AICAD] ✅ GENERATION COMPLETED - Final Response Received');
+                                    Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                    Log::info('[AICAD] 🔑 Session ID: '.($projectId ?? 'N/A'));
+
+                                    if (isset($final['obj_export'])) {
+                                        Log::info('[AICAD] 📦 OBJ File: '.$final['obj_export']);
+                                    }
+                                    if (isset($final['step_export'])) {
+                                        Log::info('[AICAD] 📐 STEP File: '.$final['step_export']);
+                                    }
+                                    if (isset($final['tessellated_export']) && $final['tessellated_export']) {
+                                        Log::info('[AICAD] 🔺 Tessellated File: '.$final['tessellated_export']);
+                                    }
+                                    if (isset($final['attribute_and_transientid_map']) && $final['attribute_and_transientid_map']) {
+                                        Log::info('[AICAD] 🗺️  Attribute Map: '.$final['attribute_and_transientid_map']);
+                                    }
+                                    if (isset($final['technical_drawing']) && $final['technical_drawing']) {
+                                        Log::info('[AICAD] 📄 Technical Drawing: '.$final['technical_drawing']);
+                                    }
+                                    if (isset($final['screenshot']) && $final['screenshot']) {
+                                        Log::info('[AICAD] 📸 Screenshot: '.$final['screenshot']);
+                                    }
+                                    if (isset($final['manufacturing_errors']) && ! empty($final['manufacturing_errors'])) {
+                                        Log::warning('[AICAD] ⚠️  Manufacturing Errors: '.json_encode($final['manufacturing_errors']));
+                                    }
+                                    if (isset($final['chat_response'])) {
+                                        Log::info('[AICAD] 💬 Chat Response: '.substr($final['chat_response'], 0, 200).(strlen($final['chat_response']) > 200 ? '...' : ''));
+                                    }
+                                    Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -98,12 +154,17 @@ readonly class AICADClient
 
         // Check for errors
         if (! $success || $curlErrno !== 0) {
-            Log::error('AICADClient: Curl stream failed', [
-                'error' => $curlError,
-                'errno' => $curlErrno,
-                'http_code' => $httpCode,
-                'bytes_received' => $bytesReceived,
-            ]);
+            Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            Log::error('[AICAD] ❌ CURL STREAM FAILED');
+            Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            Log::error('[AICAD] 🔑 Session ID: '.($projectId ?? 'N/A'));
+            Log::error('[AICAD] 📍 API Endpoint: '.$fullUrl);
+            Log::error('[AICAD] ⚠️  Error: '.$curlError);
+            Log::error('[AICAD] 🔢 Error Code: '.$curlErrno);
+            Log::error('[AICAD] 📊 HTTP Code: '.$httpCode);
+            Log::error('[AICAD] 📦 Bytes Received: '.$bytesReceived);
+            Log::error('[AICAD] 📨 Events Received: '.$eventCount);
+            Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
             echo 'data: '.json_encode([
                 'error' => true,
@@ -115,10 +176,15 @@ readonly class AICADClient
         }
 
         if ($httpCode !== 200) {
-            Log::error('AICADClient: Non-200 HTTP response', [
-                'http_code' => $httpCode,
-                'bytes_received' => $bytesReceived,
-            ]);
+            Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            Log::error('[AICAD] ❌ NON-200 HTTP RESPONSE');
+            Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            Log::error('[AICAD] 🔑 Session ID: '.($projectId ?? 'N/A'));
+            Log::error('[AICAD] 📍 API Endpoint: '.$fullUrl);
+            Log::error('[AICAD] 📊 HTTP Code: '.$httpCode);
+            Log::error('[AICAD] 📦 Bytes Received: '.$bytesReceived);
+            Log::error('[AICAD] 📨 Events Received: '.$eventCount);
+            Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
             echo 'data: '.json_encode([
                 'error' => true,
@@ -129,11 +195,14 @@ readonly class AICADClient
             throw new \RuntimeException("API returned status {$httpCode}");
         }
 
-        Log::info('AICADClient: Curl stream completed successfully', [
-            'events' => $eventCount,
-            'bytes_received' => $bytesReceived,
-            'http_code' => $httpCode,
-        ]);
+        Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Log::info('[AICAD] ✅ STREAM COMPLETED SUCCESSFULLY');
+        Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Log::info('[AICAD] 🔑 Session ID: '.($projectId ?? 'N/A'));
+        Log::info('[AICAD] 📨 Total Events: '.$eventCount);
+        Log::info('[AICAD] 📦 Total Bytes: '.number_format($bytesReceived).' bytes ('.round($bytesReceived / 1024, 2).' KB)');
+        Log::info('[AICAD] 📊 HTTP Code: '.$httpCode);
+        Log::info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
 
     /**

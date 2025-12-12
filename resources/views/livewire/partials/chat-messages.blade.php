@@ -37,8 +37,10 @@
             </div>
             <div
                 class="{{ $msg['role'] === 'user' ? 'inline-block border border-gray-100 bg-gray-50' : 'inline-block bg-gray-100 text-gray-900' }} rounded-xl px-3 py-2"
-                data-message-content="{{ base64_encode($msg['content'] ?? '') }}"
+                wire:key="message-content-{{ $msg['id'] ?? $loop->index }}"
                 x-data="{
+                    content: @js($msg['content'] ?? ''),
+                    isTyping: false,
                     parsedContent: '',
                     parseFaceContext(text) {
                         if (!text) return text;
@@ -58,19 +60,30 @@
                                 `<span>${label}</span>` +
                                 `</span>`;
                         });
+                    },
+                    parseContent() {
+                        // Check if this is a typing indicator
+                        if (this.content === '[TYPING_INDICATOR]') {
+                            this.isTyping = true;
+                            this.parsedContent = '';
+                        } else {
+                            this.isTyping = false;
+                            this.parsedContent = this.parseFaceContext(this.content);
+                        }
                     }
                 }"
-                x-init="
-                    const base64 = $el.dataset.messageContent;
-                    const binary = atob(base64);
-                    const bytes = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i++) {
-                        bytes[i] = binary.charCodeAt(i);
-                    }
-                    const content = new TextDecoder('utf-8').decode(bytes);
-                    parsedContent = parseFaceContext(content);
-                "
-                x-html="parsedContent.replace(/\n/g, '<br>')">
+                x-init="parseContent()"
+                x-effect="parseContent()"
+                @tolery-chat-append.window="content = @js($msg['content'] ?? ''); parseContent();">
+                {{-- Typing indicator --}}
+                <div x-show="isTyping" class="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                {{-- Normal message content --}}
+                <div x-show="!isTyping" x-html="parsedContent.replace(/\n/g, '<br>')"></div>
             </div>
         </div>
     </article>

@@ -242,12 +242,12 @@ class Chatbot extends Component
             ];
             $this->dispatch('tolery-chat-append');
 
-            // Placeholder assistant "AI thinking…"
-            $mAsst = $this->storeMessage('assistant', 'AI thinking…');
+            // Placeholder assistant with typing indicator
+            $mAsst = $this->storeMessage('assistant', '[TYPING_INDICATOR]');
             $mAsst->load('user'); // Charger la relation user
             $this->messages[] = [
                 'role' => 'assistant',
-                'content' => 'AI thinking…',
+                'content' => '[TYPING_INDICATOR]',
                 'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
                 'screenshot_url' => null,
                 'user' => $mAsst->user,
@@ -488,13 +488,16 @@ class Chatbot extends Component
 
         $asst->save();
 
+        // Rafraîchit les messages depuis la DB pour mettre à jour la vue (et supprimer le typing indicator)
+        $this->messages = $this->mapDbMessagesToArray();
+
         // Déclenche le rafraîchissement UI (scroll + viewer) puis chargement des assets
         $this->dispatch('tolery-chat-append');
         $this->dispatchViewerEvents($asst);
     }
 
     /**
-     * Récupère le dernier message assistant inséré (placeholder "AI thinking…").
+     * Récupère le dernier message assistant inséré (placeholder avec typing indicator).
      */
     private function findLatestAssistantMessage(): ?ChatMessage
     {
@@ -723,6 +726,7 @@ class Chatbot extends Component
         if (! $team) {
             $this->canDownload = false;
             $this->downloadStatus = null;
+            $this->quotaStatus = null;
 
             return;
         }
@@ -732,6 +736,9 @@ class Chatbot extends Component
 
         $this->canDownload = $status['can_download'];
         $this->downloadStatus = $status;
+
+        // Met à jour le quota affiché dans le header
+        $this->quotaStatus = $fileAccessService->getQuotaStatus($team);
     }
 
     /**
@@ -1021,7 +1028,7 @@ class Chatbot extends Component
         logger()->info('[CHATBOT] Team found for version download', ['team_id' => $team->id]);
 
         $fileAccessService = app(FileAccessService::class);
-        $status = $fileAccessService->canDownloadChat($team, $this->chat);
+        $status = $fileAccessService->canDownloadMessage($team, $this->chat, $message);
 
         logger()->info('[CHATBOT] Download permission checked for version', [
             'can_download' => $status['can_download'],
@@ -1031,15 +1038,16 @@ class Chatbot extends Component
 
         if (! $status['can_download']) {
             logger()->warning('[CHATBOT] Download not allowed for version, showing purchase modal');
-            // Affiche le modal d'achat/abonnement
+            // Affiche le modal d'achat/abonnement avec les options
             $this->showPurchaseModal = true;
             $this->downloadStatus = $status;
 
             return;
         }
 
-        // Enregistre le téléchargement (décompte le crédit)
-        $fileAccessService->recordChatDownload($team, $this->chat);
+        // Enregistre le téléchargement de cette version spécifique (décompte 1 quota si jamais téléchargée)
+        // Chaque version téléchargée consomme 1 quota. Re-télécharger la même version ne coûte rien.
+        $fileAccessService->recordMessageDownload($team, $this->chat, $message);
         logger()->info('[CHATBOT] Version download recorded', ['version' => $message->getVersionLabel()]);
 
         // Met à jour le statut

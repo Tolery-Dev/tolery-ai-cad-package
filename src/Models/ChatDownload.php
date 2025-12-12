@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $team_id
  * @property int $chat_id
+ * @property int|null $message_id
  * @property \Carbon\Carbon $downloaded_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
@@ -18,6 +19,7 @@ class ChatDownload extends Model
     protected $fillable = [
         'team_id',
         'chat_id',
+        'message_id',
         'downloaded_at',
     ];
 
@@ -38,10 +40,30 @@ class ChatDownload extends Model
         return $this->belongsTo(Chat::class);
     }
 
+    public function message(): BelongsTo
+    {
+        return $this->belongsTo(ChatMessage::class, 'message_id');
+    }
+
+    /**
+     * Vérifie si un chat complet a déjà été téléchargé (sans version spécifique)
+     */
     public static function isDownloaded(ChatTeam $team, Chat $chat): bool
     {
         return static::where('team_id', $team->id)
             ->where('chat_id', $chat->id)
+            ->whereNull('message_id')
+            ->exists();
+    }
+
+    /**
+     * Vérifie si une version spécifique (message) a déjà été téléchargée
+     */
+    public static function isMessageDownloaded(ChatTeam $team, Chat $chat, ChatMessage $message): bool
+    {
+        return static::where('team_id', $team->id)
+            ->where('chat_id', $chat->id)
+            ->where('message_id', $message->id)
             ->exists();
     }
 }
