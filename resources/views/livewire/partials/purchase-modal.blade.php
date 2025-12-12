@@ -6,9 +6,7 @@
                 @if($downloadStatus && $downloadStatus['reason'] === 'no_subscription')
                     Vous devez être abonné ou acheter ce fichier pour le télécharger.
                 @elseif($downloadStatus && $downloadStatus['reason'] === 'quota_exceeded')
-                    Votre quota mensuel est épuisé ({{ $downloadStatus['total_quota'] }}/{{ $downloadStatus['total_quota'] }} fichiers utilisés).
-                    <br>
-                    <span class="text-violet-600 font-medium">Passez à un plan supérieur ou achetez ce fichier individuellement.</span>
+                    Votre quota mensuel est épuisé ({{ $downloadStatus['total_quota'] }}/{{ $downloadStatus['total_quota'] }} fichiers).
                 @else
                     Vous n'avez pas accès à ce téléchargement.
                 @endif
@@ -46,11 +44,7 @@
                             variant="primary"
                             color="purple"
                             class="mt-4 w-full">
-                            @if($downloadStatus && $downloadStatus['reason'] === 'quota_exceeded')
-                                Passer à un plan supérieur
-                            @else
-                                Voir les plans
-                            @endif
+                            Voir les plans
                         </flux:button>
                     </div>
                 </flux:card>

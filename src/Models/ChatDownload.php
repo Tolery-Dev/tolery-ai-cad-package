@@ -46,24 +46,13 @@ class ChatDownload extends Model
     }
 
     /**
-     * Vérifie si un chat complet a déjà été téléchargé (sans version spécifique)
+     * Vérifie si un chat a déjà été téléchargé (n'importe quelle version)
+     * Note: Peu importe la version téléchargée, le chat est marqué comme téléchargé
      */
     public static function isDownloaded(ChatTeam $team, Chat $chat): bool
     {
         return static::where('team_id', $team->id)
             ->where('chat_id', $chat->id)
-            ->whereNull('message_id')
-            ->exists();
-    }
-
-    /**
-     * Vérifie si une version spécifique (message) a déjà été téléchargée
-     */
-    public static function isMessageDownloaded(ChatTeam $team, Chat $chat, ChatMessage $message): bool
-    {
-        return static::where('team_id', $team->id)
-            ->where('chat_id', $chat->id)
-            ->where('message_id', $message->id)
             ->exists();
     }
 }
