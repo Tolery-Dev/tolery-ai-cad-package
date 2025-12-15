@@ -75,17 +75,12 @@ class Chatbot extends Component
 
     public function mount(): void
     {
-        // Si nouveau chat, on s’assure qu’il existe en base
+        // Si le chat n'existe pas encore (ghost chat), ne rien faire
+        // Il sera créé au premier message envoyé
         if (! $this->chat->exists) {
-            $chat = new Chat;
-            /** @var ChatUser $user */
-            $user = auth()->user();
-            $chat->team()->associate($user->team);
-            $chat->user()->associate($user);
-            $chat->save();
-            $chat->name ??= 'Ma nouvelle pièce';
-            $chat->save();
-            $this->chat = $chat;
+            $this->messages = [];
+
+            return;
         }
 
         if ($this->chat->name) {
@@ -206,6 +201,33 @@ class Chatbot extends Component
 
         $this->validate();
 
+        // Si le chat n'existe pas encore, le créer MAINTENANT
+        if (! $this->chat->exists) {
+            // S'assurer que les IDs team et user sont bien présents
+            // (Livewire peut perdre les attributs non sauvegardés lors de la désérialisation)
+            if (! $this->chat->team_id || ! $this->chat->user_id) {
+                /** @var ChatUser $user */
+                $user = auth()->user();
+                $this->chat->team()->associate($user->team);
+                $this->chat->user()->associate($user);
+            }
+
+            $this->chat->name = 'Ma nouvelle pièce';
+            $this->chat->save(); // ← Création en DB au premier message
+
+            Log::info('[AICAD] Lazy chat created', [
+                'chat_id' => $this->chat->id,
+                'user_id' => $this->chat->user_id,
+            ]);
+
+            // Mettre à jour la session avec l'ID du chat créé
+            session()->put('pending_chat', [
+                'team_id' => $this->chat->team_id,
+                'user_id' => $this->chat->user_id,
+                'chat_id' => $this->chat->id, // Stocker l'ID du chat créé
+            ]);
+        }
+
         $rateKey = 'aicad:chat:'.($this->chat->id ?: request()->session()->getId());
         if ($limiter->tooManyAttempts($rateKey, $this->ratePerMinute)) {
             $wait = $limiter->availableIn($rateKey);
@@ -244,9 +266,8 @@ class Chatbot extends Component
             $userText = trim($this->message);
             $this->message = '';
 
-            // Déterminer si c'est une édition (au moins un assistant déjà existant avant ce tour)
-            $hasAnyAssistant = $this->chat->messages()->where('role', ChatMessage::ROLE_ASSISTANT)->exists();
-            $isEdit = $hasAnyAssistant; // false la toute première fois, true ensuite
+            // Déterminer si c'est une édition (basé sur has_generated_piece)
+            $isEdit = $this->shouldUseEditMode();
 
             // Persiste + UI (utilisateur)
             $mUser = $this->storeMessage('user', $userText);
@@ -295,6 +316,21 @@ class Chatbot extends Component
             optional($lock)->release();
             $this->dispatch('tolery-chat-append');
         }
+    }
+
+    /**
+     * Détermine si la requête doit être envoyée en mode édition
+     * Retourne true si une pièce a déjà été générée avec succès
+     */
+    protected function shouldUseEditMode(): bool
+    {
+        // Si le chat a déjà généré une pièce, toujours en mode édition
+        if ($this->chat->has_generated_piece) {
+            return true;
+        }
+
+        // Sinon, première génération
+        return false;
     }
 
     // Note: Les handlers chatObjectClick et chatObjectClickReal ont été remplacés
@@ -505,6 +541,23 @@ class Chatbot extends Component
         logger()->info('[AICAD] final_response saved', ['chat_id' => $this->chat->id, 'final' => $final]);
 
         $asst->save();
+
+        // Détecter si c'est une génération réussie (présence de fichiers exportés)
+        $isSuccessfulGeneration =
+            !empty($objUrl) ||
+            !empty($stepUrl) ||
+            !empty($tessUrl);
+
+        // Si génération réussie et pas encore marquée, marquer maintenant
+        if ($isSuccessfulGeneration && !$this->chat->has_generated_piece) {
+            $this->chat->has_generated_piece = true;
+            $this->chat->save();
+
+            Log::info('[AICAD] First piece generated successfully', [
+                'chat_id' => $this->chat->id,
+                'session_id' => $final['session_id'] ?? null,
+            ]);
+        }
 
         // Rafraîchit les messages depuis la DB pour mettre à jour la vue (et supprimer le typing indicator)
         $this->messages = $this->mapDbMessagesToArray();

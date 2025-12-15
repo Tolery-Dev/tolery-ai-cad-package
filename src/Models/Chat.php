@@ -18,6 +18,7 @@ use Tolery\AiCad\Enum\MaterialFamily;
  * @property int $team_id
  * @property string|null $name
  * @property MaterialFamily|null $material_family
+ * @property bool $has_generated_piece
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -30,11 +31,13 @@ class Chat extends Model
 
     /**
      * @var array{
-     *     'material_family': 'Tolery\AiCad\Enum\MaterialFamily'
+     *     'material_family': 'Tolery\AiCad\Enum\MaterialFamily',
+     *     'has_generated_piece': 'boolean'
      * }
      */
     protected $casts = [
         'material_family' => MaterialFamily::class,
+        'has_generated_piece' => 'boolean',
     ];
 
     /**
