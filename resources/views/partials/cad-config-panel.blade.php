@@ -22,7 +22,7 @@
     >
         <div class="flex items-center gap-2 pointer-events-none">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
-            <h3 class="text-base font-bold text-violet-700">Configurez votre fichier</h3>
+            <h3 class="text-base font-bold text-violet-700">Configurez votre pièce CAO</h3>
         </div>
 
         <div class="pointer-events-none">
@@ -55,24 +55,190 @@
                 </flux:callout.text>
             </flux:callout>
 
-            {{-- Sélection (MOVED UP - Priority 1) --}}
+            {{-- Sélection avec types de faces --}}
             <div class="space-y-2">
-                <div class="text-base font-semibold text-gray-900">Sélection</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-base font-semibold text-gray-900">Sélection</div>
+                    <button
+                        x-show="selection && !editMode"
+                        @click="enableEditMode()"
+                        class="text-xs text-violet-600 hover:text-violet-700 font-medium">
+                        Éditer
+                    </button>
+                    <div x-show="editMode" class="flex gap-2">
+                        <button @click="cancelEdit()" class="text-xs text-gray-600 hover:text-gray-700">
+                            Annuler
+                        </button>
+                        <button @click="saveEdits()" class="text-xs text-violet-600 hover:text-violet-700 font-medium">
+                            Modifier
+                        </button>
+                    </div>
+                </div>
+
                 <template x-if="selection">
-                    <div class="text-sm space-y-1 rounded-xl bg-violet-50/60 border border-violet-100 p-3">
-                        <div>
-                            <span class="text-gray-500">Face ID</span> :
-                            <span class="font-medium" x-text="selection.realFaceId || selection.id"></span>
+                    <div class="text-sm space-y-2 rounded-xl bg-violet-50/60 border border-violet-100 p-3">
+                        {{-- Badge type --}}
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                  :class="{
+                                      'bg-blue-100 text-blue-700': selection.faceType === 'planar',
+                                      'bg-green-100 text-green-700': selection.faceType === 'cylindrical',
+                                      'bg-orange-100 text-orange-700': selection.faceType === 'hole',
+                                      'bg-red-100 text-red-700': selection.faceType === 'thread',
+                                  }"
+                                  x-text="selection.metrics?.displayType || 'Face'">
+                            </span>
+                            <span class="text-gray-500 text-xs">ID: </span>
+                            <span class="font-medium text-xs" x-text="selection.realFaceId || selection.id"></span>
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div><span class="text-gray-500">L</span> <span class="font-medium" x-text="fmt(selection.bbox?.x)"></span></div>
-                            <div><span class="text-gray-500">l</span> <span class="font-medium" x-text="fmt(selection.bbox?.y)"></span></div>
-                            <div><span class="text-gray-500">h</span> <span class="font-medium" x-text="fmt(selection.bbox?.z)"></span></div>
-                        </div>
-                        <div><span class="text-gray-500">Aire</span> : <span class="font-medium" x-text="fmtArea(selection.area)"></span></div>
-                        <div class="text-xs text-gray-500">Centroïde : <span x-text="coord(selection.centroid)"></span></div>
+
+                        {{-- Face PLANE --}}
+                        <template x-if="selection.faceType === 'planar'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Longueur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.length)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.length"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Largeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.width)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.width"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Épaisseur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.thickness)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.thickness"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Aire</span>
+                                    <span class="font-medium" x-text="fmtArea(selection.metrics.area)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- Face CYLINDRIQUE (Cylindre ou Bord arrondi) --}}
+                        <template x-if="selection.faceType === 'cylindrical'">
+                            <div class="space-y-1.5">
+                                {{-- Afficher Rayon pour les bords arrondis, Diamètre pour les cylindres --}}
+                                <template x-if="selection.metrics.displayType === 'Bord arrondi'">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Rayon</span>
+                                        <template x-if="!editMode">
+                                            <span class="font-medium" x-text="fmt(selection.metrics.radius)"></span>
+                                        </template>
+                                        <template x-if="editMode">
+                                            <input type="number" step="0.01" x-model="edits.radius"
+                                                   class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <template x-if="selection.metrics.displayType === 'Cylindre'">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Diamètre</span>
+                                        <template x-if="!editMode">
+                                            <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
+                                        </template>
+                                        <template x-if="editMode">
+                                            <input type="number" step="0.01" x-model="edits.diameter"
+                                                   class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Profondeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.depth"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Aire</span>
+                                    <span class="font-medium" x-text="fmtArea(selection.metrics.area)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- PERCAGE --}}
+                        <template x-if="selection.faceType === 'hole'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Diamètre</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.diameter"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Profondeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.depth"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Position : <span x-text="coord(selection.metrics.position)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- TARAUDAGE --}}
+                        <template x-if="selection.faceType === 'thread'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Diamètre</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.diameter"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Profondeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.depth"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Position : <span x-text="coord(selection.metrics.position)"></span>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </template>
+
                 <template x-if="!selection">
                     <div class="text-sm text-gray-500 rounded-xl bg-gray-50 border border-gray-200 p-3">
                         Aucune face sélectionnée.
@@ -108,23 +274,36 @@
                 </div>
             </div>
 
-            {{-- Afficher les contours --}}
-            <div class="flex items-center justify-between">
-                <div class="text-base font-medium text-gray-900">Afficher les contours</div>
-                <flux:switch x-model="showEdges" @change="dispatchEdges()"/>
+            <flux:separator/>
+
+            {{-- Matériau --}}
+            <div class="space-y-3">
+                <div class="text-base font-semibold text-gray-900">Matériau</div>
+
+                <flux:radio.group variant="segmented" x-model="materialFamily" @change="saveMaterialChoice()">
+                    @foreach (\Tolery\AiCad\Enum\MaterialFamily::cases() as $material)
+                        <flux:radio :value="$material->value" :label="$material->label()" />
+                    @endforeach
+                </flux:radio.group>
+
+                <div class="text-xs text-gray-500 italic">
+                    Le rendu 3D reste métallique. Votre choix est envoyé à l'API lors de la génération.
+                </div>
             </div>
 
             <flux:separator/>
 
             {{-- Outil de mesure --}}
-            <div class="flex items-center justify-between">
-                <div>
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
                     <div class="text-base font-medium text-gray-900">Outil de mesure</div>
-                    <div class="text-xs text-gray-500">Cliquez deux points pour afficher la distance</div>
+                    <flux:button @click="toggleMeasure()" size="sm">
+                        <span x-text="measureEnabled ? 'Désactiver' : 'Activer'"></span>
+                    </flux:button>
                 </div>
-                <flux:button @click="toggleMeasure()" size="sm">
-                    <span x-text="measureEnabled ? 'Désactiver' : 'Activer'"></span>
-                </flux:button>
+                <div class="text-sm text-gray-500 pl-1">
+                    Cliquez sur deux points pour afficher la distance
+                </div>
             </div>
 
             {{-- Barre d’actions rapide --}}
@@ -243,9 +422,25 @@
                 showDetails: true,
                 measureEnabled: false,
 
+                // Material choice (synced with Livewire)
+                materialFamily: @js($chat->material_family?->value ?? 'STEEL'),
+
                 // State alimenté par app.js (events window)
                 stats: {sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm'},
                 selection: null,
+
+                // Edit mode
+                editMode: false,
+                edits: {
+                    length: null,
+                    width: null,
+                    thickness: null,
+                    radius: null,
+                    diameter: null,
+                    depth: null,
+                    pitch: null
+                },
+
                 // position (transform translate)
                 x: 0, y: 0,
                 startX: 0, startY: 0,   // position souris au début du drag
@@ -262,7 +457,6 @@
 
                 // Data
                 partName: 'Pièce 001',
-                showEdges: false,
 
                 // Exports disponibles (initialisés depuis Livewire puis mis à jour par événements)
                 exports: {
@@ -391,9 +585,6 @@
                 },
 
                 // Features
-                dispatchEdges() {
-                    Livewire.dispatch('toggleShowEdges', {show: this.showEdges, threshold: 45, color: '#000000'})
-                },
                 toggleMeasure() {
                     this.measureEnabled = !this.measureEnabled
                     Livewire.dispatch('toggleMeasureMode', {enabled: this.measureEnabled})
@@ -402,6 +593,73 @@
                 recenter() {
                   // Demande au viewer de se recentrer
                   this.$dispatch('viewer-fit');
+                },
+                saveMaterialChoice() {
+                    Livewire.dispatch('updateMaterialFamily', {
+                        materialFamily: this.materialFamily
+                    });
+                },
+                enableEditMode() {
+                    this.editMode = true;
+                    // Initialize edits from current selection
+                    const m = this.selection.metrics;
+                    this.edits = {
+                        length: m.length || null,
+                        width: m.width || null,
+                        thickness: m.thickness || null,
+                        radius: m.radius || null,
+                        diameter: m.diameter || null,
+                        depth: m.depth || null,
+                        pitch: m.pitch || null,
+                    };
+                },
+                cancelEdit() {
+                    this.editMode = false;
+                    this.edits = {
+                        length: null, width: null, thickness: null,
+                        radius: null, diameter: null, depth: null, pitch: null
+                    };
+                },
+                saveEdits() {
+                    // Collect all changes
+                    const changes = [];
+                    const m = this.selection.metrics;
+                    const displayType = m.displayType || 'Face';
+                    const faceId = this.selection.realFaceId || this.selection.id;
+
+                    // Compare original vs edited values
+                    if (this.edits.length && this.edits.length !== m.length) {
+                        changes.push(`Longueur: ${this.fmt(m.length)} → ${this.fmt(this.edits.length)}`);
+                    }
+                    if (this.edits.width && this.edits.width !== m.width) {
+                        changes.push(`Largeur: ${this.fmt(m.width)} → ${this.fmt(this.edits.width)}`);
+                    }
+                    if (this.edits.thickness && this.edits.thickness !== m.thickness) {
+                        changes.push(`Épaisseur: ${this.fmt(m.thickness)} → ${this.fmt(this.edits.thickness)}`);
+                    }
+                    if (this.edits.diameter && this.edits.diameter !== m.diameter) {
+                        changes.push(`Diamètre: ${this.fmt(m.diameter)} → ${this.fmt(this.edits.diameter)}`);
+                    }
+                    if (this.edits.depth && this.edits.depth !== m.depth) {
+                        changes.push(`Profondeur: ${this.fmt(m.depth)} → ${this.fmt(this.edits.depth)}`);
+                    }
+                    if (this.edits.radius && this.edits.radius !== m.radius) {
+                        changes.push(`Rayon: ${this.fmt(m.radius)} → ${this.fmt(this.edits.radius)}`);
+                    }
+
+                    if (changes.length === 0) {
+                        alert('Aucune modification détectée');
+                        return;
+                    }
+
+                    // Build message for API
+                    const message = `Régénérer une pièce avec ces mesures: ${displayType} (ID: ${faceId}): ${changes.join(' ; ')}`;
+
+                    // Send to Livewire
+                    Livewire.dispatch('sendRegenerationRequest', { message });
+
+                    // Reset edit mode
+                    this.cancelEdit();
                 },
             }
         }

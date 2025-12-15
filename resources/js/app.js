@@ -866,9 +866,26 @@ class JsonModelViewer3D {
       ac.subVectors(c, a);
       areaMm2 += ab.cross(ac).length() * 0.5;
     }
+
+    // Collect vertices for face type detection
+    const vertices = [];
+    for (let i = fg.start; i < fg.start + fg.count; i++) {
+      vertices.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
+    }
+
+    // Detect face type and compute metrics
+    const faceType = this.detectFaceType(fg, this.mesh.geometry);
+    const bbox = {
+      min: new THREE.Vector3(minX, minY, minZ),
+      max: new THREE.Vector3(maxX, maxY, maxZ)
+    };
+    const metrics = this.computeFaceMetrics(faceType, vertices, bbox, areaMm2);
+
     const detail = {
       id: faceId,
       realFaceId: realId,
+      faceType: faceType,          // NOUVEAU
+      metrics: metrics,             // NOUVEAU
       centroid,
       triangles: Math.floor(fg.count / 3),
       unit: "mm",
@@ -881,6 +898,242 @@ class JsonModelViewer3D {
     };
     window.Alpine?.dispatchEvent?.("cad-selection", detail) ||
       window.dispatchEvent(new CustomEvent("cad-selection", { detail }));
+  }
+
+  /**
+   * Analyzes face geometry to determine face type
+   * Since JSON doesn't provide type metadata, we analyze vertices, normals, and bounding box
+   */
+  detectFaceType(faceGroup, geometry) {
+    const pos = geometry.getAttribute("position");
+    const vertices = [];
+
+    // Extract all vertices for this face
+    for (let i = faceGroup.start; i < faceGroup.start + faceGroup.count; i++) {
+      vertices.push(new THREE.Vector3(
+        pos.getX(i),
+        pos.getY(i),
+        pos.getZ(i)
+      ));
+    }
+
+    // Compute normals to detect curvature
+    const normals = this.computeFaceNormals(vertices);
+    const normalVariation = this.computeNormalVariation(normals);
+
+    // Compute bounding box
+    const bbox = this.computeBoundingBox(vertices);
+    const dimensions = {
+      x: bbox.max.x - bbox.min.x,
+      y: bbox.max.y - bbox.min.y,
+      z: bbox.max.z - bbox.min.z
+    };
+
+    // Sort dimensions to find patterns
+    const sorted = [dimensions.x, dimensions.y, dimensions.z].sort((a, b) => a - b);
+
+    // Debug logs
+    console.log('🔍 Face Detection Debug:', {
+      normalVariation: normalVariation.toFixed(4),
+      dimensions: { x: dimensions.x.toFixed(2), y: dimensions.y.toFixed(2), z: dimensions.z.toFixed(2) },
+      sorted: sorted.map(d => d.toFixed(2)),
+      vertexCount: vertices.length,
+      triangleCount: normals.length
+    });
+
+    // Check cylindrical characteristics
+    const isCylindrical = normalVariation > 0.1;
+
+    // For cylinders, check if any two dimensions are similar (not necessarily sorted[0] and sorted[1])
+    // Check all three combinations
+    const diff01 = Math.abs(sorted[0] - sorted[1]);
+    const diff12 = Math.abs(sorted[1] - sorted[2]);
+    const diff02 = Math.abs(sorted[0] - sorted[2]);
+    const maxDiff = Math.max(diff01, diff12, diff02);
+    const minDiff = Math.min(diff01, diff12, diff02);
+
+    // Two dimensions are similar if the smallest difference is much smaller than the largest
+    const twoSimilarDims = minDiff < sorted[2] * 0.3; // 30% tolerance
+
+    // Additional check: for very small features, be more lenient
+    const isVerySmall = sorted[2] < 20;
+
+    console.log('🎯 Detection criteria:', {
+      isCylindrical,
+      twoSimilarDims,
+      diff01: diff01.toFixed(2),
+      diff12: diff12.toFixed(2),
+      diff02: diff02.toFixed(2),
+      minDiff: minDiff.toFixed(2),
+      maxDim: sorted[2].toFixed(2),
+      isSmall: sorted[2] < 50,
+      isVerySmall
+    });
+
+    // Hole detection: small cylindrical face
+    if (isCylindrical && twoSimilarDims && sorted[2] < 50) {
+      const hasThreadPattern = this.detectThreadPattern(vertices);
+      console.log('✅ Detected:', hasThreadPattern ? 'thread' : 'hole');
+      return hasThreadPattern ? 'thread' : 'hole';
+    }
+
+    // Cylindrical face (fillet, round feature)
+    if (isCylindrical && twoSimilarDims) {
+      console.log('✅ Detected: cylindrical');
+      return 'cylindrical';
+    }
+
+    // Planar face (flat surface)
+    if (normalVariation < 0.05) {
+      console.log('✅ Detected: planar (low variation)');
+      return 'planar';
+    }
+
+    console.log('✅ Detected: planar (default)');
+    return 'planar'; // Default
+  }
+
+  computeFaceNormals(vertices) {
+    const normals = [];
+    for (let i = 0; i < vertices.length - 2; i += 3) {
+      const a = vertices[i];
+      const b = vertices[i + 1];
+      const c = vertices[i + 2];
+
+      const ab = new THREE.Vector3().subVectors(b, a);
+      const ac = new THREE.Vector3().subVectors(c, a);
+      const normal = new THREE.Vector3().crossVectors(ab, ac).normalize();
+
+      normals.push(normal);
+    }
+    return normals;
+  }
+
+  computeNormalVariation(normals) {
+    if (normals.length === 0) return 0;
+
+    const avgNormal = new THREE.Vector3();
+    normals.forEach(n => avgNormal.add(n));
+    avgNormal.divideScalar(normals.length).normalize();
+
+    let totalDeviation = 0;
+    normals.forEach(n => {
+      const angle = Math.acos(Math.max(-1, Math.min(1, n.dot(avgNormal))));
+      totalDeviation += angle;
+    });
+
+    return totalDeviation / normals.length;
+  }
+
+  computeBoundingBox(vertices) {
+    const bbox = {
+      min: new THREE.Vector3(Infinity, Infinity, Infinity),
+      max: new THREE.Vector3(-Infinity, -Infinity, -Infinity)
+    };
+
+    vertices.forEach(v => {
+      bbox.min.x = Math.min(bbox.min.x, v.x);
+      bbox.min.y = Math.min(bbox.min.y, v.y);
+      bbox.min.z = Math.min(bbox.min.z, v.z);
+      bbox.max.x = Math.max(bbox.max.x, v.x);
+      bbox.max.y = Math.max(bbox.max.y, v.y);
+      bbox.max.z = Math.max(bbox.max.z, v.z);
+    });
+
+    return bbox;
+  }
+
+  detectThreadPattern(vertices) {
+    if (vertices.length < 100) return false;
+
+    const bbox = this.computeBoundingBox(vertices);
+    const center = new THREE.Vector3(
+      (bbox.min.x + bbox.max.x) / 2,
+      (bbox.min.y + bbox.max.y) / 2,
+      (bbox.min.z + bbox.max.z) / 2
+    );
+
+    const angles = vertices.map(v => {
+      const dx = v.x - center.x;
+      const dy = v.y - center.y;
+      return Math.atan2(dy, dx);
+    }).sort((a, b) => a - b);
+
+    const diffs = [];
+    for (let i = 1; i < angles.length; i++) {
+      diffs.push(angles[i] - angles[i-1]);
+    }
+
+    const avgDiff = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+    const variance = diffs.reduce((sum, d) => sum + Math.pow(d - avgDiff, 2), 0) / diffs.length;
+
+    return variance < 0.01; // Regular pattern = thread
+  }
+
+  computeFaceMetrics(faceType, vertices, bbox, area) {
+    const dimensions = {
+      x: bbox.max.x - bbox.min.x,
+      y: bbox.max.y - bbox.min.y,
+      z: bbox.max.z - bbox.min.z
+    };
+
+    const sorted = [dimensions.x, dimensions.y, dimensions.z].sort((a, b) => a - b);
+    const centroid = {
+      x: (bbox.min.x + bbox.max.x) / 2,
+      y: (bbox.min.y + bbox.max.y) / 2,
+      z: (bbox.min.z + bbox.max.z) / 2
+    };
+
+    switch (faceType) {
+      case 'planar':
+        return {
+          displayType: 'Face plane',
+          length: sorted[2],
+          width: sorted[1],
+          thickness: sorted[0],
+          area: area,
+          centroid: centroid
+        };
+
+      case 'cylindrical':
+        // For fillets/rounds, show radius. For cylinders, show diameter + depth
+        const isRound = sorted[2] < 30; // Small features are fillets/rounds
+        return {
+          displayType: isRound ? 'Bord arrondi' : 'Cylindre',
+          radius: sorted[0] / 2,
+          diameter: sorted[0],
+          depth: sorted[2],
+          length: sorted[2],
+          area: area,
+          centroid: centroid
+        };
+
+      case 'hole':
+        return {
+          displayType: 'Perçage',
+          diameter: sorted[0],
+          depth: sorted[2],
+          position: centroid,
+          area: area
+        };
+
+      case 'thread':
+        return {
+          displayType: 'Taraudage',
+          diameter: sorted[0],
+          pitch: null,
+          depth: sorted[2],
+          position: centroid,
+          area: area
+        };
+
+      default:
+        return {
+          displayType: 'Face',
+          area: area,
+          centroid: centroid
+        };
+    }
   }
 
   updateMaterialStates() {
@@ -1041,6 +1294,9 @@ class FaceSelectionManager {
       const detail = event?.detail ?? null;
       if (detail && detail.id !== undefined) {
         this.handleFaceSelectionDetail(detail);
+      } else if (detail === null) {
+        // Désélection - effacer toutes les pastilles
+        this.clearSelections();
       }
     });
 
@@ -1099,7 +1355,10 @@ class FaceSelectionManager {
         ? `Face ${detail.realFaceId ?? detail.id}`
         : "Face";
 
-    // Ajoute ou remplace la sélection
+    // Efface les anciennes sélections pour n'en garder qu'une seule à la fois
+    this.selections.clear();
+
+    // Ajoute la nouvelle sélection
     this.selections.set(faceId, {
       context,
       summary,
@@ -1339,11 +1598,6 @@ Livewire.on("jsonEdgesLoaded", ({ jsonPath }) => {
 // Fonctionne avec $dispatch d'Alpine et window.dispatchEvent natif
 window.addEventListener("viewer-fit", () => {
   ensureViewer().resetView();
-});
-
-Livewire.on("toggleShowEdges", ({ show, threshold = null, color = null }) => {
-  const v = ensureViewer();
-  v.toggleEdges(show, threshold, color);
 });
 Livewire.on("updatedMaterialPreset", () => {
   // Matériau figé sur le rendu métallique par défaut, aucun changement nécessaire.

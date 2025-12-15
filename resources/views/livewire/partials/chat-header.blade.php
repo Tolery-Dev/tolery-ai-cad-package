@@ -55,9 +55,6 @@
                     <div class="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                         <div class="bg-violet-600 h-1.5 rounded-full transition-all" style="width: {{ min(100, ($quotaStatus['used'] / max(1, $quotaStatus['total'])) * 100) }}%"></div>
                     </div>
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ $quotaStatus['remaining'] }} rest.
-                    </span>
                 @endif
             </div>
         </div>

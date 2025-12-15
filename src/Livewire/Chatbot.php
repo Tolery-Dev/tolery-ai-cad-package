@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Tolery\AiCad\Enum\MaterialFamily;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
@@ -124,16 +125,6 @@ class Chatbot extends Component
         $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
     }
 
-    public function updatedEdgesShow($value): void
-    {
-        $this->dispatch('toggleShowEdges', show: $value);
-    }
-
-    public function updatedEdgesColor($value): void
-    {
-        $this->dispatch('updatedEdgeColor', color: $value);
-    }
-
     public function updatedPartName($value): void
     {
         $this->partName = trim($value) === '' ? null : $value;
@@ -151,6 +142,33 @@ class Chatbot extends Component
         return view('ai-cad::livewire.chatbot', [
             'predefinedPrompts' => $predefinedPrompts,
         ]);
+    }
+
+    #[On('updateMaterialFamily')]
+    public function updateMaterialFamily(string $materialFamily): void
+    {
+        try {
+            $validated = MaterialFamily::from($materialFamily);
+            $this->chat->material_family = $validated;
+            $this->chat->save();
+
+            Flux::toast(
+                variant: 'success',
+                heading: 'Matériau mis à jour',
+                text: "Matériau défini sur {$validated->label()}"
+            );
+        } catch (\Exception $e) {
+            Log::error('[AICAD] Failed to update material family', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    #[On('sendRegenerationRequest')]
+    public function sendRegenerationRequest(string $message): void
+    {
+        $this->message = $message;
+        $this->send(app(RateLimiter::class));
     }
 
     protected function rules(): array
