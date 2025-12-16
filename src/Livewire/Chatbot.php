@@ -544,12 +544,12 @@ class Chatbot extends Component
 
         // Détecter si c'est une génération réussie (présence de fichiers exportés)
         $isSuccessfulGeneration =
-            !empty($objUrl) ||
-            !empty($stepUrl) ||
-            !empty($tessUrl);
+            ! empty($objUrl) ||
+            ! empty($stepUrl) ||
+            ! empty($tessUrl);
 
         // Si génération réussie et pas encore marquée, marquer maintenant
-        if ($isSuccessfulGeneration && !$this->chat->has_generated_piece) {
+        if ($isSuccessfulGeneration && ! $this->chat->has_generated_piece) {
             $this->chat->has_generated_piece = true;
             $this->chat->save();
 
