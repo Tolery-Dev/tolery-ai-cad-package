@@ -31,9 +31,10 @@
     <div class="flex-1 flex overflow-hidden">
         {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
         <section class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl overflow-hidden">
-            {{-- Greeting Header --}}
+            {{-- Greeting Header - Hidden when conversation has started --}}
             <div class="bg-white px-6 pt-6 pb-4 shrink-0"
                  x-data="{ isGenerating: false }"
+                 x-show="@js(count($messages) === 0)"
                  @cad-generation-started.window="isGenerating = true"
                  @cad-generation-ended.window="isGenerating = false">
                 <flux:text size="lg" class="flex items-start gap-2">
@@ -42,7 +43,8 @@
                          class="h-8 w-8 p-1 bot-avatar"
                          :class="{ 'bot-thinking': isGenerating }">
                     <span>
-                        Bienvenue dans notre configurateur intelligent de création de fichier CAO (STEP) sur-mesure et instantanément <span class="italic text-violet-600">pour des pièces simples de tôlerie</span>. Vous pouvez démarrer la création de vos fichiers CAO de 3 manières :
+                        Bienvenue dans le configurateur intelligent de création <span class="italic text-violet-600">pour des pièces simples de tôlerie</span> sur-mesure et instantanément.
+                        Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
                     </span>
                 </flux:text>
             </div>
