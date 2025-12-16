@@ -544,12 +544,12 @@ class Chatbot extends Component
 
         // Détecter si c'est une génération réussie (présence de fichiers exportés)
         $isSuccessfulGeneration =
-            !empty($objUrl) ||
-            !empty($stepUrl) ||
-            !empty($tessUrl);
+            ! empty($objUrl) ||
+            ! empty($stepUrl) ||
+            ! empty($tessUrl);
 
         // Si génération réussie et pas encore marquée, marquer maintenant
-        if ($isSuccessfulGeneration && !$this->chat->has_generated_piece) {
+        if ($isSuccessfulGeneration && ! $this->chat->has_generated_piece) {
             $this->chat->has_generated_piece = true;
             $this->chat->save();
 
@@ -719,7 +719,7 @@ class Chatbot extends Component
 
     protected function mapDbMessagesToArray(): array
     {
-        return $this->chat->messages()->with('user')->orderBy('created_at')->get()
+        return $this->chat->messages()->with('user')->orderBy('chat_messages.id', 'asc')->get()
             ->map(fn (ChatMessage $m) => [
                 'id' => $m->id,
                 'role' => $m->role,
@@ -924,6 +924,9 @@ class Chatbot extends Component
     public function redirectToSubscription(): void
     {
         $this->showPurchaseModal = false;
+
+        // Stocker l'URL du chatbot pour y revenir après l'abonnement
+        session()->put('return_to_chatbot', route('client.tolerycad.show-chatbot', ['chat' => $this->chat->id]));
 
         // Rediriger vers la page de gestion d'abonnement ToleryCad
         $this->redirect(route('client.tolerycad.subscription'));

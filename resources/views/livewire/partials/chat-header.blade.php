@@ -1,11 +1,4 @@
 <header class="flex items-center gap-2.5 px-6 pt-8 pb-6 border-b border-grey-stroke bg-white rounded-tl-4xl shrink-0">
-    <button
-        onclick="window.location.href='{{ back() }}'"
-        class="w-8 h-8 border border-[#CECECE] rounded flex items-center justify-center hover:bg-gray-50 transition-colors shrink-0">
-        <svg class="w-4 h-4 text-[#323232]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    </button>
     <div
         x-data="{ editing: false, name: @entangle('partName').live, originalName: '{{ $chat->name }}' }"
         class="flex-1">
