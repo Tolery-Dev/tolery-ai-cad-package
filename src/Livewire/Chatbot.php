@@ -57,9 +57,6 @@ class Chatbot extends Component
 
     public ?string $screenshotUrl = null;
 
-    /** URL du JSON à charger au démarrage (pour éviter les problèmes de timing avec dispatch) */
-    public ?string $initialJsonUrl = null;
-
     /** Download management */
     public bool $canDownload = false;
 
@@ -101,8 +98,11 @@ class Chatbot extends Component
 
         if ($objToDisplay) {
             // 1. JSON tessellé pour la sélection de faces
-            // Stocké dans une propriété publique pour être chargé côté JS une fois initialisé
-            $this->initialJsonUrl = $objToDisplay->getJSONEdgeUrl();
+            $jsonUrl = $objToDisplay->getJSONEdgeUrl();
+
+            if ($jsonUrl) {
+                $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
+            }
 
             // 2. Initialise les liens d'export pour le panneau
             $this->updateExportUrls($objToDisplay);
@@ -544,12 +544,12 @@ class Chatbot extends Component
 
         // Détecter si c'est une génération réussie (présence de fichiers exportés)
         $isSuccessfulGeneration =
-            ! empty($objUrl) ||
-            ! empty($stepUrl) ||
-            ! empty($tessUrl);
+            !empty($objUrl) ||
+            !empty($stepUrl) ||
+            !empty($tessUrl);
 
         // Si génération réussie et pas encore marquée, marquer maintenant
-        if ($isSuccessfulGeneration && ! $this->chat->has_generated_piece) {
+        if ($isSuccessfulGeneration && !$this->chat->has_generated_piece) {
             $this->chat->has_generated_piece = true;
             $this->chat->save();
 
@@ -719,7 +719,7 @@ class Chatbot extends Component
 
     protected function mapDbMessagesToArray(): array
     {
-        return $this->chat->messages()->with('user')->orderBy('chat_messages.id', 'asc')->get()
+        return $this->chat->messages()->with('user')->orderBy('created_at')->get()
             ->map(fn (ChatMessage $m) => [
                 'id' => $m->id,
                 'role' => $m->role,
@@ -924,9 +924,6 @@ class Chatbot extends Component
     public function redirectToSubscription(): void
     {
         $this->showPurchaseModal = false;
-
-        // Stocker l'URL du chatbot pour y revenir après l'abonnement
-        session()->put('return_to_chatbot', route('client.tolerycad.show-chatbot', ['chat' => $this->chat->id]));
 
         // Rediriger vers la page de gestion d'abonnement ToleryCad
         $this->redirect(route('client.tolerycad.subscription'));

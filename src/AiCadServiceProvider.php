@@ -64,9 +64,14 @@ class AiCadServiceProvider extends PackageServiceProvider
     {
         parent::boot();
 
-        // Publish assets from resources/assets to public/vendor/ai-cad
+        // Publish images from resources/assets (tracked in git)
         $this->publishes([
             __DIR__.'/../resources/assets' => public_path('vendor/ai-cad'),
+        ], 'ai-cad-assets');
+
+        // Publish built JS from resources/dist (built by Vite, not tracked in git)
+        $this->publishes([
+            __DIR__.'/../resources/dist/assets' => public_path('vendor/ai-cad/assets'),
         ], 'ai-cad-assets');
     }
 
