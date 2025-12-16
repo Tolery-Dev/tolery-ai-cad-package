@@ -69,8 +69,22 @@
         <div id="viewer"
              wire:ignore
              data-screenshot-exists="{{ $screenshotUrl ? 'true' : 'false' }}"
+             data-initial-json="{{ $initialJsonUrl ?? '' }}"
              class="h-full w-full">
         </div>
+
+        {{-- Charge le viewer avec l'URL initiale une fois le JS prêt --}}
+        @if($initialJsonUrl)
+            <script>
+                document.addEventListener('livewire:initialized', function() {
+                    const viewer = document.getElementById('viewer');
+                    const jsonPath = viewer?.dataset?.initialJson;
+                    if (jsonPath && window.Livewire) {
+                        Livewire.dispatch('jsonEdgesLoaded', { jsonPath: jsonPath });
+                    }
+                });
+            </script>
+        @endif
 
         @include('ai-cad::partials.cad-config-panel', [
             'stepExportUrl' => $stepExportUrl,

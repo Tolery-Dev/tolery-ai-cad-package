@@ -57,6 +57,9 @@ class Chatbot extends Component
 
     public ?string $screenshotUrl = null;
 
+    /** URL du JSON à charger au démarrage (pour éviter les problèmes de timing avec dispatch) */
+    public ?string $initialJsonUrl = null;
+
     /** Download management */
     public bool $canDownload = false;
 
@@ -98,11 +101,8 @@ class Chatbot extends Component
 
         if ($objToDisplay) {
             // 1. JSON tessellé pour la sélection de faces
-            $jsonUrl = $objToDisplay->getJSONEdgeUrl();
-
-            if ($jsonUrl) {
-                $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
-            }
+            // Stocké dans une propriété publique pour être chargé côté JS une fois initialisé
+            $this->initialJsonUrl = $objToDisplay->getJSONEdgeUrl();
 
             // 2. Initialise les liens d'export pour le panneau
             $this->updateExportUrls($objToDisplay);
