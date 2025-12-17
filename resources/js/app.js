@@ -442,12 +442,14 @@ class JsonModelViewer3D {
     Object.assign(el.style, {
       position: "absolute",
       padding: "4px 8px",
-      background: "rgba(255,255,255,1)",
+      background: "rgba(124, 58, 237, 0.95)",
       color: "#fff",
       borderRadius: "6px",
       fontSize: "12px",
+      fontWeight: "500",
       pointerEvents: "none",
       transform: "translate(-50%, -120%)",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
     });
     this.container.appendChild(el);
     this.measureLabelEl = el;
