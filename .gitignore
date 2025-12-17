@@ -31,8 +31,7 @@ phpstan.neon
 /docs
 /coverage
 
-# Compiled/Built files
+# Compiled/Built files (root level only, resources/dist is tracked for package distribution)
 /dist
-**/dist/
 
 resources/assets/images/.DS_Store
