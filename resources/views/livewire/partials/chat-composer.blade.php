@@ -1,5 +1,5 @@
 <footer class="bg-white shrink-0" x-data="{ hasContent: false }">
-    <form wire:submit.prevent="send" class="px-6 pb-8 pt-6">
+    <form wire:submit.prevent="send" class="px-6 pb-2 pt-6">
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
             <div

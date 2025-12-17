@@ -12,7 +12,10 @@
                     <flux:text class="text-zinc-600">
                         Votre fichier CAO est maintenant disponible au téléchargement.
                         <br>
-                        <span class="text-sm text-zinc-500">Vous pouvez le télécharger autant de fois que vous le souhaitez.</span>
+                        <span class="text-sm text-zinc-500">
+                            Vous pouvez le télécharger autant de fois que vous le souhaitez dans le menu
+                            <span class="font-medium text-violet-600">Fichiers commandés</span>.
+                        </span>
                     </flux:text>
                 </div>
 

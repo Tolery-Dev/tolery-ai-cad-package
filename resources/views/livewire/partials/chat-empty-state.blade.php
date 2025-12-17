@@ -1,11 +1,5 @@
 <div class="flex items-start gap-6">
     <div class="flex-1 space-y-4">
-        <div class="space-y-4">
-            <p class="text-base font-normal text-black">
-                Bienvenue dans le configurateur intelligent de création de fichier CAO (STEP) sur-mesure et instantanément. Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
-            </p>
-        </div>
-
         <div class="space-y-2">
             <div class="bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
                 <div class="shrink-0 w-10 h-10">
@@ -13,7 +7,7 @@
                 </div>
                 <div class="flex-1 space-y-4">
                     <p class="text-sm font-medium leading-[1.4] text-black">
-                        Décrivez votre pièce dans le chat (Text-to-CAD)
+                        Décrivez une pièce simple dans le chat (Text-to-CAD)
                     </p>
                     <div class="text-xs font-normal leading-[1.4] text-soft-black space-y-2">
                         <p>

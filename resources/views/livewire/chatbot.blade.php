@@ -30,32 +30,40 @@
     {{-- Main Content Area: Chat (left) + Preview (right) --}}
     <div class="flex-1 flex overflow-hidden">
         {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
-        <section class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl overflow-hidden">
-            {{-- Greeting Header --}}
-            <div class="bg-white px-6 pt-6 pb-4 shrink-0"
-                 x-data="{ isGenerating: false }"
-                 @cad-generation-started.window="isGenerating = true"
-                 @cad-generation-ended.window="isGenerating = false">
-                <flux:heading size="lg" class="flex items-center gap-2">
-                    <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}"
-                         alt="Tolery Bot"
-                         class="h-8 w-8 p-1 bot-avatar"
-                         :class="{ 'bot-thinking': isGenerating }">
-                    <span>Bonjour {{ auth()->user()->firstname }} !</span>
-                </flux:heading>
-            </div>
-
-            {{-- Messages Area (Scrollable) --}}
-            <div id="chat-scroll"
+        <section id="chat-scroll"
+                 class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl overflow-y-auto"
                  x-data="{
-                     scrollToEnd(){ this.$el.scrollTop = this.$el.scrollHeight },
+                     scrollToEnd() {
+                         // Ne scroller que si on a des messages
+                         if (@js(count($messages)) > 0) {
+                             this.$el.scrollTop = this.$el.scrollHeight;
+                         }
+                     },
                      isGenerating: false
                  }"
                  x-init="$nextTick(()=>scrollToEnd())"
                  x-on:tolery-chat-append.window="scrollToEnd()"
                  @cad-generation-started.window="isGenerating = true"
-                 @cad-generation-ended.window="isGenerating = false"
-                 class="flex-1 overflow-y-auto px-6 py-6 bg-white border-b border-grey-stroke">
+                 @cad-generation-ended.window="isGenerating = false">
+
+            @if(empty($messages))
+                {{-- Greeting Header (visible uniquement quand la conversation est vide) --}}
+                <div class="bg-white px-6 pt-6 pb-4">
+                    <flux:text size="lg" class="flex items-start gap-2">
+                        <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}"
+                             alt="Tolery Bot"
+                             class="h-8 w-8 p-1 bot-avatar"
+                             :class="{ 'bot-thinking': isGenerating }">
+                        <span>
+                            Bienvenue dans le configurateur intelligent de création <span class="italic text-violet-600">pour des pièces simples de tôlerie</span> sur-mesure et instantanément.
+                            Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
+                        </span>
+                    </flux:text>
+                </div>
+            @endif
+
+            {{-- Messages Area --}}
+            <div class="flex-1 px-6 py-6 bg-white border-b border-grey-stroke">
 
                 @if(empty($messages))
                     @include('ai-cad::livewire.partials.chat-empty-state')
@@ -77,6 +85,10 @@
     {{-- Modal Achat/Abonnement --}}
     @include('ai-cad::livewire.partials.purchase-modal')
 </div>
+
+@push('scripts')
+<script src="{{ asset('vendor/ai-cad/assets/app.js') }}" defer></script>
+@endpush
 
 @push('styles')
 <style>
@@ -198,7 +210,7 @@
             },
             reset() {
                 this.overall = 0;
-                this.statusText = 'Initialisation...';
+                this.statusText = 'Initialisation..';
                 this.activeStep = null;
                 this.completedSteps = 0;
                 this.steps.forEach(s => s.state = 'inactive');

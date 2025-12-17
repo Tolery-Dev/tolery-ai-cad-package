@@ -21,7 +21,7 @@
                     <div class="flex flex-col h-full">
                         <div class="flex-1">
                             <flux:heading size="base" class="mb-2 text-violet-600">
-                                S'abonner
+                                Télécharger ce fichier CAO
                             </flux:heading>
                             <flux:subheading class="mb-4">
                                 Accès illimité aux téléchargements selon votre plan
@@ -49,7 +49,7 @@
                             @if($downloadStatus && $downloadStatus['reason'] === 'quota_exceeded')
                                 Passer à un plan supérieur
                             @else
-                                Voir les plans
+                                S'abonner
                             @endif
                         </flux:button>
                     </div>
@@ -69,16 +69,13 @@
                             @if(isset($downloadStatus['options']['purchase_price']))
                                 <div class="text-3xl font-bold text-zinc-900 mb-2">
                                     {{ number_format($downloadStatus['options']['purchase_price'] / 100, 2) }}€
+                                    <span class="text-base font-normal text-zinc-600">HT</span>
                                 </div>
                             @endif
                             <ul class="space-y-2 text-sm text-zinc-600">
                                 <li class="flex items-start gap-2">
                                     <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
                                     <span>Téléchargement immédiat</span>
-                                </li>
-                                <li class="flex items-start gap-2">
-                                    <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
-                                    <span>Fichier STEP haute qualité</span>
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
