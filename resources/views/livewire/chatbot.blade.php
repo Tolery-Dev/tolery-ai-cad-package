@@ -185,6 +185,35 @@
                 {key: 'export', label: 'Export', state: 'inactive'},
                 {key: 'complete', label: 'Terminé', state: 'inactive'},
             ],
+            // Messages détaillés par étape pour un meilleur feedback utilisateur
+            stepMessages: {
+                'analysis': [
+                    'Analyse des dimensions de la pièce...',
+                    'Vérification des contraintes de fabrication...',
+                    'Validation de la géométrie...',
+                ],
+                'parameters': [
+                    'Calcul des paramètres de génération...',
+                    'Optimisation de la géométrie...',
+                    'Définition des tolérances...',
+                ],
+                'generation_code': [
+                    'Génération du code CAO...',
+                    'Construction de la géométrie 3D...',
+                    'Application des opérations...',
+                ],
+                'export': [
+                    'Export des fichiers STEP et OBJ...',
+                    'Génération de la mise en plan...',
+                    'Création du rendu 3D...',
+                ],
+                'complete': [
+                    'Finalisation des exports...',
+                    'Vérification de la qualité...',
+                    'Pièce prête !',
+                ],
+            },
+            stepMessageIndex: {},
             init() {
                 const comp = this;
                 this._onLivewire = ({message, sessionId, isEdit = false}) => comp.startStream(message, sessionId, isEdit);
@@ -206,10 +235,25 @@
             },
             reset() {
                 this.overall = 0;
-                this.statusText = 'Initialisation..';
+                this.statusText = 'Initialisation...';
                 this.activeStep = null;
                 this.completedSteps = 0;
                 this.steps.forEach(s => s.state = 'inactive');
+                this.stepMessageIndex = {};
+            },
+            getDetailedMessage(stepKey) {
+                const messages = this.stepMessages[stepKey];
+                if (!messages || messages.length === 0) return null;
+
+                // Initialiser l'index pour cette étape si nécessaire
+                if (this.stepMessageIndex[stepKey] === undefined) {
+                    this.stepMessageIndex[stepKey] = 0;
+                } else {
+                    // Passer au message suivant (avec boucle)
+                    this.stepMessageIndex[stepKey] = (this.stepMessageIndex[stepKey] + 1) % messages.length;
+                }
+
+                return messages[this.stepMessageIndex[stepKey]];
             },
             markStep(stepKey, status, message, pct) {
                 const idx = this.steps.findIndex(s => s.key === stepKey);
@@ -224,7 +268,9 @@
                 if (typeof pct === 'number') {
                     this.overall = Math.max(0, Math.min(100, pct));
                 }
-                this.statusText = message || status || 'Processing…';
+                // Utiliser le message détaillé si disponible, sinon fallback sur message API
+                const detailedMessage = this.getDetailedMessage(stepKey);
+                this.statusText = detailedMessage || message || status || 'Traitement en cours...';
             },
             async startStream(message, sessionId, isEdit = false) {
                 this.reset();
