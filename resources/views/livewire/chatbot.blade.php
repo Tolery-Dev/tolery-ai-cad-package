@@ -191,10 +191,6 @@
                 Livewire.on('aicad:startStream', this._onLivewire);
                 Livewire.on('aicad-start-stream', this._onLivewire);
 
-                // Listen for cached stream event
-                this._onCached = ({cachedData, simulationDuration}) => comp.simulateCachedStream(cachedData, simulationDuration);
-                Livewire.on('aicad-start-cached-stream', this._onCached);
-
                 // Focus sur le textarea du composer Flux
                 Livewire.on('tolery-chat-focus-input', () => {
                     const composer = document.querySelector('[data-flux-composer]');
@@ -229,57 +225,6 @@
                     this.overall = Math.max(0, Math.min(100, pct));
                 }
                 this.statusText = message || status || 'Processing…';
-            },
-            async simulateCachedStream(cachedData, duration = 10000) {
-                // Simulate the 5-step stream with cached data
-                this.reset();
-                this.open = true;
-                window.dispatchEvent(new CustomEvent('cad-generation-started'));
-                this.cancelable = false; // Don't allow cancel during simulation
-
-                const stepDuration = duration / 5; // 2 seconds per step at 10s total
-                const simulatedSteps = cachedData.simulated_steps || {};
-
-                // Step 1: Analysis
-                await this.animateStep('analysis', simulatedSteps.analysis || ['Analyse en cours...'], stepDuration, 20);
-
-                // Step 2: Parameters
-                await this.animateStep('parameters', simulatedSteps.parameters || ['Calcul des paramètres...'], stepDuration, 40);
-
-                // Step 3: Generation
-                await this.animateStep('generation_code', simulatedSteps.generation_code || ['Génération du code...'], stepDuration, 60);
-
-                // Step 4: Export
-                await this.animateStep('export', simulatedSteps.export || ['Export des fichiers...'], stepDuration, 80);
-
-                // Step 5: Complete
-                await this.animateStep('complete', simulatedSteps.complete || ['Finalisation...'], stepDuration / 2, 95);
-
-                // Mark as complete
-                this.markStep('complete', 'Completed', cachedData.chat_response || 'Pièce prête !', 100);
-
-                // Save the cached data to backend
-                $wire.saveCachedFinal(cachedData);
-
-                // Close modal after brief delay
-                this.cancelable = true;
-                setTimeout(() => this.close(), 800);
-                window.dispatchEvent(new CustomEvent('cad-generation-ended'));
-            },
-            async animateStep(stepKey, messages, duration, targetPercentage) {
-                const messageCount = messages.length;
-                const messageDuration = duration / messageCount;
-
-                for (let i = 0; i < messageCount; i++) {
-                    const message = messages[i];
-                    const progress = targetPercentage - ((messageCount - i - 1) * 5); // Gradual increase
-
-                    this.markStep(stepKey, i === messageCount - 1 ? 'completed' : 'active', message, progress);
-
-                    // Add small random variation for natural feel
-                    const jitter = Math.random() * 400 - 200; // ±200ms
-                    await new Promise(resolve => setTimeout(resolve, messageDuration + jitter));
-                }
             },
             async startStream(message, sessionId, isEdit = false) {
                 this.reset();
