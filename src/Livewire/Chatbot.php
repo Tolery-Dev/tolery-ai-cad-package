@@ -17,7 +17,6 @@ use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
 use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\FileAccessService;
-use Tolery\AiCad\Services\PredefinedPromptCacheService;
 use Tolery\AiCad\Services\ZipGeneratorService;
 
 class Chatbot extends Component
@@ -132,7 +131,7 @@ class Chatbot extends Component
 
     public function render(): View
     {
-        $predefinedPrompts = config('ai-cad.cache.predefined_prompts', []);
+        $predefinedPrompts = config('ai-cad.predefined_prompts', []);
 
         return view('ai-cad::livewire.chatbot', [
             'predefinedPrompts' => $predefinedPrompts,
@@ -239,24 +238,6 @@ class Chatbot extends Component
 
         $limiter->hit($rateKey, 60);
 
-        // Check cache BEFORE acquiring lock
-        $cacheService = app(PredefinedPromptCacheService::class);
-        $cachedPrompt = null;
-
-        if (config('ai-cad.cache.enabled', true) && $cacheService->isCached($this->message)) {
-            $cachedPrompt = $cacheService->getCached($this->message);
-
-            if ($cachedPrompt) {
-                Log::info('[CACHE] Cache hit for predefined prompt', [
-                    'hash' => $cachedPrompt->prompt_hash,
-                    'hits' => $cachedPrompt->hits_count,
-                ]);
-
-                // Increment analytics
-                $cacheService->incrementHits($cachedPrompt);
-            }
-        }
-
         $lock = Cache::lock("aicad:send:chat:{$this->chat->id}", $this->lockSeconds);
         if (! $lock->get()) {
             return;
@@ -294,22 +275,14 @@ class Chatbot extends Component
             $this->streamingIndex = array_key_last($this->messages);
             $this->lastRefreshAt = microtime(true);
 
-            // If cached: dispatch cached stream event, otherwise normal stream
-            if ($cachedPrompt) {
-                $this->dispatch('aicad-start-cached-stream',
-                    cachedData: $cachedPrompt->toArray(),
-                    simulationDuration: config('ai-cad.cache.simulation_duration_ms', 10000)
-                );
-            } else {
-                // Démarre le stream côté navigateur: ouverture du modal + progression live
-                logger()->info('[AICAD] Dispatching stream to frontend', [
-                    'chat_id' => $this->chat->id,
-                    'session_id' => $this->chat->session_id,
-                    'is_edit' => $isEdit,
-                ]);
+            // Démarre le stream côté navigateur: ouverture du modal + progression live
+            logger()->info('[AICAD] Dispatching stream to frontend', [
+                'chat_id' => $this->chat->id,
+                'session_id' => $this->chat->session_id,
+                'is_edit' => $isEdit,
+            ]);
 
-                $this->dispatch('aicad-start-stream', message: $userText, sessionId: (string) $this->chat->session_id, isEdit: $isEdit);
-            }
+            $this->dispatch('aicad-start-stream', message: $userText, sessionId: (string) $this->chat->session_id, isEdit: $isEdit);
 
         } finally {
             $this->isProcessing = false;
@@ -383,74 +356,6 @@ class Chatbot extends Component
             ]);
         } catch (\Exception $e) {
             Log::error('[AICAD] Failed to save client screenshot', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-        }
-    }
-
-    /**
-     * Save cached prompt response after frontend simulation
-     * Called by frontend after the 10-second animation completes
-     */
-    public function saveCachedFinal(array $cachedData): void
-    {
-        Log::info('[CACHE] Saving cached prompt final data', [
-            'chat_id' => $this->chat->id,
-            'hash' => $cachedData['prompt_hash'] ?? null,
-        ]);
-
-        try {
-            // Find the last assistant message (placeholder created in send())
-            $lastAssistant = $this->findLatestAssistantMessage();
-
-            if (! $lastAssistant) {
-                Log::error('[CACHE] No assistant message found to update');
-
-                return;
-            }
-
-            // Update the message with cached file paths and response
-            $lastAssistant->message = $cachedData['chat_response'] ?? 'Pièce générée avec succès.';
-            $lastAssistant->ai_cad_path = $cachedData['obj_cache_path'] ?? null;
-            $lastAssistant->ai_step_path = $cachedData['step_cache_path'] ?? null;
-            $lastAssistant->ai_json_edge_path = $cachedData['json_cache_path'] ?? null;
-            $lastAssistant->ai_technical_drawing_path = $cachedData['technical_drawing_cache_path'] ?? null;
-            $lastAssistant->ai_screenshot_path = $cachedData['screenshot_cache_path'] ?? null;
-            $lastAssistant->save();
-
-            Log::info('[CACHE] Updated assistant message with cached files', [
-                'message_id' => $lastAssistant->id,
-                'has_obj' => ! empty($lastAssistant->ai_cad_path),
-                'has_step' => ! empty($lastAssistant->ai_step_path),
-                'has_json' => ! empty($lastAssistant->ai_json_edge_path),
-            ]);
-
-            // Update export URLs for the view (to hide empty state)
-            $this->updateExportUrls($lastAssistant);
-            $this->dispatchExportLinks($lastAssistant);
-            $this->updateDownloadStatus();
-
-            // Refresh UI
-            $this->refreshFromDb();
-
-            // Dispatch events to load 3D viewer
-            if ($lastAssistant->ai_json_edge_path) {
-                $this->dispatch('jsonEdgesLoaded', jsonPath: $lastAssistant->getJSONEdgeUrl());
-            } elseif ($lastAssistant->ai_cad_path) {
-                $this->dispatch('objLoaded', objPath: $lastAssistant->getObjUrl());
-            }
-
-            // Dispatch exports updated event for download panel
-            $this->dispatch('cad-exports-updated',
-                step: $lastAssistant->getStepUrl(),
-                obj: $lastAssistant->getObjUrl(),
-                technical_drawing: $lastAssistant->getTechnicalDrawingUrl(),
-                screenshot: $lastAssistant->getScreenshotUrl()
-            );
-
-        } catch (\Exception $e) {
-            Log::error('[CACHE] Failed to save cached final', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

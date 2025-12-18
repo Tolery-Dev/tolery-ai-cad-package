@@ -9,15 +9,12 @@ use Laravel\Cashier\Cashier;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Tolery\AiCad\Commands\CachePredefinedPromptsCommand;
-use Tolery\AiCad\Commands\CleanupOldCachesCommand;
 use Tolery\AiCad\Commands\DebugApiStream;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
 use Tolery\AiCad\Commands\SyncStripeProducts;
 use Tolery\AiCad\Commands\TestApiConnection;
 use Tolery\AiCad\Commands\TestStreamEndpoint;
 use Tolery\AiCad\Commands\UpdateStripeMetadata;
-use Tolery\AiCad\Jobs\RegeneratePredefinedCacheJob;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Livewire\ChatHistoryPanel;
@@ -48,8 +45,6 @@ class AiCadServiceProvider extends PackageServiceProvider
                 TestStreamEndpoint::class,
                 SyncStripeProducts::class,
                 UpdateStripeMetadata::class,
-                CachePredefinedPromptsCommand::class,
-                CleanupOldCachesCommand::class,
             ]);
 
         Cashier::useCustomerModel(ChatTeam::class);
@@ -118,14 +113,8 @@ class AiCadServiceProvider extends PackageServiceProvider
     protected function scheduleCommandes(): static
     {
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
-            // Existing: Daily limit renewal
+            // Daily limit renewal
             $schedule->command(LimitsAutoRenewal::class)->dailyAt('01:00');
-
-            // Cache: Weekly regeneration of predefined prompts (Sundays at 2 AM)
-            $schedule->job(new RegeneratePredefinedCacheJob)->weekly()->sundays()->at('02:00');
-
-            // Cache: Daily cleanup of old caches (3 AM)
-            $schedule->command(CleanupOldCachesCommand::class)->dailyAt('03:00');
         });
 
         return $this;
