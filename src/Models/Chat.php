@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Tolery\AiCad\Database\Factories\ChatFactory;
 use Tolery\AiCad\Enum\MaterialFamily;
 
@@ -21,11 +22,13 @@ use Tolery\AiCad\Enum\MaterialFamily;
  * @property bool $has_generated_piece
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
 #[UseFactory(ChatFactory::class)]
 class Chat extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $guarded = [];
 
