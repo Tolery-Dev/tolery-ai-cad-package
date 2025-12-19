@@ -1111,20 +1111,28 @@ class JsonModelViewer3D {
         };
 
       case 'hole':
-        return {
-          displayType: 'Perçage',
-          diameter: sorted[0],
-          depth: sorted[2],
-          position: centroid,
-          area: area
-        };
-
       case 'thread':
+        // For holes/threads, find the two similar dimensions (diameter) vs the outlier (depth)
+        // Compare differences between consecutive sorted values
+        const diff01 = Math.abs(sorted[1] - sorted[0]);
+        const diff12 = Math.abs(sorted[2] - sorted[1]);
+
+        let holeDiameter, holeDepth;
+        if (diff01 < diff12) {
+          // sorted[0] and sorted[1] are similar -> they represent the diameter
+          holeDiameter = (sorted[0] + sorted[1]) / 2;
+          holeDepth = sorted[2];
+        } else {
+          // sorted[1] and sorted[2] are similar -> they represent the diameter
+          holeDiameter = (sorted[1] + sorted[2]) / 2;
+          holeDepth = sorted[0];
+        }
+
         return {
-          displayType: 'Taraudage',
-          diameter: sorted[0],
-          pitch: null,
-          depth: sorted[2],
+          displayType: faceType === 'thread' ? 'Taraudage' : 'Perçage',
+          diameter: holeDiameter,
+          depth: holeDepth,
+          pitch: faceType === 'thread' ? null : undefined,
           position: centroid,
           area: area
         };

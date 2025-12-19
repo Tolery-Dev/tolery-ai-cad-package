@@ -11,7 +11,7 @@
             <flux:composer
                 wire:model="message"
                 submit="send"
-                placeholder="Décrivez le plus précisément votre pièce ou insérez un lien url"
+                placeholder="Décrivez le plus précisément votre pièce ou insérez un lien url ici"
                 x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; } }"
                 x-init="resize()"
                 x-on:input="resize(); $dispatch('composer-input', { value: $event.target.value })"

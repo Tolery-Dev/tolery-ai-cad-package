@@ -22,7 +22,7 @@
     >
         <div class="flex items-center gap-2 pointer-events-none">
             <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs">⚙️</span>
-            <h3 class="text-base font-bold text-violet-700">Configurez votre pièce CAO</h3>
+            <h3 class="text-base font-bold text-violet-700">Configurez votre fichier CAO</h3>
         </div>
 
         <div class="pointer-events-none">
@@ -248,6 +248,20 @@
 
             <flux:separator/>
 
+            {{-- Matière --}}
+            <div class="space-y-3">
+                <div class="text-base font-semibold text-gray-900">Matière</div>
+
+                <flux:radio.group variant="segmented" x-model="materialFamily" @change="saveMaterialChoice()">
+                    @foreach (\Tolery\AiCad\Enum\MaterialFamily::cases() as $material)
+                        <flux:radio :value="$material->value" :label="$material->label()" />
+                    @endforeach
+                </flux:radio.group>
+
+            </div>
+
+            <flux:separator/>
+
             {{-- Détails / Dimensions globales --}}
             <div class="rounded-xl bg-violet-50/60 border border-violet-100 p-4">
                 <div class="flex items-center justify-between">
@@ -264,30 +278,17 @@
                         <span class="font-semibold" x-text="fmt(stats.sizeY)"></span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-gray-500">épaisseur</span>
+                        <span class="text-gray-500">hauteur</span>
                         <span class="font-semibold" x-text="fmt(stats.sizeZ)"></span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-gray-500">hauteur</span>
-                        <span class="font-semibold" x-text="'—'"></span>
+                        <span class="text-gray-500">épaisseur</span>
+                        <span class="font-semibold" x-text="stats.thickness ? fmt(stats.thickness) : '—'"></span>
                     </div>
-                </div>
-            </div>
-
-            <flux:separator/>
-
-            {{-- Matériau --}}
-            <div class="space-y-3">
-                <div class="text-base font-semibold text-gray-900">Matériau</div>
-
-                <flux:radio.group variant="segmented" x-model="materialFamily" @change="saveMaterialChoice()">
-                    @foreach (\Tolery\AiCad\Enum\MaterialFamily::cases() as $material)
-                        <flux:radio :value="$material->value" :label="$material->label()" />
-                    @endforeach
-                </flux:radio.group>
-
-                <div class="text-xs text-gray-500 italic">
-                    Le rendu 3D reste métallique. Votre choix est envoyé à l'API lors de la génération.
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">poids</span>
+                        <span class="font-semibold" x-text="stats.weight ? fmtWeight(stats.weight) : '—'"></span>
+                    </div>
                 </div>
             </div>
 
@@ -574,6 +575,14 @@
                 },
                 fmtArea(v) {
                     return (v == null) ? '—' : `${(+v).toFixed(0)} mm²`
+                },
+                fmtWeight(v) {
+                    if (v == null) return '—';
+                    // Convertir en kg si > 1000g
+                    if (v >= 1000) {
+                        return `${(v / 1000).toFixed(2)} kg`;
+                    }
+                    return `${(+v).toFixed(0)} g`;
                 },
                 fmtThickness() {
                     return '—'

@@ -85,7 +85,7 @@
                     <img src="{{ asset('vendor/ai-cad/images/tolery-large-logo.svg') }}" alt="ToleryCAD" />
                 </div>
                 <p class="text-sm font-medium text-black text-center max-w-[310px]">
-                    Votre pièce apparaîtra ici dès qu'elle sera prête.
+                    Votre pièce apparaîtra ici dès qu'elle sera générée.
                 </p>
             </div>
         @endif
