@@ -55,8 +55,7 @@
                              class="h-8 w-8 p-1 bot-avatar"
                              :class="{ 'bot-thinking': isGenerating }">
                         <span>
-                            Bienvenue dans le configurateur intelligent de création <span class="italic text-violet-600">pour des pièces simples de tôlerie</span> sur-mesure et instantanément.
-                            Vous pouvez démarrer votre demande de fichier CAO de 3 manières :
+                            Bienvenue dans notre configurateur intelligent de création de fichier CAO (STEP) sur-mesure et instantanément <span class="italic text-violet-600">pour des pièces simples de tôlerie</span>. Vous pouvez démarrer la création de vos fichiers CAO de 3 manières :
                         </span>
                     </flux:text>
                 </div>
