@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
-use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\ZipGeneratorService;
@@ -77,38 +76,38 @@ class StripePaymentModal extends Component
         if (app()->environment('local')) {
             try {
                 /** @var ChatUser $user */
-                $user = auth()->user();
-                $team = $user->team;
+            $user = auth()->user();
+            $team = $user->team;
 
-                if ($team && $this->chatId) {
-                    // Vérifier que l'achat n'existe pas déjà
-                    $existingPurchase = FilePurchase::where('stripe_payment_intent_id', $paymentIntentId)->first();
+            if ($team && $this->chatId) {
+                // Vérifier que l'achat n'existe pas déjà
+                $existingPurchase = FilePurchase::where('stripe_payment_intent_id', $paymentIntentId)->first();
 
-                    if (!$existingPurchase) {
-                        $purchase = FilePurchase::create([
-                            'team_id' => $team->id,
-                            'chat_id' => $this->chatId,
-                            'stripe_payment_intent_id' => $paymentIntentId,
-                            'amount' => $this->amount,
-                            'currency' => 'eur',
-                            'purchased_at' => now(),
-                        ]);
+                if (! $existingPurchase) {
+                    $purchase = FilePurchase::create([
+                        'team_id' => $team->id,
+                        'chat_id' => $this->chatId,
+                        'stripe_payment_intent_id' => $paymentIntentId,
+                        'amount' => $this->amount,
+                        'currency' => 'eur',
+                        'purchased_at' => now(),
+                    ]);
 
-                        Log::info('[AICAD] FilePurchase created after payment confirmation (LOCAL ENV)', [
-                            'purchase_id' => $purchase->id,
-                            'team_id' => $team->id,
-                            'chat_id' => $this->chatId,
-                            'payment_intent_id' => $paymentIntentId,
-                        ]);
-                    } else {
-                        Log::info('[AICAD] FilePurchase already exists (LOCAL ENV)', [
-                            'purchase_id' => $existingPurchase->id,
-                            'payment_intent_id' => $paymentIntentId,
-                        ]);
-                    }
+                    Log::info('[AICAD] FilePurchase created after payment confirmation', [
+                        'purchase_id' => $purchase->id,
+                        'team_id' => $team->id,
+                        'chat_id' => $this->chatId,
+                        'payment_intent_id' => $paymentIntentId,
+                    ]);
+                } else {
+                    Log::info('[AICAD] FilePurchase already exists', [
+                        'purchase_id' => $existingPurchase->id,
+                        'payment_intent_id' => $paymentIntentId,
+                    ]);
                 }
+            }
             } catch (\Exception $e) {
-                Log::error('[AICAD] Failed to create FilePurchase after payment (LOCAL ENV)', [
+                Log::error('[AICAD] Failed to create FilePurchase after payment', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                     'payment_intent_id' => $paymentIntentId,
