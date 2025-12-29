@@ -4,6 +4,7 @@ namespace Tolery\AiCad;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\Compilers\BladeCompiler;
 use Laravel\Cashier\Cashier;
 use Livewire\Livewire;
@@ -69,6 +70,9 @@ class AiCadServiceProvider extends PackageServiceProvider
     {
         parent::boot();
 
+        // Register policies
+        $this->registerPolicies();
+
         // Load admin routes conditionally
         if (config('ai-cad.admin.enabled', true)) {
             $this->loadRoutesFrom(__DIR__.'/../routes/admin.php');
@@ -88,6 +92,17 @@ class AiCadServiceProvider extends PackageServiceProvider
         $this->publishes([
             __DIR__.'/../resources/views/admin' => resource_path('views/vendor/ai-cad/admin'),
         ], 'ai-cad-admin-views');
+    }
+
+    /**
+     * Register authorization policies.
+     */
+    protected function registerPolicies(): void
+    {
+        Gate::policy(\Tolery\AiCad\Models\Chat::class, \Tolery\AiCad\Policies\ChatPolicy::class);
+        Gate::policy(\Tolery\AiCad\Models\FilePurchase::class, \Tolery\AiCad\Policies\FilePurchasePolicy::class);
+        Gate::policy(\Tolery\AiCad\Models\ChatDownload::class, \Tolery\AiCad\Policies\ChatDownloadPolicy::class);
+        Gate::policy(\Tolery\AiCad\Models\PredefinedPrompt::class, \Tolery\AiCad\Policies\PredefinedPromptPolicy::class);
     }
 
     protected function registerLivewireComponents(): self

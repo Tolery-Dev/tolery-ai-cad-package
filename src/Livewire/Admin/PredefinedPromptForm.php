@@ -35,6 +35,13 @@ class PredefinedPromptForm extends Component
 
     public function save(): void
     {
+        // Vérifier les autorisations
+        if ($this->prompt && $this->prompt->exists) {
+            $this->authorize('update', $this->prompt);
+        } else {
+            $this->authorize('create', PredefinedPrompt::class);
+        }
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'prompt_text' => ['required', 'string'],
@@ -51,13 +58,16 @@ class PredefinedPromptForm extends Component
             'sort_order' => $validated['sort_order'],
         ];
 
-        if ($this->prompt && $this->prompt->exists) {
-            $this->prompt->update($data);
-            session()->flash('success', 'Prompt mis à jour avec succès.');
-        } else {
-            PredefinedPrompt::create($data);
-            session()->flash('success', 'Prompt créé avec succès.');
-        }
+        // Exécuter dans une transaction
+        DB::transaction(function () use ($data) {
+            if ($this->prompt && $this->prompt->exists) {
+                $this->prompt->update($data);
+                session()->flash('success', 'Prompt mis à jour avec succès.');
+            } else {
+                PredefinedPrompt::create($data);
+                session()->flash('success', 'Prompt créé avec succès.');
+            }
+        });
 
         $this->redirect(route('ai-cad.admin.prompts.index'));
     }

@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
-use Tolery\AiCad\Services\ZipGeneratorService;
 
 class ChatDetail extends Component
 {
@@ -20,46 +19,37 @@ class ChatDetail extends Component
 
     public function downloadZip(): void
     {
-        Log::info('[ADMIN] Generating ZIP for chat detail', ['chat_id' => $this->chat->id]);
+        Log::info('[ADMIN] Generating signed download URL for chat', ['chat_id' => $this->chat->id]);
 
-        $zipService = app(ZipGeneratorService::class);
-        $result = $zipService->generateChatFilesZip($this->chat);
+        // Vérifier l'autorisation
+        $this->authorize('downloadFiles', $this->chat);
 
-        if (! $result['success']) {
-            Log::error('[ADMIN] ZIP generation failed', ['error' => $result['error']]);
-            $this->js("Flux.toast({ heading: 'Erreur', text: '{$result['error']}', variant: 'danger' })");
+        // Déterminer si S3 est disponible
+        $disk = Storage::disk(config('ai-cad.storage_disk', 's3'));
+        $useS3 = method_exists($disk->getAdapter(), 'temporaryUrl');
 
-            return;
+        // Générer l'URL signée appropriée
+        if ($useS3) {
+            $downloadUrl = URL::temporarySignedRoute(
+                'ai-cad.admin.download.s3',
+                now()->addMinutes(5),
+                ['chat' => $this->chat->id]
+            );
+        } else {
+            $downloadUrl = URL::temporarySignedRoute(
+                'ai-cad.admin.download',
+                now()->addMinutes(5),
+                ['chat' => $this->chat->id]
+            );
         }
 
-        // Stocker le ZIP dans un emplacement accessible
-        $publicPath = 'downloads/'.basename($result['path']);
-        Storage::disk('public')->put($publicPath, file_get_contents($result['path']));
-
-        // Supprimer le fichier temporaire
-        @unlink($result['path']);
-
-        // Déclencher le téléchargement via JavaScript
-        $downloadUrl = Storage::disk('public')->url($publicPath);
-        $filename = $result['filename'];
-
-        Log::info('[ADMIN] Triggering download from chat detail', [
-            'url' => $downloadUrl,
-            'filename' => $filename,
+        Log::info('[ADMIN] Signed download URL generated', [
+            'chat_id' => $this->chat->id,
+            'uses_s3' => $useS3,
         ]);
 
-        $this->js("
-            (function() {
-                const link = document.createElement('a');
-                link.href = '{$downloadUrl}';
-                link.download = '{$filename}';
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            })();
-            Flux.toast({ heading: 'Téléchargement lancé', text: 'Le fichier ZIP est en cours de téléchargement.', variant: 'success' });
-        ");
+        // Ouvrir l'URL dans un nouvel onglet
+        $this->js("window.open('{$downloadUrl}', '_blank');");
     }
 
     public function render(): View

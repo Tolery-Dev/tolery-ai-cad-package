@@ -3,11 +3,8 @@
 namespace Tolery\AiCad\Livewire\Admin;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Number;
 use Tolery\AiCad\Models\FilePurchase;
-use Tolery\AiCad\Services\ZipGeneratorService;
 use Ultraviolettes\FluxDataTable\Livewire\FluxDataTable;
 
 class FilePurchaseTable extends FluxDataTable
@@ -61,67 +58,24 @@ class FilePurchaseTable extends FluxDataTable
             [
                 'label' => 'Actions',
                 'field' => 'actions',
-                'render' => fn ($row) => $row->chat
-                    ? '<button wire:click="downloadZip('.$row->chat_id.')" class="text-sm text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300">
-                        <svg class="inline-block w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                        </svg>
-                        Télécharger ZIP
-                    </button>'
-                    : '-',
+                'render' => function ($row) {
+                    if (! $row->chat) {
+                        return '-';
+                    }
+
+                    $disk = Storage::disk(config('ai-cad.storage_disk', 's3'));
+                    $useS3 = method_exists($disk->getAdapter(), 'temporaryUrl');
+
+                    $downloadUrl = $useS3
+                        ? URL::temporarySignedRoute('ai-cad.admin.download.s3', now()->addMinutes(5), ['chat' => $row->chat->id])
+                        : URL::temporarySignedRoute('ai-cad.admin.download', now()->addMinutes(5), ['chat' => $row->chat->id]);
+
+                    return '<a href="'.e($downloadUrl).'" target="_blank" class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700">'
+                        .'<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>'
+                        .'ZIP'
+                        .'</a>';
+                },
             ],
         ];
-    }
-
-    public function downloadZip(int $chatId): void
-    {
-        $chat = \Tolery\AiCad\Models\Chat::find($chatId);
-
-        if (! $chat) {
-            $this->js("Flux.toast({ heading: 'Erreur', text: 'Conversation introuvable', variant: 'danger' })");
-
-            return;
-        }
-
-        Log::info('[ADMIN] Generating ZIP for purchase download', ['chat_id' => $chatId]);
-
-        $zipService = app(ZipGeneratorService::class);
-        $result = $zipService->generateChatFilesZip($chat);
-
-        if (! $result['success']) {
-            Log::error('[ADMIN] ZIP generation failed', ['error' => $result['error']]);
-            $this->js("Flux.toast({ heading: 'Erreur', text: '{$result['error']}', variant: 'danger' })");
-
-            return;
-        }
-
-        // Stocker le ZIP dans un emplacement accessible
-        $publicPath = 'downloads/'.basename($result['path']);
-        Storage::disk('public')->put($publicPath, file_get_contents($result['path']));
-
-        // Supprimer le fichier temporaire
-        @unlink($result['path']);
-
-        // Déclencher le téléchargement via JavaScript
-        $downloadUrl = Storage::disk('public')->url($publicPath);
-        $filename = $result['filename'];
-
-        Log::info('[ADMIN] Triggering download', [
-            'url' => $downloadUrl,
-            'filename' => $filename,
-        ]);
-
-        $this->js("
-            (function() {
-                const link = document.createElement('a');
-                link.href = '{$downloadUrl}';
-                link.download = '{$filename}';
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            })();
-            Flux.toast({ heading: 'Téléchargement lancé', text: 'Le fichier ZIP est en cours de téléchargement.', variant: 'success' });
-        ");
     }
 }
