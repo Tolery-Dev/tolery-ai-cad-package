@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
-use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\ZipGeneratorService;
@@ -83,7 +82,7 @@ class StripePaymentModal extends Component
                 // Vérifier que l'achat n'existe pas déjà
                 $existingPurchase = FilePurchase::where('stripe_payment_intent_id', $paymentIntentId)->first();
 
-                if (!$existingPurchase) {
+                if (! $existingPurchase) {
                     $purchase = FilePurchase::create([
                         'team_id' => $team->id,
                         'chat_id' => $this->chatId,
