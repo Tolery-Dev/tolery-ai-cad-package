@@ -18,5 +18,7 @@ parameters:
     ignoreErrors:
         # ChatUser model is configured dynamically via config('ai-cad.chat_user_model')
         - '#.*(unknown class|Class).*ChatUser#'
-        # curl_close() deprecated in PHP 8.5 but still functional
-        - '#Call to deprecated function curl_close\(\)#'
+        # curl_close() deprecated in PHP 8.5 but still functional (only appears in PHP 8.5+)
+        -
+            message: '#Call to deprecated function curl_close\(\)#'
+            reportUnmatched: false
