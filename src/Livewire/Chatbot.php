@@ -15,6 +15,7 @@ use Tolery\AiCad\Enum\MaterialFamily;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
+use Tolery\AiCad\Models\PredefinedPrompt;
 use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\FileAccessService;
 use Tolery\AiCad\Services\ZipGeneratorService;
@@ -131,7 +132,21 @@ class Chatbot extends Component
 
     public function render(): View
     {
-        $predefinedPrompts = config('ai-cad.predefined_prompts', []);
+        // Charger les prompts depuis la DB (actifs uniquement, triés par sort_order)
+        // Avec fallback sur la config si la table est vide
+        $predefinedPrompts = PredefinedPrompt::where('active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn ($prompt) => [
+                'name' => $prompt->name,
+                'prompt' => $prompt->prompt_text,
+            ])
+            ->toArray();
+
+        // Fallback sur la config si aucun prompt en DB
+        if (empty($predefinedPrompts)) {
+            $predefinedPrompts = config('ai-cad.predefined_prompts', []);
+        }
 
         return view('ai-cad::livewire.chatbot', [
             'predefinedPrompts' => $predefinedPrompts,

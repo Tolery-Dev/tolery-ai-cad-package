@@ -9,3 +9,16 @@ parameters:
     tmpDir: build/phpstan
     checkOctaneCompatibility: true
     checkModelProperties: true
+    excludePaths:
+        # These files extend FluxDataTable which is not available during static analysis
+        - src/Livewire/Admin/ChatDownloadTable.php
+        - src/Livewire/Admin/ChatTable.php
+        - src/Livewire/Admin/FilePurchaseTable.php
+        - src/Livewire/Admin/PredefinedPromptTable.php
+    ignoreErrors:
+        # ChatUser model is configured dynamically via config('ai-cad.chat_user_model')
+        - '#.*(unknown class|Class).*ChatUser#'
+        # curl_close() deprecated in PHP 8.5+ but still works (preexisting code)
+        -
+            message: '#Call to deprecated function curl_close\(\)\.#'
+            reportUnmatched: false

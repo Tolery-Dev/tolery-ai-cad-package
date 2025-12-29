@@ -202,7 +202,7 @@
                     'Application des opérations...',
                 ],
                 'export': [
-                    'Export des fichiers STEP et OBJ...',
+                    'Export des fichiers STEP et PDF technique...',
                     'Génération de la mise en plan...',
                     'Création du rendu 3D...',
                 ],

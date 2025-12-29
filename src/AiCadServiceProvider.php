@@ -4,6 +4,7 @@ namespace Tolery\AiCad;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\Compilers\BladeCompiler;
 use Laravel\Cashier\Cashier;
 use Livewire\Livewire;
@@ -11,10 +12,18 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\DebugApiStream;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
+use Tolery\AiCad\Commands\MigratePrompts;
 use Tolery\AiCad\Commands\SyncStripeProducts;
 use Tolery\AiCad\Commands\TestApiConnection;
 use Tolery\AiCad\Commands\TestStreamEndpoint;
 use Tolery\AiCad\Commands\UpdateStripeMetadata;
+use Tolery\AiCad\Livewire\Admin\ChatDetail;
+use Tolery\AiCad\Livewire\Admin\ChatDownloadTable;
+use Tolery\AiCad\Livewire\Admin\ChatTable;
+use Tolery\AiCad\Livewire\Admin\Dashboard;
+use Tolery\AiCad\Livewire\Admin\FilePurchaseTable;
+use Tolery\AiCad\Livewire\Admin\PredefinedPromptForm;
+use Tolery\AiCad\Livewire\Admin\PredefinedPromptTable;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Livewire\ChatHistoryPanel;
@@ -45,12 +54,14 @@ class AiCadServiceProvider extends PackageServiceProvider
                 TestStreamEndpoint::class,
                 SyncStripeProducts::class,
                 UpdateStripeMetadata::class,
+                MigratePrompts::class,
             ]);
 
         Cashier::useCustomerModel(ChatTeam::class);
 
         $this
             ->registerLivewireComponents()
+            ->registerAdminLivewireComponents()
             ->registerBladeDirective()
             ->scheduleCommandes();
     }
@@ -58,6 +69,14 @@ class AiCadServiceProvider extends PackageServiceProvider
     public function boot(): void
     {
         parent::boot();
+
+        // Register policies
+        $this->registerPolicies();
+
+        // Load admin routes conditionally
+        if (config('ai-cad.admin.enabled', true)) {
+            $this->loadRoutesFrom(__DIR__.'/../routes/admin.php');
+        }
 
         // Publish images from resources/assets (tracked in git)
         $this->publishes([
@@ -68,6 +87,22 @@ class AiCadServiceProvider extends PackageServiceProvider
         $this->publishes([
             __DIR__.'/../resources/dist/assets' => public_path('vendor/ai-cad/assets'),
         ], 'ai-cad-assets');
+
+        // Publish admin views
+        $this->publishes([
+            __DIR__.'/../resources/views/admin' => resource_path('views/vendor/ai-cad/admin'),
+        ], 'ai-cad-admin-views');
+    }
+
+    /**
+     * Register authorization policies.
+     */
+    protected function registerPolicies(): void
+    {
+        Gate::policy(\Tolery\AiCad\Models\Chat::class, \Tolery\AiCad\Policies\ChatPolicy::class);
+        Gate::policy(\Tolery\AiCad\Models\FilePurchase::class, \Tolery\AiCad\Policies\FilePurchasePolicy::class);
+        Gate::policy(\Tolery\AiCad\Models\ChatDownload::class, \Tolery\AiCad\Policies\ChatDownloadPolicy::class);
+        Gate::policy(\Tolery\AiCad\Models\PredefinedPrompt::class, \Tolery\AiCad\Policies\PredefinedPromptPolicy::class);
     }
 
     protected function registerLivewireComponents(): self
@@ -77,6 +112,25 @@ class AiCadServiceProvider extends PackageServiceProvider
             Livewire::component('chat-config', ChatConfig::class);
             Livewire::component('stripe-payment-modal', StripePaymentModal::class);
             Livewire::component('chat-history-panel', ChatHistoryPanel::class);
+        });
+
+        return $this;
+    }
+
+    protected function registerAdminLivewireComponents(): self
+    {
+        if (! config('ai-cad.admin.enabled', true)) {
+            return $this;
+        }
+
+        $this->callAfterResolving(BladeCompiler::class, function () {
+            Livewire::component('ai-cad-admin-dashboard', Dashboard::class);
+            Livewire::component('ai-cad-admin-chat-table', ChatTable::class);
+            Livewire::component('ai-cad-admin-chat-detail', ChatDetail::class);
+            Livewire::component('ai-cad-admin-file-purchase-table', FilePurchaseTable::class);
+            Livewire::component('ai-cad-admin-chat-download-table', ChatDownloadTable::class);
+            Livewire::component('ai-cad-admin-predefined-prompt-table', PredefinedPromptTable::class);
+            Livewire::component('ai-cad-admin-predefined-prompt-form', PredefinedPromptForm::class);
         });
 
         return $this;

@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
 use Tolery\AiCad\Models\Chat;
@@ -120,15 +121,17 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            // Créer l'enregistrement FilePurchase
-            $purchase = FilePurchase::create([
-                'team_id' => $team->id,
-                'chat_id' => $chat->id,
-                'stripe_payment_intent_id' => $paymentIntent['id'],
-                'amount' => $paymentIntent['amount'],
-                'currency' => $paymentIntent['currency'],
-                'purchased_at' => now(),
-            ]);
+            // Créer l'enregistrement FilePurchase dans une transaction
+            $purchase = DB::transaction(function () use ($team, $chat, $paymentIntent) {
+                return FilePurchase::create([
+                    'team_id' => $team->id,
+                    'chat_id' => $chat->id,
+                    'stripe_payment_intent_id' => $paymentIntent['id'],
+                    'amount' => $paymentIntent['amount'],
+                    'currency' => $paymentIntent['currency'],
+                    'purchased_at' => now(),
+                ]);
+            });
 
             Log::info('[AICAD Webhook] File purchase created successfully', [
                 'purchase_id' => $purchase->id,
@@ -196,9 +199,11 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            // Create limit for this subscription
-            $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
-            $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+            // Create limit for this subscription dans une transaction
+            DB::transaction(function () use ($team, $subscriptionProduct, $subscription) {
+                $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
+                $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+            });
 
             Log::info('[AICAD Webhook] Limit created for subscription.created event', [
                 'team_id' => $team->id,
@@ -271,9 +276,11 @@ class StripeWebhookController extends Controller
                 ->first();
 
             if (! $existingLimit) {
-                // New billing period - create new limit
-                $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
-                $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+                // New billing period - create new limit dans une transaction
+                DB::transaction(function () use ($team, $subscriptionProduct, $subscription) {
+                    $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
+                    $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+                });
 
                 Log::info('[AICAD Webhook] New limit created for updated subscription (new billing period)', [
                     'team_id' => $team->id,
@@ -383,41 +390,44 @@ class StripeWebhookController extends Controller
                 $stripeSubscriptionId
             );
 
-            // Update team's ToleryCad customer ID
-            $team->tolerycad_stripe_id = $session['customer'];
-            $team->save();
+            // Créer l'abonnement et la limite dans une transaction atomique
+            DB::transaction(function () use ($team, $session, $stripeSubscription, $subscriptionProductId, $teamId) {
+                // Update team's ToleryCad customer ID
+                $team->tolerycad_stripe_id = $session['customer'];
+                $team->save();
 
-            // Create subscription record using Cashier pattern
-            $subscription = $team->subscriptions()->create([
-                'type' => 'default',
-                'stripe_id' => $stripeSubscription->id,
-                'stripe_status' => $stripeSubscription->status,
-                'stripe_price' => $stripeSubscription->items->data[0]->price->id ?? null,
-                'quantity' => 1,
-                'ends_at' => null,
-            ]);
-
-            // Create subscription items (required for getSubscriptionProduct to work)
-            foreach ($stripeSubscription->items->data as $item) {
-                $subscription->items()->create([
-                    'stripe_id' => $item->id,
-                    'stripe_product' => $item->price->product,
-                    'stripe_price' => $item->price->id,
-                    'quantity' => $item->quantity ?? 1,
+                // Create subscription record using Cashier pattern
+                $subscription = $team->subscriptions()->create([
+                    'type' => 'default',
+                    'stripe_id' => $stripeSubscription->id,
+                    'stripe_status' => $stripeSubscription->status,
+                    'stripe_price' => $stripeSubscription->items->data[0]->price->id ?? null,
+                    'quantity' => 1,
+                    'ends_at' => null,
                 ]);
-            }
 
-            // Create the limit for this subscription period
-            if ($subscriptionProductId) {
-                $product = SubscriptionProduct::find($subscriptionProductId);
-                if ($product) {
-                    $this->createLimitForTeam($team, $product, $stripeSubscription);
-                    Log::info('[AICAD Webhook] Limit created for new subscription', [
-                        'team_id' => $teamId,
-                        'product_id' => $product->id,
+                // Create subscription items (required for getSubscriptionProduct to work)
+                foreach ($stripeSubscription->items->data as $item) {
+                    $subscription->items()->create([
+                        'stripe_id' => $item->id,
+                        'stripe_product' => $item->price->product,
+                        'stripe_price' => $item->price->id,
+                        'quantity' => $item->quantity ?? 1,
                     ]);
                 }
-            }
+
+                // Create the limit for this subscription period
+                if ($subscriptionProductId) {
+                    $product = SubscriptionProduct::find($subscriptionProductId);
+                    if ($product) {
+                        $this->createLimitForTeam($team, $product, $stripeSubscription);
+                        Log::info('[AICAD Webhook] Limit created for new subscription', [
+                            'team_id' => $teamId,
+                            'product_id' => $product->id,
+                        ]);
+                    }
+                }
+            });
 
             Log::info('[AICAD Webhook] Subscription created from checkout', [
                 'team_id' => $teamId,

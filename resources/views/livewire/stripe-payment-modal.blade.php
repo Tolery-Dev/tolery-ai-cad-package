@@ -143,7 +143,7 @@
                                         $wire.call('handlePaymentError', error.message);
                                     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
                                         console.log('Payment succeeded:', paymentIntent);
-                                        $wire.call('handlePaymentSuccess');
+                                        $wire.call('handlePaymentSuccess', paymentIntent.id);
                                     }
                                 } catch (err) {
                                     console.error('Unexpected error:', err);
