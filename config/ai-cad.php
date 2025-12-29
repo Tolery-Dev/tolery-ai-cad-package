@@ -39,10 +39,51 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Predefined Prompts (UI suggestions)
+    | Admin Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the ToleryCAD admin panel.
+    |
+    */
+    'admin' => [
+        'enabled' => env('AICAD_ADMIN_ENABLED', true),
+        'prefix' => env('AICAD_ADMIN_PREFIX', 'admin/tolerycad'),
+        'middleware' => ['web', 'auth:sanctum', 'verified', 'has_role:admin', 'active_user'],
+        'nav_items' => [
+            [
+                'name' => 'ToleryCad',
+                'route' => 'ai-cad.admin.dashboard',
+                'icon' => 'cube',
+                'children' => [
+                    ['name' => 'Dashboard', 'route' => 'ai-cad.admin.dashboard'],
+                    ['name' => 'Conversations', 'route' => 'ai-cad.admin.chats.index'],
+                    ['name' => 'Achats', 'route' => 'ai-cad.admin.purchases.index'],
+                    ['name' => 'Téléchargements', 'route' => 'ai-cad.admin.downloads.index'],
+                    ['name' => 'Prompts', 'route' => 'ai-cad.admin.prompts.index'],
+                ],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Predefined Prompts Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Source for predefined prompts:
+    | - 'database': Use the predefined_prompts table (recommended for admin management)
+    | - 'config': Use the predefined_prompts array below (legacy)
+    |
+    */
+    'prompts_source' => env('AICAD_PROMPTS_SOURCE', 'database'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Predefined Prompts (UI suggestions) - Legacy Config
     |--------------------------------------------------------------------------
     |
     | Example prompts shown in the UI to help users get started.
+    | Only used when prompts_source = 'config'
     |
     */
     'predefined_prompts' => [
