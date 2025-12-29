@@ -4,6 +4,7 @@ namespace Tolery\AiCad\Livewire\Admin;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;

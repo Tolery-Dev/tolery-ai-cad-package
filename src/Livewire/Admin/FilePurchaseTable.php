@@ -3,6 +3,8 @@
 namespace Tolery\AiCad\Livewire\Admin;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Number;
 use Tolery\AiCad\Models\FilePurchase;
 use Ultraviolettes\FluxDataTable\Livewire\FluxDataTable;

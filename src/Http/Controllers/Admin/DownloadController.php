@@ -21,7 +21,7 @@ class DownloadController extends Controller
      * - Middleware 'auth' (utilisateur authentifié)
      * - Gate authorization (vérification des permissions)
      */
-    public function download(Chat $chat): Response|StreamedResponse
+    public function download(Chat $chat): Response|StreamedResponse|\Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         // Vérifier l'autorisation explicite
         Gate::authorize('downloadFiles', $chat);
@@ -70,7 +70,7 @@ class DownloadController extends Controller
      * Télécharge le ZIP via stockage S3 avec URL temporaire.
      * Utilisé uniquement si S3 est configuré.
      */
-    public function downloadFromS3(Chat $chat): Response
+    public function downloadFromS3(Chat $chat): Response|\Illuminate\Http\RedirectResponse
     {
         Gate::authorize('downloadFiles', $chat);
 

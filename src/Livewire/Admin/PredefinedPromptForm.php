@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Livewire\Admin;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Livewire\Component;
 use Tolery\AiCad\Enum\MaterialFamily;

@@ -3,6 +3,8 @@
 namespace Tolery\AiCad\Livewire\Admin;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tolery\AiCad\Models\ChatDownload;
 use Ultraviolettes\FluxDataTable\Livewire\FluxDataTable;
 
