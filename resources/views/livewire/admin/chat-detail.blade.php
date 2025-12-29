@@ -13,15 +13,26 @@
                     @endif
                 </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
                 @if($chat->has_generated_piece)
-                    <flux:badge color="green">Pièce générée</flux:badge>
+                    <flux:button 
+                        wire:click="downloadZip" 
+                        size="sm"
+                        variant="primary"
+                        icon="arrow-down-tray">
+                        Télécharger ZIP
+                    </flux:button>
                 @endif
-                @if($chat->trashed())
-                    <flux:badge color="red">Supprimée</flux:badge>
-                @else
-                    <flux:badge color="green">Active</flux:badge>
-                @endif
+                <div class="flex items-center gap-2">
+                    @if($chat->has_generated_piece)
+                        <flux:badge color="green">Pièce générée</flux:badge>
+                    @endif
+                    @if($chat->trashed())
+                        <flux:badge color="red">Supprimée</flux:badge>
+                    @else
+                        <flux:badge color="green">Active</flux:badge>
+                    @endif
+                </div>
             </div>
         </div>
     </flux:card>
