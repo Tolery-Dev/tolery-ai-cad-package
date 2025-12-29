@@ -79,6 +79,7 @@ class FilePurchaseTable extends FluxDataTable
 
         if (! $chat) {
             $this->js("Flux.toast({ heading: 'Erreur', text: 'Conversation introuvable', variant: 'danger' })");
+
             return;
         }
 
@@ -90,6 +91,7 @@ class FilePurchaseTable extends FluxDataTable
         if (! $result['success']) {
             Log::error('[ADMIN] ZIP generation failed', ['error' => $result['error']]);
             $this->js("Flux.toast({ heading: 'Erreur', text: '{$result['error']}', variant: 'danger' })");
+
             return;
         }
 

@@ -28,6 +28,7 @@ class ChatDetail extends Component
         if (! $result['success']) {
             Log::error('[ADMIN] ZIP generation failed', ['error' => $result['error']]);
             $this->js("Flux.toast({ heading: 'Erreur', text: '{$result['error']}', variant: 'danger' })");
+
             return;
         }
 
