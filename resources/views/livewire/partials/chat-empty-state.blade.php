@@ -25,13 +25,15 @@
                                 'bg-rose-100 text-rose-700',
                             ];
                         @endphp
-                        @foreach($predefinedPrompts as $label => $prompt)
+                        @foreach($predefinedPrompts as $promptData)
                             @php
                                 $colorClass = $buttonColors[$loop->index % count($buttonColors)] ?? 'bg-gray-100 text-gray-700';
+                                $name = is_array($promptData) ? $promptData['name'] : array_keys($predefinedPrompts)[$loop->index];
+                                $prompt = is_array($promptData) ? $promptData['prompt'] : $promptData;
                             @endphp
                             <button wire:click="sendPredefinedPrompt('{{ addslashes($prompt) }}')"
                                     class="cursor-pointer px-3 py-1 rounded {{ $colorClass }} text-xs font-normal hover:opacity-80 transition-opacity">
-                                {{ $label }}
+                                {{ $name }}
                             </button>
                         @endforeach
                     </div>
