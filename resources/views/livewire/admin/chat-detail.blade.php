@@ -42,39 +42,62 @@
                                 @endif
                             @else
                                 <flux:badge color="purple" size="sm">Assistant</flux:badge>
+                                @if($message->getVersionLabel())
+                                    <flux:badge color="green" size="sm">{{ $message->getVersionLabel() }}</flux:badge>
+                                @endif
                             @endif
                         </div>
                         <span class="text-xs text-zinc-500">{{ $message->created_at->format('d/m/Y H:i:s') }}</span>
                     </div>
 
-                    <div class="prose prose-sm dark:prose-invert max-w-none">
-                        {!! nl2br(e($message->content)) !!}
-                    </div>
+                    {{-- Texte du message --}}
+                    @if($message->message)
+                        <div class="prose prose-sm dark:prose-invert max-w-none mb-3">
+                            {!! nl2br(e($message->message)) !!}
+                        </div>
+                    @endif
 
-                    {{-- Fichiers attachés --}}
-                    @if($message->attachments && count($message->attachments) > 0)
+                    {{-- Screenshot de la pièce générée --}}
+                    @if($message->ai_screenshot_path)
                         <div class="mt-3 border-t pt-3 dark:border-zinc-700">
-                            <p class="mb-2 text-xs font-medium text-zinc-500">Fichiers attachés:</p>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach($message->attachments as $attachment)
-                                    <flux:badge size="sm" color="zinc">
-                                        {{ $attachment['name'] ?? 'Fichier' }}
-                                    </flux:badge>
-                                @endforeach
+                            <p class="mb-2 text-xs font-medium text-zinc-500">Aperçu de la pièce:</p>
+                            <div class="rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 inline-block">
+                                <img src="{{ $message->getScreenshotUrl() }}" 
+                                     alt="Screenshot {{ $message->getVersionLabel() ?? 'pièce' }}" 
+                                     class="max-w-md w-full h-auto">
                             </div>
                         </div>
                     @endif
 
-                    {{-- Fichiers générés --}}
-                    @if($message->generated_files && count($message->generated_files) > 0)
+                    {{-- Fichiers générés (CAD, STEP, PDF) --}}
+                    @if($message->ai_cad_path || $message->ai_step_path || $message->ai_technical_drawing_path || $message->ai_json_edge_path)
                         <div class="mt-3 border-t pt-3 dark:border-zinc-700">
                             <p class="mb-2 text-xs font-medium text-zinc-500">Fichiers générés:</p>
                             <div class="flex flex-wrap gap-2">
-                                @foreach($message->generated_files as $file)
+                                @if($message->ai_step_path)
                                     <flux:badge size="sm" color="green">
-                                        {{ $file['type'] ?? 'Fichier' }}
+                                        <flux:icon.document-arrow-down class="size-3 mr-1" />
+                                        STEP
                                     </flux:badge>
-                                @endforeach
+                                @endif
+                                @if($message->ai_cad_path)
+                                    <flux:badge size="sm" color="blue">
+                                        <flux:icon.document-arrow-down class="size-3 mr-1" />
+                                        OBJ
+                                    </flux:badge>
+                                @endif
+                                @if($message->ai_technical_drawing_path)
+                                    <flux:badge size="sm" color="purple">
+                                        <flux:icon.document-arrow-down class="size-3 mr-1" />
+                                        PDF (Plan technique)
+                                    </flux:badge>
+                                @endif
+                                @if($message->ai_json_edge_path)
+                                    <flux:badge size="sm" color="zinc">
+                                        <flux:icon.document-arrow-down class="size-3 mr-1" />
+                                        JSON
+                                    </flux:badge>
+                                @endif
                             </div>
                         </div>
                     @endif
