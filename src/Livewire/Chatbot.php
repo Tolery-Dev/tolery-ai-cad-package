@@ -240,6 +240,9 @@ class Chatbot extends Component
                 'user_id' => $this->chat->user_id,
                 'chat_id' => $this->chat->id, // Stocker l'ID du chat créé
             ]);
+
+            // Dispatcher un événement pour mettre à jour l'URL côté frontend via History API
+            $this->dispatch('chat-created', chatId: $this->chat->id);
         }
 
         $rateKey = 'aicad:chat:'.($this->chat->id ?: request()->session()->getId());

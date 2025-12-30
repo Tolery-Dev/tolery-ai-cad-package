@@ -70,22 +70,38 @@ class StreamController extends Controller
                 // No Generator, no foreach loop, no nested streaming
                 $this->client->streamDirectlyToOutput($message, $sessionId, $isEditRequest, 600);
 
-                Log::info('StreamController: Stream completed successfully');
+                Log::info('[AICAD] StreamController: Stream completed successfully', [
+                    'session_id' => $sessionId,
+                    'message_length' => strlen($message),
+                ]);
 
                 // Événement de fin SSE
                 echo "data: [DONE]\n\n";
                 flush();
 
             } catch (\Exception $e) {
-                Log::error('StreamController: Stream failed', [
-                    'error' => $e->getMessage(),
+                Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                Log::error('[AICAD] ❌ StreamController EXCEPTION');
+                Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                Log::error('[AICAD] 🔑 Session ID: '.($sessionId ?: 'N/A'));
+                Log::error('[AICAD] 📝 Message: '.substr($message, 0, 150));
+                Log::error('[AICAD] ⚠️  Exception Type: '.get_class($e));
+                Log::error('[AICAD] ⚠️  Exception Message: '.$e->getMessage());
+                Log::error('[AICAD] 📍 Exception File: '.$e->getFile().':'.$e->getLine());
+                Log::error('[AICAD] 🔍 Exception Code: '.$e->getCode());
+                if ($e->getPrevious()) {
+                    Log::error('[AICAD] 🔗 Previous Exception: '.get_class($e->getPrevious()).' - '.$e->getPrevious()->getMessage());
+                }
+                Log::error('[AICAD] 📚 Stack Trace:', [
                     'trace' => $e->getTraceAsString(),
                 ]);
+                Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
                 // Envoie une erreur au format SSE
                 $error = json_encode([
                     'error' => true,
                     'message' => $e->getMessage(),
+                    'type' => get_class($e),
                 ]);
                 echo "data: {$error}\n\n";
                 flush();
