@@ -290,6 +290,7 @@
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
                 try {
+                    console.log('[AICAD] 📡 Sending fetch request...');
                     const res = await fetch(url, {
                         method: 'POST',
                         headers: {
@@ -304,8 +305,23 @@
                         }),
                         signal: this.controller.signal,
                     });
+
+                    console.log('[AICAD] 📨 Response received:', {
+                        status: res.status,
+                        statusText: res.statusText,
+                        ok: res.ok,
+                        headers: Object.fromEntries(res.headers.entries()),
+                        bodyExists: !!res.body,
+                    });
+
                     if (!res.ok || !res.body) {
-                        throw new Error(`Stream error: ${res.status}`);
+                        console.error('[AICAD] ❌ Response not OK or no body:', {
+                            status: res.status,
+                            statusText: res.statusText,
+                            ok: res.ok,
+                            bodyExists: !!res.body,
+                        });
+                        throw new Error(`Stream error: ${res.status} ${res.statusText}`);
                     }
                     const reader = res.body.getReader();
                     const decoder = new TextDecoder();
@@ -400,8 +416,18 @@
                     console.error('[AICAD] ❌ STREAM ERROR');
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     console.error('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
-                    console.error('[AICAD] ⚠️  Error:', e.message);
+                    console.error('[AICAD] 📝 Message:', message?.substring(0, 150));
+                    console.error('[AICAD] 📍 Endpoint:', url);
+                    console.error('[AICAD] ⚠️  Error Type:', e.constructor.name);
+                    console.error('[AICAD] ⚠️  Error Message:', e.message);
                     console.error('[AICAD] 📍 Stack:', e.stack);
+                    console.error('[AICAD] 🔍 Error Object:', {
+                        name: e.name,
+                        message: e.message,
+                        cause: e.cause,
+                        isAbortError: e.name === 'AbortError',
+                        isNetworkError: e instanceof TypeError,
+                    });
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     this.statusText = 'Stream connection error. Retrying soon…';
                     this.cancelable = true;
@@ -415,6 +441,22 @@
                 window.dispatchEvent(new CustomEvent('cad-generation-ended'));
             }
         }
+    });
+
+    // Listen for chat creation to update URL without redirecting
+    Livewire.on('chat-created', ({chatId}) => {
+        const newUrl = @js(route('client.tolerycad.show-chatbot', ['chat' => '__CHAT_ID__'])).replace('__CHAT_ID__', chatId);
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('[AICAD] 🔗 Updating URL after chat creation');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('[AICAD] 🔑 Chat ID:', chatId);
+        console.log('[AICAD] 📍 Old URL:', window.location.href);
+        console.log('[AICAD] 📍 New URL:', newUrl);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Update URL without page reload using HTML5 History API
+        window.history.pushState({chatId: chatId}, '', newUrl);
     });
 
     // Listen for file download events
