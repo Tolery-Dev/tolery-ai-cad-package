@@ -888,16 +888,29 @@ class JsonModelViewer3D {
       vertices.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
     }
 
-    // Detect face type and compute metrics
-    const faceType = this.detectFaceType(fg, this.mesh.geometry);
-    const bbox = {
-      min: new THREE.Vector3(minX, minY, minZ),
-      max: new THREE.Vector3(maxX, maxY, maxZ)
-    };
-    const metrics = this.computeFaceMetrics(faceType, vertices, bbox, areaMm2);
-
-    // Try to find semantic feature data from FreeCad JSON
+    // Try to find semantic feature data from FreeCad JSON first
     const featureData = this.getFeatureForFaceId(realId);
+    
+    // Determine face type: prefer FreeCad semantic data over geometric detection
+    let faceType, metrics;
+    if (featureData) {
+      // Use semantic type from FreeCad
+      faceType = featureData.type; // "hole", "countersink", "fillet", "chamfer", "slot"
+      
+      // Build metrics from feature data
+      metrics = {
+        displayType: this.getFeatureDisplayType(featureData),
+        ...featureData // Include all feature properties (diameter, depth, position, etc.)
+      };
+    } else {
+      // Fallback to geometric detection
+      faceType = this.detectFaceType(fg, this.mesh.geometry);
+      const bbox = {
+        min: new THREE.Vector3(minX, minY, minZ),
+        max: new THREE.Vector3(maxX, maxY, maxZ)
+      };
+      metrics = this.computeFaceMetrics(faceType, vertices, bbox, areaMm2);
+    }
 
 
     const detail = {
@@ -943,6 +956,26 @@ class JsonModelViewer3D {
     
     return null;
   }
+
+  /**
+   * Get human-readable display type for a feature
+   * @param {object} feature - Feature object from FreeCad JSON
+   * @returns {string} - Display name
+   */
+  getFeatureDisplayType(feature) {
+    if (!feature || !feature.type) return "Feature";
+    
+    const typeMap = {
+      hole: feature.subtype === "tapped" ? "Taraudage" : "Perçage",
+      countersink: "Fraisage",
+      fillet: "Congé",
+      chamfer: "Chanfrein",
+      slot: "Rainure"
+    };
+    
+    return typeMap[feature.type] || feature.type;
+  }
+
 
   /**
 
