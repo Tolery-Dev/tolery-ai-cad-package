@@ -76,6 +76,10 @@ class JsonModelViewer3D {
     this.modelGroup = new THREE.Group();
     this.scene.add(this.modelGroup);
     this.mesh = null;
+    
+    // Features semantic data from FreeCad JSON
+    this.features = null; // Will store array of features with type, subtype, diameter, etc.
+
 
     // edges (contours)
     this.edgesLine = null;
@@ -350,6 +354,15 @@ class JsonModelViewer3D {
     this.mesh = null;
     this.selectedGroupIndex = null;
     this.hoveredGroupIndex = null;
+
+    // Store features semantic data if available (from FreeCad JSON)
+    if (Array.isArray(json?.features)) {
+      this.features = json.features;
+      console.log(`[JsonModelViewer3D] Loaded ${this.features.length} semantic features from JSON`);
+    } else {
+      this.features = null;
+    }
+
 
     // build
     let mesh = null;
@@ -883,6 +896,10 @@ class JsonModelViewer3D {
     };
     const metrics = this.computeFaceMetrics(faceType, vertices, bbox, areaMm2);
 
+    // Try to find semantic feature data from FreeCad JSON
+    const featureData = this.getFeatureForFaceId(realId);
+
+
     const detail = {
       id: faceId,
       realFaceId: realId,
@@ -895,8 +912,11 @@ class JsonModelViewer3D {
         x: maxX - minX,
         y: maxY - minY,
         z: maxZ - minZ,
+
       },
       area: +areaMm2.toFixed(2), // mm²
+      feature: featureData, // Semantic feature data from FreeCad (type, subtype, diameter, thread, etc.)
+
     };
     window.Alpine?.dispatchEvent?.("cad-selection", detail) ||
       window.dispatchEvent(new CustomEvent("cad-selection", { detail }));
@@ -904,6 +924,28 @@ class JsonModelViewer3D {
 
   /**
    * Analyzes face geometry to determine face type
+  /**
+   * Find feature data for a given face ID from the loaded FreeCad features
+   * @param {string} faceId - The face ID to search for (e.g., "JfG", "JfA")
+   * @returns {object|null} - The feature object if found, null otherwise
+   */
+  getFeatureForFaceId(faceId) {
+    if (!this.features || !Array.isArray(this.features)) {
+      return null;
+    }
+    
+    // Search through features to find one that references this face_id
+    for (const feature of this.features) {
+      if (Array.isArray(feature.face_ids) && feature.face_ids.includes(faceId)) {
+        return feature;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+
    * Since JSON doesn't provide type metadata, we analyze vertices, normals, and bounding box
    */
   detectFaceType(faceGroup, geometry) {
