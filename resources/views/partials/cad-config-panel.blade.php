@@ -628,6 +628,41 @@
                         length: null, width: null, thickness: null,
                         radius: null, diameter: null, depth: null, pitch: null
                     };
+                // Build technical badge for bot message
+                buildTechnicalBadge() {
+                    const m = this.selection.metrics;
+                    const type = m.displayType || 'Face';
+                    
+                    // For features with semantic data from FreeCad
+                    if (m.type && m.subtype) {
+                        const parts = [type];
+                        
+                        // Add subtype info
+                        if (m.subtype === 'through') parts.push('traversant');
+                        if (m.subtype === 'blind') parts.push('borgne');
+                        if (m.subtype === 'tapped') parts.push('taraudé');
+                        
+                        // Add key dimensions
+                        if (m.diameter) parts.push(`Ø${m.diameter}mm`);
+                        if (m.depth) parts.push(`profondeur ${m.depth}mm`);
+                        
+                        // Add thread info if present
+                        if (m.thread && m.thread.designation) {
+                            parts.push(`filetage ${m.thread.designation}`);
+                        }
+                        
+                        return parts.join(' ');
+                    }
+                    
+                    // Fallback for geometric detection
+                    const parts = [type];
+                    if (m.diameter) parts.push(`Ø${m.diameter}mm`);
+                    if (m.depth) parts.push(`prof. ${m.depth}mm`);
+                    if (m.length && m.width) parts.push(`${m.length}×${m.width}mm`);
+                    
+                    return parts.join(' ');
+                },
+
                 },
                 saveEdits() {
                     // Collect all changes
@@ -662,7 +697,9 @@
                     }
 
                     // Build message for API
-                    const message = `Régénérer une pièce avec ces mesures: ${displayType} (ID: ${faceId}): ${changes.join(' ; ')}`;
+                    // Build technical badge with feature details
+                    const technicalBadge = this.buildTechnicalBadge();
+                    const message = `Régénérer une pièce avec ces mesures: ${technicalBadge}: ${changes.join(' ; ')}`;
 
                     // Send to Livewire
                     Livewire.dispatch('sendRegenerationRequest', { message });
