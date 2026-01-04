@@ -628,6 +628,7 @@
                         length: null, width: null, thickness: null,
                         radius: null, diameter: null, depth: null, pitch: null
                     };
+                },
                 // Build technical badge for bot message
                 buildTechnicalBadge() {
                     const m = this.selection.metrics;
@@ -663,7 +664,43 @@
                     return parts.join(' ');
                 },
 
+                // Build face context string (same format as FaceSelectionManager)
+                buildFaceContext() {
+                    const sel = this.selection;
+                    const faceId = sel.realFaceId || sel.id;
+                    const m = sel.metrics;
+                    
+                    let ctx = `Face Selection: ID[${faceId}]`;
+                    
+                    // Add position if available
+                    if (m.position || sel.centroid) {
+                        const pos = m.position || sel.centroid;
+                        ctx += ` Position[center(${(pos.x || 0).toFixed(1)}, ${(pos.y || 0).toFixed(1)}, ${(pos.z || 0).toFixed(1)})]`;
+                    }
+                    
+                    // Add bounding box if available
+                    if (sel.bbox) {
+                        ctx += ` BBox[Size(${(sel.bbox.x || 0).toFixed(1)}, ${(sel.bbox.y || 0).toFixed(1)}, ${(sel.bbox.z || 0).toFixed(1)})]`;
+                    }
+                    
+                    // Add area if available
+                    if (m.area || sel.area) {
+                        const area = m.area || sel.area;
+                        ctx += ` Area[${area.toFixed(0)} mm²]`;
+                    }
+                    
+                    // Add feature type info
+                    const displayType = m.displayType || 'Face';
+                    ctx += ` Type[${displayType}]`;
+                    
+                    // Add specific metrics based on face type
+                    if (m.diameter) ctx += ` Diameter[${m.diameter.toFixed(2)} mm]`;
+                    if (m.depth) ctx += ` Depth[${m.depth.toFixed(2)} mm]`;
+                    if (m.length && m.width) ctx += ` Dimensions[${m.length.toFixed(2)}×${m.width.toFixed(2)} mm]`;
+                    
+                    return `[FACE_CONTEXT: ${ctx}]`;
                 },
+
                 saveEdits() {
                     // Collect all changes
                     const changes = [];
@@ -696,10 +733,14 @@
                         return;
                     }
 
-                    // Build message for API
+                    // Build face context (pastille format)
+                    const faceContext = this.buildFaceContext();
+                    
                     // Build technical badge with feature details
                     const technicalBadge = this.buildTechnicalBadge();
-                    const message = `Régénérer une pièce avec ces mesures: ${technicalBadge}: ${changes.join(' ; ')}`;
+                    
+                    // Build message with face context for the API
+                    const message = `Modifier ${technicalBadge}: ${changes.join(' ; ')} ${faceContext}`;
 
                     // Send to Livewire
                     Livewire.dispatch('sendRegenerationRequest', { message });
