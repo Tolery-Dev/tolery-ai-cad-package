@@ -2,6 +2,34 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v0.9.0 - DFM Features Support - 2026-01-05
+
+### What's New
+
+#### DFM API Features Integration
+
+Support for semantic features from the DFM/FreeCad JSON API:
+
+| Feature | JSON Type | UI Display |
+|---------|-----------|------------|
+| Trou lisse | `hole` + `through` | Perçage |
+| Trou taraudé | `hole` + `threaded` | Taraudage |
+| Fraisurage | `countersink` | Fraisage |
+| Arrondi (congé) | `fillet` | Congé |
+| Face | `box` | Face |
+
+#### Bug Fixes
+
+- Fixed `threaded` vs `tapped` subtype mapping for threaded holes
+- Fixed fillet detection by searching `edge_ids` (not just `face_ids`)
+- Added angular span detection as geometric fallback
+
+#### UI Improvements
+
+- Added colored badges for each feature type
+- New UI templates for countersink, fillet, and box features
+- Updated simple panel with feature type display
+
 ## v0.8.6 - 2026-01-04
 
 ### What's New
