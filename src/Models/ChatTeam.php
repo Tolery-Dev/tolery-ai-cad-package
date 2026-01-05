@@ -25,8 +25,19 @@ class ChatTeam extends Model
         return 'team_id';
     }
 
+    /**
+     * @return HasMany<Chat, $this>
+     */
     public function chats(): HasMany
     {
         return $this->hasMany(Chat::class);
+    }
+
+    /**
+     * @return HasMany<FilePurchase, $this>
+     */
+    public function FilesPurchase(): HasMany
+    {
+        return $this->hasMany(FilePurchase::class);
     }
 }
