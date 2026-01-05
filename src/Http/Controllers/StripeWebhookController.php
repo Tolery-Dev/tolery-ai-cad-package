@@ -170,7 +170,6 @@ class StripeWebhookController extends Controller
                 'status' => $subscription['status'] ?? null,
             ]);
 
-            // Find team by Stripe customer ID
             $teamModel = config('ai-cad.chat_team_model', ChatTeam::class);
             $team = $teamModel::where('tolerycad_stripe_id', $subscription['customer'])->first();
 
@@ -182,8 +181,9 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            // Get subscription product from Stripe
             $productStripeId = $subscription['items']['data'][0]['price']['product'] ?? null;
+            $priceStripeId = $subscription['items']['data'][0]['price']['id'] ?? null;
+
             if (! $productStripeId) {
                 Log::warning('[AICAD Webhook] No product found in subscription items');
 
@@ -199,13 +199,15 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            // Create limit for this subscription dans une transaction
-            DB::transaction(function () use ($team, $subscriptionProduct, $subscription) {
+            DB::transaction(function () use ($team, $subscriptionProduct, $subscription, $priceStripeId) {
                 $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
-                $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+
+                $this->syncSubscriptionRecord($team, $stripeSubscription, $priceStripeId);
+
+                $this->createOrUpdateLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
             });
 
-            Log::info('[AICAD Webhook] Limit created for subscription.created event', [
+            Log::info('[AICAD Webhook] Subscription created and synced', [
                 'team_id' => $team->id,
                 'product_id' => $subscriptionProduct->id,
             ]);
@@ -224,16 +226,21 @@ class StripeWebhookController extends Controller
 
     /**
      * Handle customer.subscription.updated webhook.
-     * This is called on subscription updates, including billing period renewals
+     * This is called on subscription updates, including:
+     * - Billing period renewals
+     * - Plan changes via Stripe Billing Portal
+     * - Status changes (active, past_due, canceled, etc.)
      */
     protected function handleCustomerSubscriptionUpdated(array $payload): JsonResponse
     {
         try {
             $subscription = $payload['object'];
+            $previousAttributes = $payload['previous_attributes'] ?? [];
 
             Log::info('[AICAD Webhook] Subscription updated event', [
                 'subscription_id' => $subscription['id'] ?? null,
                 'status' => $subscription['status'] ?? null,
+                'previous_attributes' => array_keys($previousAttributes),
             ]);
 
             // Find team
@@ -248,8 +255,10 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            // Get subscription product
+            // Get current subscription product
             $productStripeId = $subscription['items']['data'][0]['price']['product'] ?? null;
+            $priceStripeId = $subscription['items']['data'][0]['price']['id'] ?? null;
+
             if (! $productStripeId) {
                 Log::warning('[AICAD Webhook] No product found in subscription items');
 
@@ -265,28 +274,33 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            // Check if we need to create a new limit for a new billing period
-            $currentPeriodStart = \Carbon\Carbon::createFromTimestamp($subscription['current_period_start']);
-            $currentPeriodEnd = \Carbon\Carbon::createFromTimestamp($subscription['current_period_end']);
+            DB::transaction(function () use ($team, $subscriptionProduct, $subscription, $priceStripeId, $previousAttributes) {
+                $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
 
-            $existingLimit = Limit::where('team_id', $team->id)
-                ->where('subscription_product_id', $subscriptionProduct->id)
-                ->where('start_date', '<=', $currentPeriodStart)
-                ->where('end_date', '>=', $currentPeriodEnd)
-                ->first();
+                // Sync subscription record (handles plan changes in the subscription table)
+                $this->syncSubscriptionRecord($team, $stripeSubscription, $priceStripeId);
 
-            if (! $existingLimit) {
-                // New billing period - create new limit dans une transaction
-                DB::transaction(function () use ($team, $subscriptionProduct, $subscription) {
-                    $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve($subscription['id']);
-                    $this->createLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
-                });
+                // Detect if this is a plan change (items changed)
+                $isPlanChange = isset($previousAttributes['items']);
 
-                Log::info('[AICAD Webhook] New limit created for updated subscription (new billing period)', [
-                    'team_id' => $team->id,
-                    'product_id' => $subscriptionProduct->id,
-                ]);
-            }
+                if ($isPlanChange) {
+                    Log::info('[AICAD Webhook] Plan change detected', [
+                        'team_id' => $team->id,
+                        'new_product_id' => $subscriptionProduct->id,
+                    ]);
+                }
+
+                // Create or update limit for the current period
+                // This handles both:
+                // - New billing periods (creates new limit)
+                // - Plan changes (updates existing limit's product)
+                $this->createOrUpdateLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+            });
+
+            Log::info('[AICAD Webhook] Subscription updated successfully', [
+                'team_id' => $team->id,
+                'product_id' => $subscriptionProduct->id,
+            ]);
 
             return response()->json(['success' => true], 200);
 
@@ -343,6 +357,9 @@ class StripeWebhookController extends Controller
      *
      * This is triggered when a Stripe Checkout session is completed successfully.
      * Creates the subscription record in the database.
+     *
+     * Note: This webhook may arrive BEFORE or AFTER customer.subscription.created.
+     * We use syncSubscriptionRecord() to handle both cases gracefully.
      */
     protected function handleCheckoutSessionCompleted(array $payload): JsonResponse
     {
@@ -374,62 +391,44 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            // Check if subscription already exists (avoid duplicates)
-            $existingSubscription = $team->subscriptions()->where('stripe_id', $stripeSubscriptionId)->first();
-            if ($existingSubscription) {
-                Log::info('[AICAD Webhook] Subscription already exists', [
-                    'team_id' => $teamId,
-                    'stripe_subscription_id' => $stripeSubscriptionId,
-                ]);
-
-                return response()->json(['success' => true], 200);
-            }
-
             // Get Stripe subscription details
             $stripeSubscription = $this->aiCadStripe->client()->subscriptions->retrieve(
                 $stripeSubscriptionId
             );
 
-            // Créer l'abonnement et la limite dans une transaction atomique
-            DB::transaction(function () use ($team, $session, $stripeSubscription, $subscriptionProductId, $teamId) {
+            // Get subscription product - either from metadata or from Stripe subscription
+            $subscriptionProduct = null;
+            if ($subscriptionProductId) {
+                $subscriptionProduct = SubscriptionProduct::find($subscriptionProductId);
+            }
+            if (! $subscriptionProduct) {
+                $productStripeId = $stripeSubscription->items->data[0]->price->product ?? null;
+                if ($productStripeId) {
+                    $subscriptionProduct = SubscriptionProduct::where('stripe_id', $productStripeId)->first();
+                }
+            }
+
+            // Create/update subscription and limit in an atomic transaction
+            DB::transaction(function () use ($team, $session, $stripeSubscription, $subscriptionProduct, $teamId) {
                 // Update team's ToleryCad customer ID
                 $team->tolerycad_stripe_id = $session['customer'];
                 $team->save();
 
-                // Create subscription record using Cashier pattern
-                $subscription = $team->subscriptions()->create([
-                    'type' => 'default',
-                    'stripe_id' => $stripeSubscription->id,
-                    'stripe_status' => $stripeSubscription->status,
-                    'stripe_price' => $stripeSubscription->items->data[0]->price->id ?? null,
-                    'quantity' => 1,
-                    'ends_at' => null,
-                ]);
+                // Sync subscription record - handles duplicates and updates existing records
+                $this->syncSubscriptionRecord($team, $stripeSubscription);
 
-                // Create subscription items (required for getSubscriptionProduct to work)
-                foreach ($stripeSubscription->items->data as $item) {
-                    $subscription->items()->create([
-                        'stripe_id' => $item->id,
-                        'stripe_product' => $item->price->product,
-                        'stripe_price' => $item->price->id,
-                        'quantity' => $item->quantity ?? 1,
+                // Create or update the limit for this subscription period
+                if ($subscriptionProduct) {
+                    $this->createOrUpdateLimitForTeam($team, $subscriptionProduct, $stripeSubscription);
+
+                    Log::info('[AICAD Webhook] Limit synced for checkout subscription', [
+                        'team_id' => $teamId,
+                        'product_id' => $subscriptionProduct->id,
                     ]);
-                }
-
-                // Create the limit for this subscription period
-                if ($subscriptionProductId) {
-                    $product = SubscriptionProduct::find($subscriptionProductId);
-                    if ($product) {
-                        $this->createLimitForTeam($team, $product, $stripeSubscription);
-                        Log::info('[AICAD Webhook] Limit created for new subscription', [
-                            'team_id' => $teamId,
-                            'product_id' => $product->id,
-                        ]);
-                    }
                 }
             });
 
-            Log::info('[AICAD Webhook] Subscription created from checkout', [
+            Log::info('[AICAD Webhook] Subscription synced from checkout', [
                 'team_id' => $teamId,
                 'stripe_subscription_id' => $stripeSubscription->id,
                 'stripe_customer_id' => $session['customer'],
@@ -456,10 +455,9 @@ class StripeWebhookController extends Controller
      */
     protected function createLimitForTeam(ChatTeam $team, SubscriptionProduct $product, \Stripe\Subscription $subscription): void
     {
-        // PHPStan doesn't recognize dynamic Stripe properties, but they exist at runtime
-        /** @phpstan-ignore property.notFound */
+        /** @phpstan-ignore-next-line */
         $currentPeriodStart = $subscription->current_period_start;
-        /** @phpstan-ignore property.notFound */
+        /** @phpstan-ignore-next-line */
         $currentPeriodEnd = $subscription->current_period_end;
 
         $startDate = \Carbon\Carbon::createFromTimestamp($currentPeriodStart);
@@ -481,6 +479,183 @@ class StripeWebhookController extends Controller
             return;
         }
 
+        // Count existing downloads in this period to initialize used_amount correctly
+        $existingDownloads = ChatDownload::where('team_id', $team->id)
+            ->whereBetween('downloaded_at', [$startDate, $endDate])
+            ->count();
+
+        $limit = new Limit;
+        $limit->subscription_product_id = $product->id;
+        $limit->team_id = $team->id;
+        $limit->used_amount = $existingDownloads;
+        $limit->start_date = $startDate;
+        $limit->end_date = $endDate;
+        $limit->save();
+
+        Log::info('[AICAD Webhook] Limit created', [
+            'limit_id' => $limit->id,
+            'team_id' => $team->id,
+            'product_id' => $product->id,
+            'used_amount' => $existingDownloads,
+            'start_date' => $startDate->toDateTimeString(),
+            'end_date' => $endDate->toDateTimeString(),
+        ]);
+    }
+
+    /**
+     * Synchronize subscription record - update existing or create new one, and clean up duplicates.
+     *
+     * This method ensures only ONE subscription record exists for a team at a time.
+     * When a plan is changed via the Stripe Billing Portal, Stripe keeps the same subscription ID
+     * but the product changes. This method handles that by updating the existing record.
+     */
+    protected function syncSubscriptionRecord(ChatTeam $team, \Stripe\Subscription $stripeSubscription, ?string $priceStripeId = null): void
+    {
+        // Get price from Stripe subscription if not provided
+        if (! $priceStripeId) {
+            $priceStripeId = $stripeSubscription->items->data[0]->price->id ?? null;
+        }
+
+        // Find existing subscription by stripe_id (Stripe subscription ID remains the same even when plan changes)
+        $existingSubscription = $team->subscriptions()
+            ->where('stripe_id', $stripeSubscription->id)
+            ->first();
+
+        if ($existingSubscription) {
+            /** @var \Laravel\Cashier\Subscription $existingSubscription */
+            // Update existing subscription
+            $existingSubscription->update([
+                'stripe_status' => $stripeSubscription->status,
+                'stripe_price' => $priceStripeId,
+            ]);
+
+            // Update subscription items
+            foreach ($stripeSubscription->items->data as $item) {
+                $existingSubscription->items()->updateOrCreate(
+                    ['stripe_id' => $item->id],
+                    [
+                        'stripe_product' => $item->price->product,
+                        'stripe_price' => $item->price->id,
+                        'quantity' => $item->quantity ?? 1,
+                    ]
+                );
+            }
+
+            Log::info('[AICAD Webhook] Subscription record updated', [
+                'team_id' => $team->id,
+                'subscription_id' => $existingSubscription->id,
+                'stripe_id' => $stripeSubscription->id,
+            ]);
+
+            return;
+        }
+
+        // No existing subscription with this stripe_id - check for OTHER active subscriptions to clean up
+        // This handles the case where an old subscription exists with a different stripe_id
+        $otherActiveSubscriptions = $team->subscriptions()
+            ->where('stripe_id', '!=', $stripeSubscription->id)
+            ->whereNull('ends_at')
+            ->get();
+
+        /** @var \Laravel\Cashier\Subscription $oldSubscription */
+        foreach ($otherActiveSubscriptions as $oldSubscription) {
+            // Mark old subscriptions as ended
+            $oldSubscription->update(['ends_at' => now()]);
+
+            Log::info('[AICAD Webhook] Old subscription marked as ended', [
+                'team_id' => $team->id,
+                'old_subscription_id' => $oldSubscription->id,
+                /** @phpstan-ignore-next-line */
+                'old_stripe_id' => $oldSubscription->stripe_id,
+            ]);
+        }
+
+        // Create new subscription record
+        /** @var \Laravel\Cashier\Subscription $subscription */
+        $subscription = $team->subscriptions()->create([
+            'type' => 'default',
+            'stripe_id' => $stripeSubscription->id,
+            'stripe_status' => $stripeSubscription->status,
+            'stripe_price' => $priceStripeId,
+            'quantity' => 1,
+            'ends_at' => null,
+        ]);
+
+        // Create subscription items
+        foreach ($stripeSubscription->items->data as $item) {
+            $subscription->items()->create([
+                'stripe_id' => $item->id,
+                'stripe_product' => $item->price->product,
+                'stripe_price' => $item->price->id,
+                'quantity' => $item->quantity ?? 1,
+            ]);
+        }
+
+        Log::info('[AICAD Webhook] New subscription record created', [
+            'team_id' => $team->id,
+            'subscription_id' => $subscription->id,
+            'stripe_id' => $stripeSubscription->id,
+        ]);
+    }
+
+    /**
+     * Create or update a limit for a team based on their subscription.
+     *
+     * This method handles plan changes by updating the existing limit's subscription_product_id
+     * instead of creating duplicate limits for the same period.
+     */
+    protected function createOrUpdateLimitForTeam(ChatTeam $team, SubscriptionProduct $product, \Stripe\Subscription $stripeSubscription): void
+    {
+        /** @phpstan-ignore-next-line */
+        $currentPeriodStart = $stripeSubscription->current_period_start;
+        /** @phpstan-ignore-next-line */
+        $currentPeriodEnd = $stripeSubscription->current_period_end;
+
+        $startDate = \Carbon\Carbon::createFromTimestamp($currentPeriodStart);
+        $endDate = \Carbon\Carbon::createFromTimestamp($currentPeriodEnd);
+
+        // First, check if a limit already exists for this EXACT product and period
+        $existingLimitForProduct = Limit::where('team_id', $team->id)
+            ->where('subscription_product_id', $product->id)
+            ->where('start_date', $startDate)
+            ->where('end_date', $endDate)
+            ->first();
+
+        if ($existingLimitForProduct) {
+            Log::info('[AICAD Webhook] Limit already exists for this product and period', [
+                'limit_id' => $existingLimitForProduct->id,
+                'team_id' => $team->id,
+                'product_id' => $product->id,
+            ]);
+
+            return;
+        }
+
+        // Check if there's a limit for a DIFFERENT product in the same period (plan change)
+        $existingLimitForPeriod = Limit::where('team_id', $team->id)
+            ->where('subscription_product_id', '!=', $product->id)
+            ->where('start_date', $startDate)
+            ->where('end_date', $endDate)
+            ->first();
+
+        if ($existingLimitForPeriod) {
+            // Plan changed - update the existing limit's product (preserve used_amount)
+            $oldProductId = $existingLimitForPeriod->subscription_product_id;
+            $existingLimitForPeriod->subscription_product_id = $product->id;
+            $existingLimitForPeriod->save();
+
+            Log::info('[AICAD Webhook] Limit updated for plan change', [
+                'limit_id' => $existingLimitForPeriod->id,
+                'team_id' => $team->id,
+                'old_product_id' => $oldProductId,
+                'new_product_id' => $product->id,
+                'used_amount_preserved' => $existingLimitForPeriod->used_amount,
+            ]);
+
+            return;
+        }
+
+        // No existing limit for this period - create a new one
         // Count existing downloads in this period to initialize used_amount correctly
         $existingDownloads = ChatDownload::where('team_id', $team->id)
             ->whereBetween('downloaded_at', [$startDate, $endDate])
