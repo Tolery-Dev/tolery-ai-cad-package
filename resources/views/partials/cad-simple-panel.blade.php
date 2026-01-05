@@ -84,23 +84,67 @@
         <div class="space-y-1">
             <flux:heading size="sm" level="3" class="!mb-0">Face sélectionnée</flux:heading>
             <template x-if="face">
-                <div class="grid grid-cols-2 gap-x-4 text-xs">
-                    <div class="text-gray-500">ID</div>
-                    <div class="text-right" x-text="face.realFaceId ?? face.id"></div>
-
-                    <div class="text-gray-500">Centre</div>
-                    <div class="text-right">
-                        <span x-text="face.centroid?.x ?? '—'"></span>,
-                        <span x-text="face.centroid?.y ?? '—'"></span>,
-                        <span x-text="face.centroid?.z ?? '—'"></span>
-                        <span x-text="face.unit ?? model.unit"></span>
+                <div class="space-y-2">
+                    {{-- Badge type de feature --}}
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                              :class="{
+                                  'bg-blue-100 text-blue-700': face.faceType === 'planar' || face.faceType === 'box',
+                                  'bg-green-100 text-green-700': face.faceType === 'cylindrical' || face.faceType === 'fillet',
+                                  'bg-orange-100 text-orange-700': face.faceType === 'hole',
+                                  'bg-red-100 text-red-700': face.faceType === 'thread',
+                                  'bg-purple-100 text-purple-700': face.faceType === 'countersink',
+                              }"
+                              x-text="face.metrics?.displayType || 'Face'">
+                        </span>
+                        <span class="text-gray-500 text-xs">ID:</span>
+                        <span class="font-medium text-xs" x-text="face.realFaceId ?? face.id"></span>
                     </div>
 
-                    <div class="text-gray-500">Surface (approx.)</div>
-                    <div class="text-right" x-text="face.area ? `${face.area} ${face.unit}²` : '—'"></div>
+                    <div class="grid grid-cols-2 gap-x-4 text-xs">
+                        {{-- Diamètre (pour hole, thread, countersink) --}}
+                        <template x-if="face.metrics?.diameter">
+                            <div class="text-gray-500">Diamètre</div>
+                        </template>
+                        <template x-if="face.metrics?.diameter">
+                            <div class="text-right" x-text="`${face.metrics.diameter.toFixed?.(2) ?? face.metrics.diameter} mm`"></div>
+                        </template>
 
-                    <div class="text-gray-500">Triangles</div>
-                    <div class="text-right" x-text="face.triangles ?? '—'"></div>
+                        {{-- Rayon (pour fillet) --}}
+                        <template x-if="face.metrics?.radius && !face.metrics?.diameter">
+                            <div class="text-gray-500">Rayon</div>
+                        </template>
+                        <template x-if="face.metrics?.radius && !face.metrics?.diameter">
+                            <div class="text-right" x-text="`${face.metrics.radius.toFixed?.(2) ?? face.metrics.radius} mm`"></div>
+                        </template>
+
+                        {{-- Profondeur --}}
+                        <template x-if="face.metrics?.depth">
+                            <div class="text-gray-500">Profondeur</div>
+                        </template>
+                        <template x-if="face.metrics?.depth">
+                            <div class="text-right" x-text="`${face.metrics.depth.toFixed?.(2) ?? face.metrics.depth} mm`"></div>
+                        </template>
+
+                        {{-- Dimensions (pour planar/box) --}}
+                        <template x-if="face.metrics?.length && face.metrics?.width">
+                            <div class="text-gray-500">Dimensions</div>
+                        </template>
+                        <template x-if="face.metrics?.length && face.metrics?.width">
+                            <div class="text-right" x-text="`${face.metrics.length.toFixed?.(0) ?? face.metrics.length} × ${face.metrics.width.toFixed?.(0) ?? face.metrics.width} mm`"></div>
+                        </template>
+
+                        <div class="text-gray-500">Centre</div>
+                        <div class="text-right">
+                            <span x-text="(face.centroid?.x ?? 0).toFixed?.(1) ?? '—'"></span>,
+                            <span x-text="(face.centroid?.y ?? 0).toFixed?.(1) ?? '—'"></span>,
+                            <span x-text="(face.centroid?.z ?? 0).toFixed?.(1) ?? '—'"></span>
+                            <span x-text="face.unit ?? model.unit"></span>
+                        </div>
+
+                        <div class="text-gray-500">Surface</div>
+                        <div class="text-right" x-text="face.area ? `${face.area} mm²` : '—'"></div>
+                    </div>
                 </div>
             </template>
             <template x-if="!face">
