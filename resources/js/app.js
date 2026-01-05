@@ -966,11 +966,13 @@ class JsonModelViewer3D {
     if (!feature || !feature.type) return "Feature";
     
     const typeMap = {
-      hole: feature.subtype === "tapped" ? "Taraudage" : "Perçage",
+      // hole with subtype: "through" (trou lisse) or "threaded"/"tapped" (trou taraudé)
+      hole: (feature.subtype === "threaded" || feature.subtype === "tapped") ? "Taraudage" : "Perçage",
       countersink: "Fraisage",
       fillet: "Congé",
       chamfer: "Chanfrein",
-      slot: "Rainure"
+      slot: "Rainure",
+      box: "Face"  // Face plane (from FreeCad API)
     };
     
     return typeMap[feature.type] || feature.type;

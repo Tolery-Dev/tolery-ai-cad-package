@@ -81,10 +81,11 @@
                         <div class="flex items-center gap-2">
                             <span class="text-xs px-2 py-0.5 rounded-full font-medium"
                                   :class="{
-                                      'bg-blue-100 text-blue-700': selection.faceType === 'planar',
-                                      'bg-green-100 text-green-700': selection.faceType === 'cylindrical',
+                                      'bg-blue-100 text-blue-700': selection.faceType === 'planar' || selection.faceType === 'box',
+                                      'bg-green-100 text-green-700': selection.faceType === 'cylindrical' || selection.faceType === 'fillet',
                                       'bg-orange-100 text-orange-700': selection.faceType === 'hole',
                                       'bg-red-100 text-red-700': selection.faceType === 'thread',
+                                      'bg-purple-100 text-purple-700': selection.faceType === 'countersink',
                                   }"
                                   x-text="selection.metrics?.displayType || 'Face'">
                             </span>
@@ -233,6 +234,99 @@
                                 </div>
                                 <div class="text-xs text-gray-500">
                                     Position : <span x-text="coord(selection.metrics.position)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- FRAISURAGE (countersink) --}}
+                        <template x-if="selection.faceType === 'countersink'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Diamètre</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.diameter"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between" x-show="selection.metrics.angle">
+                                    <span class="text-gray-500">Angle</span>
+                                    <span class="font-medium" x-text="selection.metrics.angle + '°'"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Profondeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.depth"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Position : <span x-text="coord(selection.metrics.position)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- CONGE (fillet) --}}
+                        <template x-if="selection.faceType === 'fillet'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Rayon</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.radius)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.radius"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Aire</span>
+                                    <span class="font-medium" x-text="fmtArea(selection.metrics.area)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- FACE / BOX (from FreeCad API) --}}
+                        <template x-if="selection.faceType === 'box'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Longueur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.length)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.length"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Largeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.width)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.width"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Épaisseur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.thickness)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.thickness"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Aire</span>
+                                    <span class="font-medium" x-text="fmtArea(selection.metrics.area)"></span>
                                 </div>
                             </div>
                         </template>
@@ -641,7 +735,7 @@
                         // Add subtype info
                         if (m.subtype === 'through') parts.push('traversant');
                         if (m.subtype === 'blind') parts.push('borgne');
-                        if (m.subtype === 'tapped') parts.push('taraudé');
+                        if (m.subtype === 'threaded' || m.subtype === 'tapped') parts.push('taraudé');
                         
                         // Add key dimensions
                         if (m.diameter) parts.push(`Ø${m.diameter}mm`);
