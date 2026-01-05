@@ -890,6 +890,7 @@ class JsonModelViewer3D {
 
     // Try to find semantic feature data from FreeCad JSON first
     const featureData = this.getFeatureForFaceId(realId);
+    console.log('🔎 Feature lookup:', { realId, featureData, featuresCount: this.features?.length });
     
     // Determine face type: prefer FreeCad semantic data over geometric detection
     let faceType, metrics;
@@ -947,9 +948,11 @@ class JsonModelViewer3D {
       return null;
     }
     
-    // Search through features to find one that references this face_id
     for (const feature of this.features) {
       if (Array.isArray(feature.face_ids) && feature.face_ids.includes(faceId)) {
+        return feature;
+      }
+      if (Array.isArray(feature.edge_ids) && feature.edge_ids.includes(faceId)) {
         return feature;
       }
     }
@@ -966,11 +969,13 @@ class JsonModelViewer3D {
     if (!feature || !feature.type) return "Feature";
     
     const typeMap = {
-      hole: feature.subtype === "tapped" ? "Taraudage" : "Perçage",
+      // hole with subtype: "through" (trou lisse) or "threaded"/"tapped" (trou taraudé)
+      hole: (feature.subtype === "threaded" || feature.subtype === "tapped") ? "Taraudage" : "Perçage",
       countersink: "Fraisage",
       fillet: "Congé",
       chamfer: "Chanfrein",
-      slot: "Rainure"
+      slot: "Rainure",
+      box: "Face"  // Face plane (from FreeCad API)
     };
     
     return typeMap[feature.type] || feature.type;
@@ -1047,15 +1052,27 @@ class JsonModelViewer3D {
       isVerySmall
     });
 
-    // Hole detection: small cylindrical face
-    if (isCylindrical && twoSimilarDims && sorted[2] < 50) {
-      const hasThreadPattern = this.detectThreadPattern(vertices);
-      console.log('✅ Detected:', hasThreadPattern ? 'thread' : 'hole');
-      return hasThreadPattern ? 'thread' : 'hole';
-    }
-
-    // Cylindrical face (fillet, round feature)
+    // For cylindrical faces, determine if it's a hole or fillet by checking angular span
     if (isCylindrical && twoSimilarDims) {
+      const angularSpan = this.computeAngularSpan(vertices, bbox);
+      console.log('🔄 Angular span:', angularSpan.toFixed(1) + '°');
+      
+      // Fillet: typically ~90° arc (quarter cylinder on an edge)
+      // Hole: typically 180°-360° arc (half or full cylinder)
+      const isFillet = angularSpan < 135;
+      
+      if (isFillet) {
+        console.log('✅ Detected: fillet (angular span < 135°)');
+        return 'fillet';
+      }
+      
+      // Small cylindrical face with large angular span = hole
+      if (sorted[2] < 50) {
+        const hasThreadPattern = this.detectThreadPattern(vertices);
+        console.log('✅ Detected:', hasThreadPattern ? 'thread' : 'hole');
+        return hasThreadPattern ? 'thread' : 'hole';
+      }
+      
       console.log('✅ Detected: cylindrical');
       return 'cylindrical';
     }
@@ -1120,6 +1137,42 @@ class JsonModelViewer3D {
     return bbox;
   }
 
+  computeAngularSpan(vertices, bbox) {
+    const center = new THREE.Vector3(
+      (bbox.min.x + bbox.max.x) / 2,
+      (bbox.min.y + bbox.max.y) / 2,
+      (bbox.min.z + bbox.max.z) / 2
+    );
+
+    const dims = {
+      x: bbox.max.x - bbox.min.x,
+      y: bbox.max.y - bbox.min.y,
+      z: bbox.max.z - bbox.min.z
+    };
+    const sorted = [dims.x, dims.y, dims.z].sort((a, b) => a - b);
+    
+    let axisIndex = 0;
+    if (sorted[2] === dims.y) axisIndex = 1;
+    else if (sorted[2] === dims.z) axisIndex = 2;
+
+    const angles = vertices.map(v => {
+      let dx, dy;
+      if (axisIndex === 0) { dy = v.y - center.y; dx = v.z - center.z; }
+      else if (axisIndex === 1) { dy = v.x - center.x; dx = v.z - center.z; }
+      else { dy = v.x - center.x; dx = v.y - center.y; }
+      return Math.atan2(dy, dx);
+    });
+
+    const minAngle = Math.min(...angles);
+    const maxAngle = Math.max(...angles);
+    let span = (maxAngle - minAngle) * (180 / Math.PI);
+    
+    if (span < 0) span += 360;
+    if (span > 360) span = 360;
+
+    return span;
+  }
+
   detectThreadPattern(vertices) {
     if (vertices.length < 100) return false;
 
@@ -1172,11 +1225,18 @@ class JsonModelViewer3D {
           centroid: centroid
         };
 
-      case 'cylindrical':
-        // For fillets/rounds, show radius. For cylinders, show diameter + depth
-        const isRound = sorted[2] < 30; // Small features are fillets/rounds
+      case 'fillet':
         return {
-          displayType: isRound ? 'Bord arrondi' : 'Cylindre',
+          displayType: 'Congé',
+          radius: sorted[0] / 2,
+          length: sorted[2],
+          area: area,
+          centroid: centroid
+        };
+
+      case 'cylindrical':
+        return {
+          displayType: 'Cylindre',
           radius: sorted[0] / 2,
           diameter: sorted[0],
           depth: sorted[2],
