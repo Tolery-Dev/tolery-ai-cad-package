@@ -1,44 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="pdfToCadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="pdfFileGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#7b46e4;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
     </linearGradient>
   </defs>
 
-  <!-- Blueprint/Technical drawing (left) -->
-  <rect x="6" y="12" width="24" height="32" rx="1" ry="1"
-        fill="url(#pdfToCadGradient)" fill-opacity="0.1"
-        stroke="url(#pdfToCadGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  
-  <!-- Dimension line horizontal -->
-  <path d="M10 20H26" stroke="url(#pdfToCadGradient)" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M10 18V22M26 18V22" stroke="url(#pdfToCadGradient)" stroke-width="1.5" stroke-linecap="round"/>
-  
-  <!-- Dimension line vertical -->
-  <path d="M14 26V38" stroke="url(#pdfToCadGradient)" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M12 26H16M12 38H16" stroke="url(#pdfToCadGradient)" stroke-width="1.5" stroke-linecap="round"/>
-  
-  <!-- Grid dots (technical drawing feel) -->
-  <circle cx="22" cy="30" r="1" fill="url(#pdfToCadGradient)"/>
-  <circle cx="22" cy="34" r="1" fill="url(#pdfToCadGradient)"/>
-  <circle cx="26" cy="30" r="1" fill="url(#pdfToCadGradient)"/>
-  <circle cx="26" cy="34" r="1" fill="url(#pdfToCadGradient)"/>
+  <!-- Document outline -->
+  <path d="M38 4H14C12.8954 4 12 4.89543 12 6V58C12 59.1046 12.8954 60 14 60H50C51.1046 60 52 59.1046 52 58V18L38 4Z"
+        fill="url(#pdfFileGradient)" fill-opacity="0.1"/>
+  <path d="M38 4H14C12.8954 4 12 4.89543 12 6V58C12 59.1046 12.8954 60 14 60H50C51.1046 60 52 59.1046 52 58V18L38 4Z"
+        stroke="url(#pdfFileGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- Transformation arrow -->
-  <path d="M34 28L40 28" stroke="url(#pdfToCadGradient)" stroke-width="2" stroke-linecap="round"/>
-  <path d="M38 24L42 28L38 32" stroke="url(#pdfToCadGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Document fold -->
+  <path d="M38 4V18H52" stroke="url(#pdfFileGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <!-- 3D Isometric cube (right) - representing CAD output -->
-  <path d="M52 20L52 36L44 42L44 26L52 20Z" 
-        fill="url(#pdfToCadGradient)" fill-opacity="0.1"
-        stroke="url(#pdfToCadGradient)" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M52 20L60 26L60 42L52 36" 
-        fill="url(#pdfToCadGradient)" fill-opacity="0.05"
-        stroke="url(#pdfToCadGradient)" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M44 42L52 48L60 42" 
-        fill="url(#pdfToCadGradient)" fill-opacity="0.15"
-        stroke="url(#pdfToCadGradient)" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M52 36V48" stroke="url(#pdfToCadGradient)" stroke-width="2" stroke-linecap="round"/>
+  <!-- PDF text -->
+  <text x="32" y="38" font-family="Arial, sans-serif" font-size="12" font-weight="bold"
+        fill="url(#pdfFileGradient)" text-anchor="middle">PDF</text>
+
+  <!-- Technical drawing lines -->
+  <path d="M20 45H44M20 49H36" stroke="url(#pdfFileGradient)" stroke-width="1.5" stroke-linecap="round"/>
 </svg>
