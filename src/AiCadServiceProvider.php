@@ -79,8 +79,6 @@ class AiCadServiceProvider extends PackageServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/admin.php');
         }
 
-
-
         // Publish admin views
         $this->publishes([
             __DIR__.'/../resources/views/admin' => resource_path('views/vendor/ai-cad/admin'),
