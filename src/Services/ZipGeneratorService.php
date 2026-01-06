@@ -82,19 +82,9 @@ class ZipGeneratorService
             $this->addStorageFileToZip($zip, $message->ai_step_path, 'STEP', $filesAdded);
         }
 
-        // Add OBJ file (use raw path, not URL)
-        if ($message->ai_cad_path) {
-            $this->addStorageFileToZip($zip, $message->ai_cad_path, 'OBJ', $filesAdded);
-        }
-
         // Add Technical Drawing (PDF) (use raw path, not URL)
         if ($message->ai_technical_drawing_path) {
             $this->addStorageFileToZip($zip, $message->ai_technical_drawing_path, 'PDF', $filesAdded);
-        }
-
-        // Add Screenshot (PNG) (use raw path, not URL)
-        if ($message->ai_screenshot_path) {
-            $this->addStorageFileToZip($zip, $message->ai_screenshot_path, 'Screenshot', $filesAdded);
         }
 
         $zip->close();
@@ -193,19 +183,9 @@ class ZipGeneratorService
             $this->addStorageFileToZip($zip, $message->ai_step_path, 'STEP', $filesAdded);
         }
 
-        // Add OBJ file (use raw path, not URL)
-        if ($message->ai_cad_path) {
-            $this->addStorageFileToZip($zip, $message->ai_cad_path, 'OBJ', $filesAdded);
-        }
-
         // Add Technical Drawing (PDF) (use raw path, not URL)
         if ($message->ai_technical_drawing_path) {
             $this->addStorageFileToZip($zip, $message->ai_technical_drawing_path, 'PDF', $filesAdded);
-        }
-
-        // Add Screenshot (PNG) (use raw path, not URL)
-        if ($message->ai_screenshot_path) {
-            $this->addStorageFileToZip($zip, $message->ai_screenshot_path, 'Screenshot', $filesAdded);
         }
 
         $zip->close();
