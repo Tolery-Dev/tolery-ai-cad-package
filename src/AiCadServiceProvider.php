@@ -44,6 +44,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             ->name('ai-cad')
             ->hasConfigFile('ai-cad')
             ->hasViews('ai-cad')
+            ->hasAssets()
             ->hasRoute('web')
             ->discoversMigrations()
             ->runsMigrations()
@@ -78,15 +79,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             $this->loadRoutesFrom(__DIR__.'/../routes/admin.php');
         }
 
-        // Publish images from resources/assets (tracked in git)
-        $this->publishes([
-            __DIR__.'/../resources/assets' => public_path('vendor/ai-cad'),
-        ], 'ai-cad-assets');
 
-        // Publish built JS from resources/dist (built by Vite, not tracked in git)
-        $this->publishes([
-            __DIR__.'/../resources/dist/assets' => public_path('vendor/ai-cad/assets'),
-        ], 'ai-cad-assets');
 
         // Publish admin views
         $this->publishes([
