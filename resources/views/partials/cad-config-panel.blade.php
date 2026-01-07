@@ -45,9 +45,9 @@
         :aria-hidden="(!open).toString()"
         class="will-change-[max-height,opacity,transform] overflow-hidden transition-[max-height,opacity,transform] duration-300 ease-[cubic-bezier(.22,1,.36,1)] transition-delay-75"
         :class="open ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'"
-        x-bind:style="open ? 'max-height: 800px' : 'max-height: 0px'"
+        x-bind:style="open ? 'max-height: calc(100vh - 100px)' : 'max-height: 0px'"
     >
-        <div class="p-4 space-y-4 select-text overflow-y-auto max-h-[750px]">
+        <div class="p-4 space-y-4 select-text overflow-y-auto max-h-[calc(100vh-160px)]">
             {{-- Instructions (NEW - Priority) --}}
             <flux:callout icon="information-circle" size="sm" color="violet" class="text-violet-900">
                 <flux:callout.text>
