@@ -86,6 +86,7 @@
                                       'bg-orange-100 text-orange-700': selection.faceType === 'hole',
                                       'bg-red-100 text-red-700': selection.faceType === 'thread',
                                       'bg-purple-100 text-purple-700': selection.faceType === 'countersink',
+                                      'bg-amber-100 text-amber-700': selection.faceType === 'oblong',
                                   }"
                                   x-text="selection.metrics?.displayType || 'Face'">
                             </span>
@@ -327,6 +328,45 @@
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Aire</span>
                                     <span class="font-medium" x-text="fmtArea(selection.metrics.area)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- OBLONG (slot with rounded ends) --}}
+                        <template x-if="selection.faceType === 'oblong'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Longueur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.straight_length || selection.metrics.length)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.length"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Largeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.width)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.width"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Profondeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.depth"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="text-xs text-gray-500" x-show="selection.metrics.position">
+                                    Position : <span x-text="coord(selection.metrics.position)"></span>
                                 </div>
                             </div>
                         </template>
