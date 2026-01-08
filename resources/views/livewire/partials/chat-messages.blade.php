@@ -42,6 +42,13 @@
                     content: @js($msg['content'] ?? ''),
                     isTyping: false,
                     parsedContent: '',
+                    parseUrls(text) {
+                        if (!text) return text;
+                        const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,;:!?'\")\]])/g;
+                        return text.replace(urlRegex, (url) => {
+                            return `<a href='${url}' target='_blank' rel='noopener noreferrer' class='text-violet-600 hover:text-violet-800 underline'>${url}</a>`;
+                        });
+                    },
                     parseFaceContext(text) {
                         if (!text) return text;
 
@@ -68,7 +75,8 @@
                             this.parsedContent = '';
                         } else {
                             this.isTyping = false;
-                            this.parsedContent = this.parseFaceContext(this.content);
+                            let parsed = this.parseFaceContext(this.content);
+                            this.parsedContent = this.parseUrls(parsed);
                         }
                     }
                 }"
