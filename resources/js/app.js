@@ -975,7 +975,8 @@ class JsonModelViewer3D {
       fillet: "Congé",
       chamfer: "Chanfrein",
       slot: "Rainure",
-      box: "Face"  // Face plane (from FreeCad API)
+      box: "Face",  // Face plane (from FreeCad API)
+      oblong: "Oblong"  // Oblong hole (slot with rounded ends)
     };
     
     return typeMap[feature.type] || feature.type;
