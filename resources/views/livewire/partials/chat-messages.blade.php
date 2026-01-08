@@ -44,9 +44,11 @@
                     parsedContent: '',
                     parseUrls(text) {
                         if (!text) return text;
-                        const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,;:!?'\")\]])/g;
+                        const urlRegex = /(https?:\/\/[^\s<]+)/g;
                         return text.replace(urlRegex, (url) => {
-                            return `<a href='${url}' target='_blank' rel='noopener noreferrer' class='text-violet-600 hover:text-violet-800 underline'>${url}</a>`;
+                            const cleanUrl = url.replace(/[.,;:!?)]+$/, '');
+                            const trailing = url.slice(cleanUrl.length);
+                            return `<a href='${cleanUrl}' target='_blank' rel='noopener noreferrer' class='text-violet-600 hover:text-violet-800 underline'>${cleanUrl}</a>${trailing}`;
                         });
                     },
                     parseFaceContext(text) {
