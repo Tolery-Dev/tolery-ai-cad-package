@@ -364,23 +364,23 @@
 
                 <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     <div class="flex items-baseline gap-2">
-                        <span class="text-gray-500">longueur</span>
+                        <span class="text-gray-500">Longueur</span>
                         <span class="font-semibold" x-text="fmt(stats.sizeX)"></span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-gray-500">largeur</span>
+                        <span class="text-gray-500">Largeur</span>
                         <span class="font-semibold" x-text="fmt(stats.sizeY)"></span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-gray-500">hauteur</span>
+                        <span class="text-gray-500">Hauteur</span>
                         <span class="font-semibold" x-text="fmt(stats.sizeZ)"></span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-gray-500">épaisseur</span>
+                        <span class="text-gray-500">Épaisseur</span>
                         <span class="font-semibold" x-text="stats.thickness ? fmt(stats.thickness) : '—'"></span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-gray-500">poids</span>
+                        <span class="text-gray-500">Poids</span>
                         <span class="font-semibold" x-text="stats.weight ? fmtWeight(stats.weight) : '—'"></span>
                     </div>
                 </div>
