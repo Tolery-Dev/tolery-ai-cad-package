@@ -520,8 +520,15 @@
                 // Material choice (synced with Livewire)
                 materialFamily: @js($chat->material_family?->value ?? 'STEEL'),
 
+                // Material densities in g/mm³ (g/cm³ / 1000)
+                materialDensities: {
+                    STEEL: 0.00785,      // 7.85 g/cm³
+                    ALUMINUM: 0.00270,   // 2.70 g/cm³
+                    STAINLESS: 0.00800,  // 8.00 g/cm³
+                },
+
                 // State alimenté par app.js (events window)
-                stats: {sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm'},
+                stats: {sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm', volume: 0, thickness: 0, weight: 0},
                 selection: null,
 
                 // Edit mode
@@ -598,7 +605,11 @@
                     // Dimensions globales
                     // On garde window.addEventListener pour compatibilité avec app.js
                     window.addEventListener('cad-model-stats', ({detail}) => {
-                        if (detail) this.stats = detail
+                        if (detail) {
+                            // Calculate weight from volume and material density
+                            const weight = this.calculateWeight(detail.volume);
+                            this.stats = { ...detail, weight };
+                        }
                     })
                     // Sélection
                     window.addEventListener('cad-selection', ({detail}) => {
@@ -701,6 +712,17 @@
                     Livewire.dispatch('updateMaterialFamily', {
                         materialFamily: this.materialFamily
                     });
+                    // Recalculate weight with new material
+                    if (this.stats.volume) {
+                        this.stats.weight = this.calculateWeight(this.stats.volume);
+                    }
+                },
+                // Calculate weight from volume (mm³) and material density
+                calculateWeight(volumeMm3) {
+                    if (!volumeMm3 || volumeMm3 <= 0) return 0;
+                    const density = this.materialDensities[this.materialFamily] || this.materialDensities.STEEL;
+                    // weight in grams = volume (mm³) × density (g/mm³)
+                    return volumeMm3 * density;
                 },
                 enableEditMode() {
                     this.editMode = true;
