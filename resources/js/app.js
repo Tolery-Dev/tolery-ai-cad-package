@@ -446,8 +446,7 @@ class JsonModelViewer3D {
       volume: volume, // mm³
       thickness: thickness, // mm (detected from smallest dimension)
     };
-    window.Alpine?.dispatchEvent?.("cad-model-stats", detail) ||
-      window.dispatchEvent(new CustomEvent("cad-model-stats", { detail }));
+    window.dispatchEvent(new CustomEvent("cad-model-stats", { detail }));
 
     this.fitCamera();
 
