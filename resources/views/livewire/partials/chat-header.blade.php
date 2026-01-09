@@ -33,7 +33,7 @@
                     <flux:badge color="green" size="sm">Illimité</flux:badge>
                 @else
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {{ $quotaStatus['used'] }}/{{ $quotaStatus['total'] }}
+                        {{ $quotaStatus['used'] }}/{{ $quotaStatus['total'] }} {{ $quotaStatus['total'] > 1 ? 'fichiers' : 'fichier' }}
                     </span>
                     <div class="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                         <div class="bg-violet-600 h-1.5 rounded-full transition-all" style="width: {{ min(100, ($quotaStatus['used'] / max(1, $quotaStatus['total'])) * 100) }}%"></div>
