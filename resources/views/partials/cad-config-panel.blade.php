@@ -602,29 +602,20 @@
                 },
 
                 init() {
-                    // Après teleport, calcule la position initiale adaptée à l'écran
+                    // Position initiale : centré en haut du viewer (zone droite de l'écran)
                     this.$nextTick(() => {
-                        const saved = JSON.parse(localStorage.getItem('cadPanelPos') || 'null')
                         const panelWidth = 360
                         const viewportWidth = window.innerWidth
-                        const viewportHeight = window.innerHeight
-
-                        if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-                            // Restaure position sauvegardée
-                            this.x = saved.x
-                            this.y = saved.y
-                        } else {
-                            // Position par défaut selon taille d'écran
-                            if (viewportWidth < 768) {
-                                // Mobile/petit écran : centré en haut
-                                this.x = Math.max(12, (viewportWidth - panelWidth) / 2)
-                                this.y = 12
-                            } else {
-                                // Desktop : haut droite
-                                this.x = viewportWidth - panelWidth - 24
-                                this.y = 24
-                            }
-                        }
+                        
+                        // Le viewer occupe ~65% de l'écran (100% - 35% du chat panel)
+                        // On centre le panneau dans cette zone
+                        const chatPanelWidth = viewportWidth * 0.35
+                        const viewerWidth = viewportWidth - chatPanelWidth
+                        const viewerCenterX = chatPanelWidth + (viewerWidth / 2)
+                        
+                        // Position centrée horizontalement dans le viewer, en haut
+                        this.x = viewerCenterX - (panelWidth / 2)
+                        this.y = 80 // En dessous du header
 
                         // Valide que la position est dans l'écran
                         this.clampToViewport()
