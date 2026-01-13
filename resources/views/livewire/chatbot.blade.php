@@ -178,9 +178,9 @@
             activeStep: null,
             completedSteps: 0,
             steps: [
-                {key: 'analysis', label: 'Analyse', state: 'inactive'},
+                {key: 'analysis', label: 'Analyse des informations et dimensions de la pièce', state: 'inactive'},
                 {key: 'parameters', label: 'Paramètres', state: 'inactive'},
-                {key: 'generation_code', label: 'Génération', state: 'inactive'},
+                {key: 'generation_code', label: 'Génération de la pièce et du fichier CAO', state: 'inactive'},
                 {key: 'export', label: 'Export', state: 'inactive'},
                 {key: 'complete', label: 'Terminé', state: 'inactive'},
             ],
