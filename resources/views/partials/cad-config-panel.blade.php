@@ -62,15 +62,15 @@
                     <button
                         x-show="selection && !editMode"
                         @click="enableEditMode()"
-                        class="text-xs text-violet-600 hover:text-violet-700 font-medium">
-                        Éditer
+                        class="text-sm text-violet-600 hover:text-violet-700 font-semibold">
+                        Modifier
                     </button>
                     <div x-show="editMode" class="flex gap-2">
-                        <button @click="cancelEdit()" class="text-xs text-gray-600 hover:text-gray-700">
+                        <button @click="cancelEdit()" class="text-sm text-gray-600 hover:text-gray-700">
                             Annuler
                         </button>
-                        <button @click="saveEdits()" class="text-xs text-violet-600 hover:text-violet-700 font-medium">
-                            Modifier
+                        <button @click="saveEdits()" class="text-sm text-violet-600 hover:text-violet-700 font-semibold">
+                            Valider
                         </button>
                     </div>
                 </div>
@@ -86,6 +86,7 @@
                                       'bg-orange-100 text-orange-700': selection.faceType === 'hole',
                                       'bg-red-100 text-red-700': selection.faceType === 'thread',
                                       'bg-purple-100 text-purple-700': selection.faceType === 'countersink',
+                                      'bg-amber-100 text-amber-700': selection.faceType === 'oblong',
                                   }"
                                   x-text="selection.metrics?.displayType || 'Face'">
                             </span>
@@ -330,6 +331,45 @@
                                 </div>
                             </div>
                         </template>
+
+                        {{-- OBLONG (slot with rounded ends) --}}
+                        <template x-if="selection.faceType === 'oblong'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Longueur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.straight_length || selection.metrics.length)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.length"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Largeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.width)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.width"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-500">Profondeur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.01" x-model="edits.depth"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="text-xs text-gray-500" x-show="selection.metrics.position">
+                                    Position : <span x-text="coord(selection.metrics.position)"></span>
+                                </div>
+                            </div>
+                        </template>
                     </div>
                 </template>
 
@@ -569,29 +609,20 @@
                 },
 
                 init() {
-                    // Après teleport, calcule la position initiale adaptée à l'écran
+                    // Position initiale : centré en haut du viewer (zone droite de l'écran)
                     this.$nextTick(() => {
-                        const saved = JSON.parse(localStorage.getItem('cadPanelPos') || 'null')
                         const panelWidth = 360
                         const viewportWidth = window.innerWidth
-                        const viewportHeight = window.innerHeight
-
-                        if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-                            // Restaure position sauvegardée
-                            this.x = saved.x
-                            this.y = saved.y
-                        } else {
-                            // Position par défaut selon taille d'écran
-                            if (viewportWidth < 768) {
-                                // Mobile/petit écran : centré en haut
-                                this.x = Math.max(12, (viewportWidth - panelWidth) / 2)
-                                this.y = 12
-                            } else {
-                                // Desktop : haut droite
-                                this.x = viewportWidth - panelWidth - 24
-                                this.y = 24
-                            }
-                        }
+                        
+                        // Le viewer occupe ~65% de l'écran (100% - 35% du chat panel)
+                        // On centre le panneau dans cette zone
+                        const chatPanelWidth = viewportWidth * 0.35
+                        const viewerWidth = viewportWidth - chatPanelWidth
+                        const viewerCenterX = chatPanelWidth + (viewerWidth / 2)
+                        
+                        // Position centrée horizontalement dans le viewer, en haut
+                        this.x = viewerCenterX - (panelWidth / 2)
+                        this.y = 80 // En dessous du header
 
                         // Valide que la position est dans l'écran
                         this.clampToViewport()
