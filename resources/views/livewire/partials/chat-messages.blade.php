@@ -42,6 +42,15 @@
                     content: @js($msg['content'] ?? ''),
                     isTyping: false,
                     parsedContent: '',
+                    parseUrls(text) {
+                        if (!text) return text;
+                        const urlRegex = /(https?:\/\/[^\s<]+)/g;
+                        return text.replace(urlRegex, (url) => {
+                            const cleanUrl = url.replace(/[.,;:!?)]+$/, '');
+                            const trailing = url.slice(cleanUrl.length);
+                            return `<a href='${cleanUrl}' target='_blank' rel='noopener noreferrer' class='text-violet-600 hover:text-violet-800 underline'>${cleanUrl}</a>${trailing}`;
+                        });
+                    },
                     parseFaceContext(text) {
                         if (!text) return text;
 
@@ -68,7 +77,8 @@
                             this.parsedContent = '';
                         } else {
                             this.isTyping = false;
-                            this.parsedContent = this.parseFaceContext(this.content);
+                            let parsed = this.parseFaceContext(this.content);
+                            this.parsedContent = this.parseUrls(parsed);
                         }
                     }
                 }"
