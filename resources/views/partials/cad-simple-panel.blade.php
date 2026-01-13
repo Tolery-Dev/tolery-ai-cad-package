@@ -94,6 +94,7 @@
                                   'bg-orange-100 text-orange-700': face.faceType === 'hole',
                                   'bg-red-100 text-red-700': face.faceType === 'thread',
                                   'bg-purple-100 text-purple-700': face.faceType === 'countersink',
+                                  'bg-amber-100 text-amber-700': face.faceType === 'oblong',
                               }"
                               x-text="face.metrics?.displayType || 'Face'">
                         </span>
