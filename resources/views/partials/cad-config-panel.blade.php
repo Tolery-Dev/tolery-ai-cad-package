@@ -62,15 +62,15 @@
                     <button
                         x-show="selection && !editMode"
                         @click="enableEditMode()"
-                        class="text-xs text-violet-600 hover:text-violet-700 font-medium">
-                        Éditer
+                        class="text-sm text-violet-600 hover:text-violet-700 font-semibold">
+                        Modifier
                     </button>
                     <div x-show="editMode" class="flex gap-2">
-                        <button @click="cancelEdit()" class="text-xs text-gray-600 hover:text-gray-700">
+                        <button @click="cancelEdit()" class="text-sm text-gray-600 hover:text-gray-700">
                             Annuler
                         </button>
-                        <button @click="saveEdits()" class="text-xs text-violet-600 hover:text-violet-700 font-medium">
-                            Modifier
+                        <button @click="saveEdits()" class="text-sm text-violet-600 hover:text-violet-700 font-semibold">
+                            Valider
                         </button>
                     </div>
                 </div>
