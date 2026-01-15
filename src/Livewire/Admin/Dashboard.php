@@ -44,7 +44,7 @@ class Dashboard extends Component
 
         // Abonnements créés sur la période
         $subscriptionsOnPeriod = Subscription::query()
-            ->where('type', 'tolerycad')
+            ->where('type', 'default')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->whereIn('stripe_status', ['active', 'trialing'])
             ->get();
@@ -62,7 +62,7 @@ class Dashboard extends Component
 
         // Abonnements actifs actuels (pas limités à la période)
         $activeSubscriptions = Subscription::query()
-            ->where('type', 'tolerycad')
+            ->where('type', 'default')
             ->whereIn('stripe_status', ['active', 'trialing'])
             ->get();
 
