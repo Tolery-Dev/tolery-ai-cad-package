@@ -1,12 +1,13 @@
 <div>
     {{-- Period Selector --}}
-    <div class="mb-6 flex items-center gap-4">
-        <flux:radio.group wire:model.live="period" variant="segmented">
-            <flux:radio value="day" label="Jour" />
-            <flux:radio value="week" label="Semaine" />
-            <flux:radio value="month" label="Mois" />
-            <flux:radio value="year" label="Année" />
-        </flux:radio.group>
+    <div class="mb-6">
+        <flux:date-picker
+            wire:model.live="range"
+            mode="range"
+            with-presets
+            presets="today yesterday last7Days thisWeek thisMonth lastMonth yearToDate allTime custom"
+            locale="fr"
+        />
     </div>
 
     {{-- Revenue Summary --}}

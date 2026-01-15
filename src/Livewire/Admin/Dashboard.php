@@ -2,9 +2,9 @@
 
 namespace Tolery\AiCad\Livewire\Admin;
 
+use Flux\DateRange;
 use Illuminate\View\View;
 use Laravel\Cashier\Subscription;
-use Livewire\Attributes\Url;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
@@ -14,8 +14,12 @@ use Tolery\AiCad\Models\SubscriptionProduct;
 
 class Dashboard extends Component
 {
-    #[Url]
-    public string $period = 'month';
+    public ?DateRange $range = null;
+
+    public function mount(): void
+    {
+        $this->range = DateRange::thisMonth();
+    }
 
     /**
      * @return array{
@@ -31,22 +35,17 @@ class Dashboard extends Component
      */
     public function getKpis(): array
     {
-        $startDate = match ($this->period) {
-            'day' => now()->startOfDay(),
-            'week' => now()->startOfWeek(),
-            'month' => now()->startOfMonth(),
-            'year' => now()->startOfYear(),
-            default => now()->startOfMonth(),
-        };
+        $startDate = $this->range?->start() ?? now()->startOfMonth();
+        $endDate = $this->range?->end() ?? now();
 
         // Achats unitaires
-        $purchaseAmount = FilePurchase::where('purchased_at', '>=', $startDate)->sum('amount');
-        $purchaseCount = FilePurchase::where('purchased_at', '>=', $startDate)->count();
+        $purchaseAmount = FilePurchase::whereBetween('purchased_at', [$startDate, $endDate])->sum('amount');
+        $purchaseCount = FilePurchase::whereBetween('purchased_at', [$startDate, $endDate])->count();
 
         // Abonnements créés sur la période
         $subscriptionsOnPeriod = Subscription::query()
             ->where('type', 'tolerycad')
-            ->where('created_at', '>=', $startDate)
+            ->whereBetween('created_at', [$startDate, $endDate])
             ->whereIn('stripe_status', ['active', 'trialing'])
             ->get();
 
@@ -86,8 +85,8 @@ class Dashboard extends Component
             'subscription_revenue' => $subscriptionRevenue / 100,
             'total_revenue' => ($purchaseAmount + $subscriptionRevenue) / 100,
             'purchase_count' => $purchaseCount,
-            'conversation_count' => Chat::where('created_at', '>=', $startDate)->count(),
-            'download_count' => ChatDownload::where('downloaded_at', '>=', $startDate)->count(),
+            'conversation_count' => Chat::whereBetween('created_at', [$startDate, $endDate])->count(),
+            'download_count' => ChatDownload::whereBetween('downloaded_at', [$startDate, $endDate])->count(),
             'subscription_count' => $activeSubscriptions->count(),
             'subscriptions_by_product' => $subscriptionsByProduct,
         ];
