@@ -1,13 +1,21 @@
 <div>
-    {{-- Period Selector --}}
-    <div class="mb-6">
+    {{-- Header with Period Selector --}}
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <flux:heading level="1" size="xl">Dashboard ToleryCAD</flux:heading>
+            <flux:text class="text-gray-500">Statistiques et revenus</flux:text>
+        </div>
         <flux:date-picker
             wire:model.live="range"
             mode="range"
             with-presets
             presets="today yesterday last7Days thisWeek thisMonth lastMonth yearToDate allTime custom"
             locale="fr"
-        />
+        >
+            <x-slot name="trigger">
+                <flux:date-picker.button />
+            </x-slot>
+        </flux:date-picker>
     </div>
 
     {{-- Revenue Summary --}}
