@@ -1105,4 +1105,66 @@ class Chatbot extends Component
             text: "Version {$message->getVersionLabel()} en cours de téléchargement."
         );
     }
+
+    /**
+     * Notifie l'équipe Tolery d'un échec de génération après plusieurs tentatives.
+     * Appelé depuis le frontend quand le retry max est atteint.
+     */
+    public function notifyStreamFailure(array $data): void
+    {
+        /** @var ChatUser $user */
+        $user = auth()->user();
+
+        $errorDetails = [
+            'chat_id' => $this->chat->id,
+            'chat_session_id' => $this->chat->session_id,
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'team_id' => $user->team?->id,
+            'team_name' => $user->team?->name,
+            'message_preview' => $data['message'] ?? 'N/A',
+            'error_type' => $data['errorType'] ?? 'unknown',
+            'error_message' => $data['errorMessage'] ?? 'N/A',
+            'retry_count' => $data['retryCount'] ?? 0,
+            'timestamp' => now()->toIso8601String(),
+            'environment' => app()->environment(),
+        ];
+
+        // Log détaillé pour investigation
+        Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Log::error('[AICAD] ❌ STREAM FAILURE - TEAM NOTIFICATION');
+        Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        Log::error('[AICAD] User: '.$user->email.' (ID: '.$user->id.')');
+        Log::error('[AICAD] Chat ID: '.$this->chat->id);
+        Log::error('[AICAD] Session ID: '.($this->chat->session_id ?? 'N/A'));
+        Log::error('[AICAD] Error Type: '.($data['errorType'] ?? 'unknown'));
+        Log::error('[AICAD] Error Message: '.($data['errorMessage'] ?? 'N/A'));
+        Log::error('[AICAD] Retry Count: '.($data['retryCount'] ?? 0));
+        Log::error('[AICAD] Message Preview: '.($data['message'] ?? 'N/A'));
+        Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Log channel spécifique pour alerting (Slack, etc.)
+        // Utiliser try-catch au cas où le channel n'est pas configuré
+        try {
+            Log::channel('slack')->critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives', $errorDetails);
+        } catch (\Exception $e) {
+            // Fallback: log to default channel if slack is not configured
+            Log::critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives (Slack unavailable)', $errorDetails);
+        }
+
+        // Store an assistant message indicating the failure
+        $failureMessage = 'Une erreur technique est survenue lors de la génération de votre pièce. '
+            .'L\'équipe Tolery a été automatiquement notifiée et travaille à résoudre ce problème. '
+            .'Nous vous tiendrons informé dès que possible.';
+
+        $asst = $this->findLatestAssistantMessage();
+        if ($asst && $asst->message === '[TYPING_INDICATOR]') {
+            $asst->message = $failureMessage;
+            $asst->save();
+        }
+
+        // Refresh messages to update UI
+        $this->messages = $this->mapDbMessagesToArray();
+        $this->dispatch('tolery-chat-append');
+    }
 }

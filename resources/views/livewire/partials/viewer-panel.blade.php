@@ -52,16 +52,61 @@
                         <div class="font-semibold" x-text="`${overall}%`"></div>
                     </div>
 
-                    {{-- Avertissement --}}
-                    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
-                        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                        </svg>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-amber-900 mb-1">Ne fermez pas cette fenêtre</p>
-                            <p class="text-xs text-amber-700">La génération de votre pièce est en cours. Fermer cette fenêtre interrompra le processus.</p>
+                    {{-- Error state with retry button --}}
+                    <template x-if="hasError">
+                        <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-red-900 mb-1" x-text="errorMessage || 'Une erreur est survenue'"></p>
+
+                                    {{-- Team notified message --}}
+                                    <template x-if="teamNotified">
+                                        <div class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                                            <p class="font-medium">L'équipe Tolery a été automatiquement notifiée.</p>
+                                            <p class="mt-1">Nous analysons le problème et reviendrons vers vous rapidement.</p>
+                                        </div>
+                                    </template>
+
+                                    {{-- Retry button --}}
+                                    <template x-if="!teamNotified">
+                                        <button
+                                            @click="manualRetry()"
+                                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                            </svg>
+                                            Réessayer
+                                        </button>
+                                    </template>
+
+                                    {{-- Close button when team is notified --}}
+                                    <template x-if="teamNotified">
+                                        <button
+                                            @click="close()"
+                                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                            Fermer
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </template>
+
+                    {{-- Avertissement (only when not in error state) --}}
+                    <template x-if="!hasError">
+                        <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-amber-900 mb-1">Ne fermez pas cette fenêtre</p>
+                                <p class="text-xs text-amber-700">La génération de votre pièce est en cours. Fermer cette fenêtre interrompra le processus.</p>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
