@@ -61,15 +61,18 @@
                     <div class="text-base font-semibold text-gray-900">Sélection</div>
                     <button
                         x-show="selection && !editMode"
-                        @click="enableEditMode()"
-                        class="text-sm text-violet-600 hover:text-violet-700 font-semibold">
+                        @click.stop="enableEditMode()"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
                         Modifier
                     </button>
                     <div x-show="editMode" class="flex gap-2">
-                        <button @click="cancelEdit()" class="text-sm text-gray-600 hover:text-gray-700">
+                        <button @click.stop="cancelEdit()" class="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
                             Annuler
                         </button>
-                        <button @click="saveEdits()" class="text-sm text-violet-600 hover:text-violet-700 font-semibold">
+                        <button @click.stop="saveEdits()" class="px-2.5 py-1 text-xs font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors">
                             Valider
                         </button>
                     </div>
@@ -383,10 +386,10 @@
             <flux:separator/>
 
             {{-- Matière --}}
-            <div class="space-y-3">
+            <div class="space-y-3" @click.stop>
                 <div class="text-base font-semibold text-gray-900">Matière</div>
 
-                <flux:radio.group variant="segmented" x-model="materialFamily" @change="saveMaterialChoice()">
+                <flux:radio.group variant="segmented" x-model="materialFamily" @change="$nextTick(() => saveMaterialChoice())">
                     @foreach (\Tolery\AiCad\Enum\MaterialFamily::cases() as $material)
                         <flux:radio :value="$material->value" :label="$material->label()" />
                     @endforeach
@@ -714,11 +717,10 @@
                 },
                 fmtWeight(v) {
                     if (v == null) return '—';
-                    // Convertir en kg si > 1000g
-                    if (v >= 1000) {
-                        return `${(v / 1000).toFixed(2)} kg`;
-                    }
-                    return `${(+v).toFixed(0)} g`;
+                    // Toujours afficher en kg (standard en tôlerie)
+                    const kg = v / 1000;
+                    // Afficher 3 décimales si < 1kg, 2 sinon
+                    return kg < 1 ? `${kg.toFixed(3)} kg` : `${kg.toFixed(2)} kg`;
                 },
                 fmtThickness() {
                     return '—'
