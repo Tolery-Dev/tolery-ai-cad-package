@@ -177,6 +177,26 @@
             statusText: 'Initialisation...',
             activeStep: null,
             completedSteps: 0,
+
+            // Retry management
+            retryCount: 0,
+            maxRetries: 3,
+            isRetrying: false,
+            retryDelays: [2000, 4000, 8000], // Exponential backoff: 2s, 4s, 8s
+
+            // Error state
+            hasError: false,
+            errorType: null, // 'network', 'timeout', 'server', 'unknown'
+            errorMessage: '',
+            teamNotified: false,
+
+            // Store request params for retry
+            lastRequest: {
+                message: null,
+                sessionId: null,
+                isEdit: false,
+            },
+
             steps: [
                 {key: 'analysis', label: 'Analyse des informations et dimensions de la pièce', state: 'inactive'},
                 {key: 'parameters', label: 'Paramètres', state: 'inactive'},
@@ -239,6 +259,103 @@
                 this.completedSteps = 0;
                 this.steps.forEach(s => s.state = 'inactive');
                 this.stepMessageIndex = {};
+                // Reset error state (but not retry count - that's managed separately)
+                this.hasError = false;
+                this.errorType = null;
+                this.errorMessage = '';
+            },
+            resetRetryState() {
+                this.retryCount = 0;
+                this.isRetrying = false;
+                this.teamNotified = false;
+            },
+            classifyError(error) {
+                // Classify error type for better user feedback
+                if (error.name === 'AbortError') {
+                    return {
+                        type: 'cancelled',
+                        message: 'La génération a été annulée.',
+                        canRetry: false,
+                    };
+                }
+                if (error instanceof TypeError || error.message?.includes('fetch') || error.message?.includes('network')) {
+                    return {
+                        type: 'network',
+                        message: 'Problème de connexion réseau. Vérifiez votre connexion internet.',
+                        canRetry: true,
+                    };
+                }
+                if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
+                    return {
+                        type: 'timeout',
+                        message: 'Le serveur met trop de temps à répondre.',
+                        canRetry: true,
+                    };
+                }
+                if (error.message?.includes('500') || error.message?.includes('502') || error.message?.includes('503')) {
+                    return {
+                        type: 'server',
+                        message: 'Le serveur rencontre un problème temporaire.',
+                        canRetry: true,
+                    };
+                }
+                if (error.message?.includes('401') || error.message?.includes('403')) {
+                    return {
+                        type: 'auth',
+                        message: 'Session expirée. Veuillez rafraîchir la page.',
+                        canRetry: false,
+                    };
+                }
+                return {
+                    type: 'unknown',
+                    message: 'Une erreur inattendue s\'est produite.',
+                    canRetry: true,
+                };
+            },
+            getRetryMessage() {
+                const remaining = this.maxRetries - this.retryCount;
+                const delay = this.retryDelays[this.retryCount] / 1000;
+                return `Nouvelle tentative dans ${delay}s... (${remaining} essai${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''})`;
+            },
+            async notifyTeamOfFailure() {
+                if (this.teamNotified) return;
+
+                console.log('[AICAD] 📧 Notifying Tolery team of repeated failure...');
+                try {
+                    await $wire.notifyStreamFailure({
+                        message: this.lastRequest.message?.substring(0, 500),
+                        sessionId: this.lastRequest.sessionId,
+                        errorType: this.errorType,
+                        errorMessage: this.errorMessage,
+                        retryCount: this.retryCount,
+                    });
+                    this.teamNotified = true;
+                    console.log('[AICAD] ✅ Team notification sent successfully');
+                } catch (e) {
+                    console.error('[AICAD] ❌ Failed to notify team:', e);
+                }
+            },
+            async retryStream() {
+                if (!this.lastRequest.message) {
+                    console.error('[AICAD] Cannot retry: no previous request stored');
+                    return;
+                }
+
+                this.hasError = false;
+                this.errorMessage = '';
+                this.errorType = null;
+
+                await this.startStream(
+                    this.lastRequest.message,
+                    this.lastRequest.sessionId,
+                    this.lastRequest.isEdit
+                );
+            },
+            manualRetry() {
+                // User clicked retry button - reset retry count and try again
+                this.retryCount = 0;
+                this.teamNotified = false;
+                this.retryStream();
             },
             getDetailedMessage(stepKey) {
                 const messages = this.stepMessages[stepKey];
@@ -272,20 +389,32 @@
                 this.statusText = detailedMessage || message || status || 'Traitement en cours...';
             },
             async startStream(message, sessionId, isEdit = false) {
+                // Check if this is a retry or a new request
+                const isRetryAttempt = this.isRetrying;
+
+                // Reset UI state
                 this.reset();
                 this.open = true;
                 window.dispatchEvent(new CustomEvent('cad-generation-started'));
                 this.cancelable = true;
                 this.controller = new AbortController();
 
+                // Store request params for potential retry (only on new requests)
+                if (!isRetryAttempt) {
+                    this.resetRetryState();
+                    this.lastRequest = { message, sessionId, isEdit };
+                }
+                this.isRetrying = false;
+
                 const url = @js(route('ai-cad.stream.generate-cad'));
 
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('[AICAD] 🚀 NEW CAD GENERATION REQUEST');
+                console.log(`[AICAD] 🚀 ${isRetryAttempt ? 'RETRY' : 'NEW'} CAD GENERATION REQUEST`);
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 console.log('[AICAD] 🔑 Session ID:', sessionId || 'NEW SESSION (no ID provided)');
                 console.log('[AICAD] 📝 Message:', message?.substring(0, 150) + (message?.length > 150 ? '...' : ''));
                 console.log('[AICAD] ✏️  Is Edit Request:', isEdit ? 'YES' : 'NO');
+                console.log('[AICAD] 🔄 Retry Attempt:', isRetryAttempt ? `#${this.retryCount}` : 'N/A (new request)');
                 console.log('[AICAD] 📍 API Endpoint:', url);
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
@@ -397,6 +526,9 @@
                                     // Force Livewire component refresh to update UI
                                     await $wire.$refresh();
 
+                                    // Success! Reset retry state
+                                    this.resetRetryState();
+
                                     this.cancelable = true;
                                     setTimeout(() => this.close(), 800);
                                     window.dispatchEvent(new CustomEvent('cad-generation-ended'));
@@ -412,12 +544,14 @@
                         }
                     }
                 } catch (e) {
+                    // Detailed error logging
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     console.error('[AICAD] ❌ STREAM ERROR');
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     console.error('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
                     console.error('[AICAD] 📝 Message:', message?.substring(0, 150));
                     console.error('[AICAD] 📍 Endpoint:', url);
+                    console.error('[AICAD] 🔄 Retry Count:', this.retryCount, '/', this.maxRetries);
                     console.error('[AICAD] ⚠️  Error Type:', e.constructor.name);
                     console.error('[AICAD] ⚠️  Error Message:', e.message);
                     console.error('[AICAD] 📍 Stack:', e.stack);
@@ -429,8 +563,61 @@
                         isNetworkError: e instanceof TypeError,
                     });
                     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    this.statusText = 'Stream connection error. Retrying soon…';
-                    this.cancelable = true;
+
+                    // Classify the error
+                    const errorInfo = this.classifyError(e);
+                    this.errorType = errorInfo.type;
+                    this.errorMessage = errorInfo.message;
+
+                    console.log('[AICAD] 🏷️  Error classified as:', errorInfo.type);
+                    console.log('[AICAD] 💬 User message:', errorInfo.message);
+                    console.log('[AICAD] 🔁 Can retry:', errorInfo.canRetry);
+
+                    // Handle cancelled requests (user aborted)
+                    if (errorInfo.type === 'cancelled') {
+                        this.hasError = false;
+                        this.statusText = errorInfo.message;
+                        this.cancelable = true;
+                        window.dispatchEvent(new CustomEvent('cad-generation-ended'));
+                        return;
+                    }
+
+                    // Check if we can and should retry
+                    if (errorInfo.canRetry && this.retryCount < this.maxRetries) {
+                        this.retryCount++;
+                        const delay = this.retryDelays[this.retryCount - 1] || 8000;
+
+                        console.log(`[AICAD] 🔄 Scheduling retry #${this.retryCount} in ${delay}ms...`);
+
+                        this.hasError = false;
+                        this.statusText = this.getRetryMessage();
+                        this.cancelable = true;
+
+                        // Schedule retry with exponential backoff
+                        this.isRetrying = true;
+                        setTimeout(() => {
+                            if (this.open && this.isRetrying) {
+                                console.log(`[AICAD] 🔄 Executing retry #${this.retryCount}...`);
+                                this.retryStream();
+                            }
+                        }, delay);
+                    } else {
+                        // Max retries reached or error not retryable
+                        console.error('[AICAD] ❌ Max retries reached or error not retryable');
+
+                        this.hasError = true;
+                        this.cancelable = true;
+
+                        if (this.retryCount >= this.maxRetries) {
+                            // Notify team of persistent failure
+                            this.statusText = 'La génération a échoué après plusieurs tentatives.';
+                            await this.notifyTeamOfFailure();
+                        } else {
+                            this.statusText = errorInfo.message;
+                        }
+
+                        window.dispatchEvent(new CustomEvent('cad-generation-ended'));
+                    }
                 }
             },
             close() {
