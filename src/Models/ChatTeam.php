@@ -9,6 +9,11 @@ use Laravel\Cashier\Billable;
 use Tolery\AiCad\Traits\HasLimits;
 use Tolery\AiCad\Traits\HasSubscription;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property int|null $user_id
+ */
 class ChatTeam extends Model
 {
     use Billable;
