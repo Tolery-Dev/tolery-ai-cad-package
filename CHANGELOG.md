@@ -2,6 +2,36 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.0.0 - First Stable Release 🎉 - 2026-01-19
+
+### 🎉 ToleryCAD v1.0.0 - Première version stable !
+
+#### Fonctionnalités principales
+
+- **Chatbot IA** pour génération de fichiers CAO
+- **Viewer 3D** avec panneau de configuration interactif
+- **DFM (Design for Manufacturing)** - Détection et édition des features :
+  - Perçages, taraudages, oblongs
+  - Pliages avec rayon intérieur
+  - Fraisures, filets
+  
+- **Streaming en temps réel** de la génération CAO
+- **Export STEP et PDF technique**
+- **Système d'abonnement** intégré (Stripe)
+- **Admin panel** pour gestion des conversations et prompts
+
+#### Améliorations récentes
+
+- Labels simplifiés dans la modal de progression
+- Affichage correct des diamètres de perçage (M3 = Ø2.5mm)
+- Sélection multi-faces pour oblongs et pliages
+- Section taraudage avec sélection M1-M20
+
+
+---
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
 ## v0.9.0 - DFM Features Support - 2026-01-05
 
 ### What's New
