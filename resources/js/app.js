@@ -1044,6 +1044,19 @@ class JsonModelViewer3D {
             // Use semantic type from FreeCad
             faceType = featureData.type; // "hole", "countersink", "fillet", "chamfer", "slot"
 
+            // Override faceType to 'thread' for threaded holes
+            if (featureData.type === "hole") {
+                const isThreaded =
+                    featureData.subtype === "threaded" ||
+                    featureData.subtype === "tapped" ||
+                    (featureData.thread !== null &&
+                        featureData.thread !== undefined &&
+                        featureData.thread !== "");
+                if (isThreaded) {
+                    faceType = "thread";
+                }
+            }
+
             // Build metrics from feature data
             metrics = {
                 displayType: this.getFeatureDisplayType(featureData),
