@@ -942,14 +942,23 @@ class JsonModelViewer3D {
             featuresCount: this.features?.length,
         });
 
-        // For multi-face features (oblongs, fillets, chamfers, etc.), select ALL faces of the feature
+        // For multi-face features (oblongs, fillets, chamfers, bending, etc.), select ALL faces of the feature
+        // Count all face/edge IDs including nested structures for bending
         const faceIdsCount = Array.isArray(featureData?.face_ids)
             ? featureData.face_ids.length
             : 0;
         const edgeIdsCount = Array.isArray(featureData?.edge_ids)
             ? featureData.edge_ids.length
             : 0;
-        const totalIds = faceIdsCount + edgeIdsCount;
+        // Bending features have nested inner/outer face_ids
+        const innerFaceIdsCount = Array.isArray(featureData?.inner?.face_ids)
+            ? featureData.inner.face_ids.length
+            : 0;
+        const outerFaceIdsCount = Array.isArray(featureData?.outer?.face_ids)
+            ? featureData.outer.face_ids.length
+            : 0;
+        const totalIds =
+            faceIdsCount + edgeIdsCount + innerFaceIdsCount + outerFaceIdsCount;
 
         if (featureData && totalIds > 1) {
             this.selectedGroupIndices =
@@ -958,6 +967,8 @@ class JsonModelViewer3D {
                 type: featureData.type,
                 faceIds: featureData.face_ids,
                 edgeIds: featureData.edge_ids,
+                innerFaceIds: featureData.inner?.face_ids,
+                outerFaceIds: featureData.outer?.face_ids,
                 selectedIndices: this.selectedGroupIndices,
             });
         } else {
@@ -1088,7 +1099,7 @@ class JsonModelViewer3D {
     }
 
     /**
-     * Get all group indices for a feature (for multi-face features like oblongs, fillets)
+     * Get all group indices for a feature (for multi-face features like oblongs, fillets, bending)
      * @param {object} feature - The feature object with face_ids or edge_ids array
      * @returns {number[]} - Array of group indices
      */
@@ -1096,10 +1107,18 @@ class JsonModelViewer3D {
         if (!feature) return [];
         const indices = [];
 
-        // Support both face_ids (for oblongs, holes) and edge_ids (for fillets, chamfers)
+        // Support face_ids (for oblongs, holes) and edge_ids (for fillets, chamfers)
+        // Also support nested structures for bending (inner.face_ids, outer.face_ids)
         const allIds = [
             ...(Array.isArray(feature.face_ids) ? feature.face_ids : []),
             ...(Array.isArray(feature.edge_ids) ? feature.edge_ids : []),
+            // Bending features have nested inner/outer face_ids
+            ...(feature.inner && Array.isArray(feature.inner.face_ids)
+                ? feature.inner.face_ids
+                : []),
+            ...(feature.outer && Array.isArray(feature.outer.face_ids)
+                ? feature.outer.face_ids
+                : []),
         ];
 
         for (const faceId of allIds) {
@@ -1120,15 +1139,32 @@ class JsonModelViewer3D {
         }
 
         for (const feature of this.features) {
+            // Check root level face_ids
             if (
                 Array.isArray(feature.face_ids) &&
                 feature.face_ids.includes(faceId)
             ) {
                 return feature;
             }
+            // Check root level edge_ids
             if (
                 Array.isArray(feature.edge_ids) &&
                 feature.edge_ids.includes(faceId)
+            ) {
+                return feature;
+            }
+            // Check nested structures for bending features (inner.face_ids, outer.face_ids)
+            if (
+                feature.inner &&
+                Array.isArray(feature.inner.face_ids) &&
+                feature.inner.face_ids.includes(faceId)
+            ) {
+                return feature;
+            }
+            if (
+                feature.outer &&
+                Array.isArray(feature.outer.face_ids) &&
+                feature.outer.face_ids.includes(faceId)
             ) {
                 return feature;
             }
@@ -1147,13 +1183,20 @@ class JsonModelViewer3D {
 
         // Special handling for holes - include thread info if available
         if (feature.type === "hole") {
+            // Check both subtype and thread property to detect threaded holes
+            // Thread property contains the designation (e.g., "M3", "M4") or null
             const isThreaded =
-                feature.subtype === "threaded" || feature.subtype === "tapped";
+                feature.subtype === "threaded" ||
+                feature.subtype === "tapped" ||
+                (feature.thread !== null &&
+                    feature.thread !== undefined &&
+                    feature.thread !== "");
+
             if (isThreaded) {
                 // Build thread designation (e.g., "M3", "M4", "M5")
                 let threadInfo = "Taraudage";
                 if (feature.thread) {
-                    // If thread property exists (e.g., "M3", "M4")
+                    // If thread property exists with a value (e.g., "M3", "M4")
                     threadInfo += ` ${feature.thread}`;
                 } else if (feature.diameter) {
                     // Infer metric thread from diameter (M3 = 3mm, M4 = 4mm, etc.)
@@ -1178,14 +1221,32 @@ class JsonModelViewer3D {
             return "Perçage";
         }
 
+        // Special handling for fillets - include radius if available
+        if (feature.type === "fillet") {
+            if (feature.radius !== undefined && feature.radius !== null) {
+                return `Congé R${feature.radius}`;
+            }
+            return "Congé";
+        }
+
+        // Special handling for bending - include radius info if available
+        if (feature.type === "bending") {
+            const innerRadius = feature.inner?.radius;
+            const outerRadius = feature.outer?.radius;
+            if (innerRadius !== undefined && innerRadius !== null) {
+                return `Pliage R${innerRadius}`;
+            }
+            return "Pliage";
+        }
+
         const typeMap = {
             countersink: "Fraisage",
-            fillet: "Congé",
             chamfer: "Chanfrein",
             slot: "Rainure",
             box: "Face", // Face plane (from FreeCad API)
             oblong: "Oblong", // Oblong hole (slot with rounded ends)
-            bending: "Pliage", // Bending/folding feature for sheet metal
+            rectangular: "Face rectangulaire", // Rectangular face
+            square: "Face carrée", // Square face
         };
 
         return typeMap[feature.type] || feature.type;
