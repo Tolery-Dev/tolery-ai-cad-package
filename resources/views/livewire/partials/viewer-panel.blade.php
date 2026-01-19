@@ -32,7 +32,7 @@
                                 </div>
                                 <span class="text-xs font-medium text-center"
                                       :class="s.state === 'inactive' ? 'text-gray-400' : 'text-gray-900'"
-                                      x-text="s.label">
+                                      x-text="s.shortLabel">
                                 </span>
                             </div>
                         </template>

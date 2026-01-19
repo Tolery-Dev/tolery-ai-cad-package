@@ -198,11 +198,11 @@
             },
 
             steps: [
-                {key: 'analysis', label: 'Analyse des informations et dimensions de la pièce', state: 'inactive'},
-                {key: 'parameters', label: 'Paramètres', state: 'inactive'},
-                {key: 'generation_code', label: 'Génération de la pièce et du fichier CAO', state: 'inactive'},
-                {key: 'export', label: 'Export', state: 'inactive'},
-                {key: 'complete', label: 'Terminé', state: 'inactive'},
+                {key: 'analysis', shortLabel: 'Analyse', label: 'Analyse des informations et dimensions de la pièce', state: 'inactive'},
+                {key: 'parameters', shortLabel: 'Paramètres', label: 'Paramètres', state: 'inactive'},
+                {key: 'generation_code', shortLabel: 'Génération', label: 'Génération de la pièce et du fichier CAO', state: 'inactive'},
+                {key: 'export', shortLabel: 'Export', label: 'Export', state: 'inactive'},
+                {key: 'complete', shortLabel: 'Terminé', label: 'Terminé', state: 'inactive'},
             ],
             // Messages détaillés par étape pour un meilleur feedback utilisateur
             stepMessages: {
