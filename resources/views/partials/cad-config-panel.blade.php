@@ -90,6 +90,7 @@
                                       'bg-red-100 text-red-700': selection.faceType === 'thread',
                                       'bg-purple-100 text-purple-700': selection.faceType === 'countersink',
                                       'bg-amber-100 text-amber-700': selection.faceType === 'oblong',
+                                      'bg-indigo-100 text-indigo-700': selection.faceType === 'bending',
                                   }"
                                   x-text="selection.metrics?.displayType || 'Face'">
                             </span>
@@ -216,24 +217,51 @@
                         {{-- TARAUDAGE --}}
                         <template x-if="selection.faceType === 'thread'">
                             <div class="space-y-1.5">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Diamètre</span>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-500">Taraudage</span>
                                     <template x-if="!editMode">
-                                        <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
+                                        <span class="font-medium" x-text="selection.metrics.thread || getThreadFromDiameter(selection.metrics.diameter)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.diameter"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <select x-model="edits.thread" class="w-24 px-2 py-0.5 text-sm border rounded bg-white">
+                                            <option value="M1">M1</option>
+                                            <option value="M1.2">M1.2</option>
+                                            <option value="M1.4">M1.4</option>
+                                            <option value="M1.6">M1.6</option>
+                                            <option value="M2">M2</option>
+                                            <option value="M2.5">M2.5</option>
+                                            <option value="M3">M3</option>
+                                            <option value="M4">M4</option>
+                                            <option value="M5">M5</option>
+                                            <option value="M6">M6</option>
+                                            <option value="M8">M8</option>
+                                            <option value="M10">M10</option>
+                                            <option value="M12">M12</option>
+                                            <option value="M14">M14</option>
+                                            <option value="M16">M16</option>
+                                            <option value="M18">M18</option>
+                                            <option value="M20">M20</option>
+                                        </select>
                                     </template>
                                 </div>
-                                <div class="flex justify-between">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-500">Ø perçage</span>
+                                    <span class="font-medium text-gray-600" x-text="fmtDiameter(getDiameterFromThread(selection.metrics.thread || getThreadFromDiameter(selection.metrics.diameter)) || selection.metrics.diameter)"></span>
+                                </div>
+                                <div class="flex justify-between items-center">
                                     <span class="text-gray-500">Profondeur</span>
                                     <template x-if="!editMode">
-                                        <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
+                                        <span class="font-medium" x-text="selection.metrics.subtype === 'through' ? 'Traversant' : fmt(selection.metrics.depth)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.depth"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <div class="flex items-center gap-2">
+                                            <select x-model="edits.depthType" class="w-28 px-2 py-0.5 text-sm border rounded bg-white">
+                                                <option value="through">Traversant</option>
+                                                <option value="blind">Borgne</option>
+                                            </select>
+                                            <input x-show="edits.depthType === 'blind'" type="number" step="0.1" x-model="edits.depth"
+                                                   class="w-16 px-2 py-0.5 text-sm border rounded" placeholder="mm" />
+                                        </div>
                                     </template>
                                 </div>
                                 <div class="text-xs text-gray-500">
@@ -291,6 +319,39 @@
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Aire</span>
                                     <span class="font-medium" x-text="fmtArea(selection.metrics.area)"></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        {{-- PLIAGE (bending) --}}
+                        <template x-if="selection.faceType === 'bending'">
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-500">Rayon intérieur</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="fmt(selection.metrics.inner?.radius || selection.metrics.radius)"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <input type="number" step="0.1" x-model="edits.innerRadius"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                    </template>
+                                </div>
+                                <div class="flex justify-between" x-show="selection.metrics.angle">
+                                    <span class="text-gray-500">Angle</span>
+                                    <template x-if="!editMode">
+                                        <span class="font-medium" x-text="selection.metrics.angle + '°'"></span>
+                                    </template>
+                                    <template x-if="editMode">
+                                        <div class="flex items-center gap-1">
+                                            <input type="number" step="1" x-model="edits.angle"
+                                                   class="w-16 px-2 py-0.5 text-sm border rounded" />
+                                            <span class="text-gray-500 text-sm">°</span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="flex justify-between" x-show="selection.metrics.length">
+                                    <span class="text-gray-500">Longueur</span>
+                                    <span class="font-medium" x-text="fmt(selection.metrics.length)"></span>
                                 </div>
                             </div>
                         </template>
@@ -708,9 +769,15 @@
                     this.x = Math.min(Math.max(this.x, 12), Math.max(maxX, 12))
                     this.y = Math.min(Math.max(this.y, 12), Math.max(maxY, 12))
                 },
-                // Helpers d’affichage
+                // Helpers d'affichage
                 fmt(v) {
                     return (v == null) ? '—' : `${(+v).toFixed(0)} mm`
+                },
+                fmtDiameter(v) {
+                    if (v == null) return '—';
+                    // Afficher 1 décimale si nécessaire (2.5 mm), sinon entier (3 mm)
+                    const num = +v;
+                    return num % 1 === 0 ? `${num.toFixed(0)} mm` : `${num.toFixed(1)} mm`;
                 },
                 fmtArea(v) {
                     return (v == null) ? '—' : `${(+v).toFixed(0)} mm²`
@@ -729,6 +796,35 @@
                     if (!c) return '—';
                     const u = this.stats.unit || 'mm';
                     return `(${(c.x || 0).toFixed(1)}, ${(c.y || 0).toFixed(1)}, ${(c.z || 0).toFixed(1)}) ${u}`
+                },
+
+                // Mapping diamètre de perçage → taille de taraudage ISO métrique
+                // Source: Diamètres de perçage standard pour filetage métrique (pas standard)
+                threadSizes: {
+                    'M1': 0.75, 'M1.2': 0.95, 'M1.4': 1.1, 'M1.6': 1.25,
+                    'M2': 1.6, 'M2.5': 2.05, 'M3': 2.5, 'M4': 3.3, 'M5': 4.2,
+                    'M6': 5.0, 'M8': 6.8, 'M10': 8.5, 'M12': 10.2, 'M14': 12.0,
+                    'M16': 14.0, 'M18': 15.5, 'M20': 17.5
+                },
+                // Trouver la taille de taraudage à partir du diamètre de perçage
+                getThreadFromDiameter(diameter) {
+                    if (!diameter) return 'M3';
+                    let closest = 'M3';
+                    let minDiff = Infinity;
+                    for (const [thread, drillDia] of Object.entries(this.threadSizes)) {
+                        const diff = Math.abs(drillDia - diameter);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closest = thread;
+                        }
+                    }
+                    // Si la différence est trop grande (>0.5mm), c'est peut-être pas un taraudage standard
+                    return minDiff < 0.5 ? closest : 'M' + Math.round(diameter);
+                },
+                // Obtenir le diamètre de perçage à partir de la taille de taraudage
+                getDiameterFromThread(thread) {
+                    if (!thread) return null;
+                    return this.threadSizes[thread] || null;
                 },
 
                 // Features
@@ -769,13 +865,20 @@
                         diameter: m.diameter || null,
                         depth: m.depth || null,
                         pitch: m.pitch || null,
+                        // Taraudage (thread) - utilise le mapping diamètre → taraudage
+                        thread: m.thread || this.getThreadFromDiameter(m.diameter),
+                        depthType: m.subtype === 'through' ? 'through' : 'blind',
+                        // Pliage (bending)
+                        innerRadius: m.inner?.radius || m.radius || null,
+                        angle: m.angle || null,
                     };
                 },
                 cancelEdit() {
                     this.editMode = false;
                     this.edits = {
                         length: null, width: null, thickness: null,
-                        radius: null, diameter: null, depth: null, pitch: null
+                        radius: null, diameter: null, depth: null, pitch: null,
+                        thread: null, depthType: null, innerRadius: null, angle: null
                     };
                 },
                 // Build technical badge for bot message
@@ -856,6 +959,7 @@
                     const m = this.selection.metrics;
                     const displayType = m.displayType || 'Face';
                     const faceId = this.selection.realFaceId || this.selection.id;
+                    const faceType = this.selection.faceType;
 
                     // Compare original vs edited values
                     if (this.edits.length && this.edits.length !== m.length) {
@@ -875,6 +979,34 @@
                     }
                     if (this.edits.radius && this.edits.radius !== m.radius) {
                         changes.push(`Rayon: ${this.fmt(m.radius)} → ${this.fmt(this.edits.radius)}`);
+                    }
+
+                    // Taraudage (thread) - modifications spécifiques
+                    if (faceType === 'thread') {
+                        const originalThread = m.thread || this.getThreadFromDiameter(m.diameter);
+                        if (this.edits.thread && this.edits.thread !== originalThread) {
+                            changes.push(`Taraudage: ${originalThread} → ${this.edits.thread}`);
+                        }
+                        const originalDepthType = m.subtype === 'through' ? 'through' : 'blind';
+                        if (this.edits.depthType !== originalDepthType) {
+                            const depthLabel = this.edits.depthType === 'through' ? 'Traversant' : 'Borgne';
+                            const origLabel = originalDepthType === 'through' ? 'Traversant' : 'Borgne';
+                            changes.push(`Type: ${origLabel} → ${depthLabel}`);
+                        }
+                        if (this.edits.depthType === 'blind' && this.edits.depth && this.edits.depth !== m.depth) {
+                            changes.push(`Profondeur: ${this.fmt(m.depth)} → ${this.fmt(this.edits.depth)}`);
+                        }
+                    }
+
+                    // Pliage (bending) - modifications spécifiques
+                    if (faceType === 'bending') {
+                        const originalInnerRadius = m.inner?.radius || m.radius;
+                        if (this.edits.innerRadius && this.edits.innerRadius !== originalInnerRadius) {
+                            changes.push(`Rayon intérieur: ${this.fmt(originalInnerRadius)} → ${this.fmt(this.edits.innerRadius)}`);
+                        }
+                        if (this.edits.angle && this.edits.angle !== m.angle) {
+                            changes.push(`Angle: ${m.angle}° → ${this.edits.angle}°`);
+                        }
                     }
 
                     if (changes.length === 0) {
