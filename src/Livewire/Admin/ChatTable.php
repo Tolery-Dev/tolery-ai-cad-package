@@ -39,7 +39,18 @@ class ChatTable extends FluxDataTable
                 'searchable' => true,
                 'sortable' => true,
                 'render' => fn ($row) => $row->session_id
-                    ? '<code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">'.e(substr($row->session_id, 0, 12)).'...</code>'
+                    ? '<div x-data="{ copied: false }" class="flex items-center gap-1.5">
+                        <code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded select-all">'.e($row->session_id).'</code>
+                        <button type="button" @click="navigator.clipboard.writeText(\''.e($row->session_id).'\'); copied = true; setTimeout(() => copied = false, 2000)"
+                            class="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700" title="Copier">
+                            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            <svg x-show="copied" x-cloak class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </button>
+                    </div>'
                     : '<span class="text-gray-400">-</span>',
             ],
             [
