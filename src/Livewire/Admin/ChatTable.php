@@ -12,7 +12,7 @@ class ChatTable extends FluxDataTable
     {
         return Chat::query()
             ->withCount('messages')
-            ->with(['team', 'user'])
+            ->with(['team', 'user', 'messages' => fn ($q) => $q->whereNotNull('ai_screenshot_path')->latest()->limit(1)])
             ->withTrashed()
             ->latest();
     }
