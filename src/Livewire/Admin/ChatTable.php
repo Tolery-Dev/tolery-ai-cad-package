@@ -12,7 +12,7 @@ class ChatTable extends FluxDataTable
     {
         return Chat::query()
             ->withCount('messages')
-            ->with('team')
+            ->with(['team', 'user'])
             ->withTrashed()
             ->latest();
     }
@@ -21,70 +21,63 @@ class ChatTable extends FluxDataTable
     {
         return [
             [
-                'label' => 'Nom',
+                'label' => 'Conversation',
                 'field' => 'name',
                 'searchable' => true,
                 'sortable' => true,
-                'render' => fn ($row) => $row->name ?: 'Sans nom',
+                'render' => fn ($row) => view('ai-cad::livewire.admin.partials.chat-name-cell', ['chat' => $row])->render(),
             ],
             [
                 'label' => 'Équipe',
                 'field' => 'team_id',
                 'searchable' => true,
-                'render' => fn ($row) => $row->team->name ?? '-',
-            ],
-            [
-                'label' => 'Session ID',
-                'field' => 'session_id',
-                'searchable' => true,
-                'sortable' => true,
-                'render' => fn ($row) => $row->session_id
-                    ? '<div x-data="{ copied: false }" class="flex items-center gap-1.5">
-                        <code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded select-all">'.e($row->session_id).'</code>
-                        <button type="button" @click="navigator.clipboard.writeText(\''.e($row->session_id).'\'); copied = true; setTimeout(() => copied = false, 2000)"
-                            class="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700" title="Copier">
-                            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                            </svg>
-                            <svg x-show="copied" x-cloak class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                            </svg>
-                        </button>
-                    </div>'
-                    : '<span class="text-gray-400">-</span>',
+                'render' => fn ($row) => '<span class="text-zinc-700 dark:text-zinc-300">'.e($row->team->name ?? '-').'</span>',
             ],
             [
                 'label' => 'Matériau',
                 'field' => 'material_family',
-                'render' => fn ($row) => $row->material_family?->label() ?? '-',
+                'render' => fn ($row) => $row->material_family
+                    ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">'
+                        .e($row->material_family->label()).'</span>'
+                    : '<span class="text-zinc-400">-</span>',
             ],
             [
                 'label' => 'Messages',
                 'field' => 'messages_count',
                 'sortable' => true,
+                'render' => fn ($row) => '<span class="inline-flex items-center justify-center min-w-6 px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">'
+                    .$row->messages_count.'</span>',
             ],
             [
-                'label' => 'Pièce générée',
+                'label' => 'Statut',
                 'field' => 'has_generated_piece',
-                'render' => fn ($row) => $row->has_generated_piece
-                    ? '<span class="text-green-600">Oui</span>'
-                    : '<span class="text-gray-400">Non</span>',
+                'render' => function ($row) {
+                    $badges = '';
+                    if ($row->has_generated_piece) {
+                        $badges .= '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">'
+                            .'<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>'
+                            .'Générée</span>';
+                    }
+                    if ($row->trashed()) {
+                        $badges .= ' <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">Supprimée</span>';
+                    }
+
+                    return $badges ?: '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">'
+                        .'<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                        .'En cours</span>';
+                },
             ],
             [
                 'label' => 'Date',
                 'field' => 'created_at',
                 'sortable' => true,
-                'render' => fn ($row) => $row->created_at->format('d/m/Y H:i'),
+                'render' => fn ($row) => '<div class="text-sm">'
+                    .'<div class="text-zinc-700 dark:text-zinc-300">'.$row->created_at->format('d/m/Y').'</div>'
+                    .'<div class="text-xs text-zinc-400">'.$row->created_at->format('H:i').'</div>'
+                    .'</div>',
             ],
             [
-                'label' => 'Statut',
-                'field' => 'deleted_at',
-                'render' => fn ($row) => $row->trashed()
-                    ? '<span class="text-red-600">Supprimé</span>'
-                    : '<span class="text-green-600">Actif</span>',
-            ],
-            [
-                'label' => 'Actions',
+                'label' => '',
                 'field' => 'id',
                 'render' => fn ($row) => view('ai-cad::livewire.admin.partials.chat-actions', ['chat' => $row])->render(),
             ],
