@@ -1,4 +1,4 @@
-<flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 min-w-[32rem]">
+<flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 min-w-[32rem]" x-data="{ cgvAccepted: false }">
     <div class="space-y-6">
         <div>
             <flux:heading size="lg" class="mb-2">Débloquer ce fichier CAO</flux:heading>
@@ -86,12 +86,29 @@
                         <flux:button
                             wire:click="purchaseFile"
                             variant="outline"
-                            class="mt-4 w-full">
+                            class="mt-4 w-full"
+                            x-bind:disabled="!cgvAccepted"
+                            x-bind:class="{ 'opacity-50 cursor-not-allowed': !cgvAccepted }">
                             Acheter maintenant
                         </flux:button>
                     </div>
                 </flux:card>
             @endif
+        </div>
+
+        {{-- CGV Checkbox --}}
+        <div class="flex items-start gap-3 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
+            <input
+                type="checkbox"
+                id="cgv-purchase-checkbox"
+                x-model="cgvAccepted"
+                class="mt-1 rounded border-zinc-300 text-violet-600 focus:ring-violet-500">
+            <label for="cgv-purchase-checkbox" class="text-sm text-zinc-600 dark:text-zinc-400">
+                Je reconnais avoir lu et accepte sans réserve les
+                <a href="{{ route('client.tolerycad.cgv') }}" target="_blank" rel="noopener" class="text-violet-600 hover:text-violet-700 underline">
+                    conditions générales du service ToleryCAD
+                </a>
+            </label>
         </div>
     </div>
 

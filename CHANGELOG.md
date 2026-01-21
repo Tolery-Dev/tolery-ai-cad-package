@@ -2,6 +2,20 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.2.0 - CGV ToleryCAD - 2026-01-21
+
+### Nouveautés
+
+#### Conditions Générales du Service
+
+- **Checkbox CGV obligatoire** avant achat one-shot dans le modal d'achat
+- Lien vers la page CGV ToleryCAD complète
+
+### Notes
+
+La page CGV et la route sont implémentées dans l'application principale (`client/tolerycad/cgv`).
+Le checkbox d'acceptation pour les abonnements est également ajouté dans la page subscription.
+
 ## v1.1.0 - Admin UI Redesign & DFM Improvements - 2026-01-21
 
 ### Nouveautés
