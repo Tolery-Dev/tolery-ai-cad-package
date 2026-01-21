@@ -336,6 +336,10 @@
                                                class="w-20 px-2 py-0.5 text-sm border rounded" />
                                     </template>
                                 </div>
+                                <div class="flex justify-between items-center" x-show="selection.metrics.outer?.radius">
+                                    <span class="text-gray-500">Rayon extérieur</span>
+                                    <span class="font-medium" x-text="fmt(selection.metrics.outer?.radius)"></span>
+                                </div>
                                 <div class="flex justify-between" x-show="selection.metrics.angle">
                                     <span class="text-gray-500">Angle</span>
                                     <template x-if="!editMode">
@@ -954,47 +958,45 @@
                 },
 
                 saveEdits() {
-                    // Collect all changes
+                    // Collect all changes with simplified format
                     const changes = [];
                     const m = this.selection.metrics;
-                    const displayType = m.displayType || 'Face';
                     const faceId = this.selection.realFaceId || this.selection.id;
                     const faceType = this.selection.faceType;
 
-                    // Compare original vs edited values
+                    // Compare original vs edited values - simplified format
                     if (this.edits.length && this.edits.length !== m.length) {
-                        changes.push(`Longueur: ${this.fmt(m.length)} → ${this.fmt(this.edits.length)}`);
+                        changes.push(`la longueur à ${this.fmt(this.edits.length)}`);
                     }
                     if (this.edits.width && this.edits.width !== m.width) {
-                        changes.push(`Largeur: ${this.fmt(m.width)} → ${this.fmt(this.edits.width)}`);
+                        changes.push(`la largeur à ${this.fmt(this.edits.width)}`);
                     }
                     if (this.edits.thickness && this.edits.thickness !== m.thickness) {
-                        changes.push(`Épaisseur: ${this.fmt(m.thickness)} → ${this.fmt(this.edits.thickness)}`);
+                        changes.push(`l'épaisseur à ${this.fmt(this.edits.thickness)}`);
                     }
                     if (this.edits.diameter && this.edits.diameter !== m.diameter) {
-                        changes.push(`Diamètre: ${this.fmt(m.diameter)} → ${this.fmt(this.edits.diameter)}`);
+                        changes.push(`le diamètre à ${this.fmt(this.edits.diameter)}`);
                     }
                     if (this.edits.depth && this.edits.depth !== m.depth) {
-                        changes.push(`Profondeur: ${this.fmt(m.depth)} → ${this.fmt(this.edits.depth)}`);
+                        changes.push(`la profondeur à ${this.fmt(this.edits.depth)}`);
                     }
                     if (this.edits.radius && this.edits.radius !== m.radius) {
-                        changes.push(`Rayon: ${this.fmt(m.radius)} → ${this.fmt(this.edits.radius)}`);
+                        changes.push(`le rayon à ${this.fmt(this.edits.radius)}`);
                     }
 
                     // Taraudage (thread) - modifications spécifiques
                     if (faceType === 'thread') {
                         const originalThread = m.thread || this.getThreadFromDiameter(m.diameter);
                         if (this.edits.thread && this.edits.thread !== originalThread) {
-                            changes.push(`Taraudage: ${originalThread} → ${this.edits.thread}`);
+                            changes.push(`le taraudage à ${this.edits.thread}`);
                         }
                         const originalDepthType = m.subtype === 'through' ? 'through' : 'blind';
                         if (this.edits.depthType !== originalDepthType) {
-                            const depthLabel = this.edits.depthType === 'through' ? 'Traversant' : 'Borgne';
-                            const origLabel = originalDepthType === 'through' ? 'Traversant' : 'Borgne';
-                            changes.push(`Type: ${origLabel} → ${depthLabel}`);
+                            const depthLabel = this.edits.depthType === 'through' ? 'traversant' : 'borgne';
+                            changes.push(`le type à ${depthLabel}`);
                         }
                         if (this.edits.depthType === 'blind' && this.edits.depth && this.edits.depth !== m.depth) {
-                            changes.push(`Profondeur: ${this.fmt(m.depth)} → ${this.fmt(this.edits.depth)}`);
+                            changes.push(`la profondeur à ${this.fmt(this.edits.depth)}`);
                         }
                     }
 
@@ -1002,10 +1004,10 @@
                     if (faceType === 'bending') {
                         const originalInnerRadius = m.inner?.radius || m.radius;
                         if (this.edits.innerRadius && this.edits.innerRadius !== originalInnerRadius) {
-                            changes.push(`Rayon intérieur: ${this.fmt(originalInnerRadius)} → ${this.fmt(this.edits.innerRadius)}`);
+                            changes.push(`le rayon intérieur à ${this.fmt(this.edits.innerRadius)}`);
                         }
                         if (this.edits.angle && this.edits.angle !== m.angle) {
-                            changes.push(`Angle: ${m.angle}° → ${this.edits.angle}°`);
+                            changes.push(`l'angle à ${this.edits.angle}°`);
                         }
                     }
 
@@ -1014,14 +1016,8 @@
                         return;
                     }
 
-                    // Build face context (pastille format)
-                    const faceContext = this.buildFaceContext();
-                    
-                    // Build technical badge with feature details
-                    const technicalBadge = this.buildTechnicalBadge();
-                    
-                    // Build message with face context for the API
-                    const message = `Modifier ${technicalBadge}: ${changes.join(' ; ')} ${faceContext}`;
+                    // Build simplified message: "Changer X à Y [Face ID: Z]"
+                    const message = `Changer ${changes.join(', ')} [Face ID: ${faceId}]`;
 
                     // Send to Livewire
                     Livewire.dispatch('sendRegenerationRequest', { message });
