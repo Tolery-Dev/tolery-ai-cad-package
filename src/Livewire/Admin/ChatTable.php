@@ -34,6 +34,15 @@ class ChatTable extends FluxDataTable
                 'render' => fn ($row) => $row->team->name ?? '-',
             ],
             [
+                'label' => 'Session ID',
+                'field' => 'session_id',
+                'searchable' => true,
+                'sortable' => true,
+                'render' => fn ($row) => $row->session_id
+                    ? '<code class="text-xs bg-gray-100 px-1.5 py-0.5 rounded">'.e(substr($row->session_id, 0, 12)).'...</code>'
+                    : '<span class="text-gray-400">-</span>',
+            ],
+            [
                 'label' => 'Matériau',
                 'field' => 'material_family',
                 'render' => fn ($row) => $row->material_family?->label() ?? '-',
