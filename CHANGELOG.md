@@ -2,6 +2,31 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.1.0 - Admin UI Redesign & DFM Improvements - 2026-01-21
+
+### Nouveautés
+
+#### Interface Admin ToleryCad
+
+- **Refonte complète du tableau des conversations** avec design moderne style Linear/Notion
+- **Miniatures screenshots** dans le tableau pour visualiser rapidement les pièces
+- **Session ID** avec bouton copier intégré
+- **Badges de statut** avec icônes (Générée/En cours/Supprimée)
+- **Page de détail redesignée** avec grille d'informations et avatars pour les messages
+
+#### Configuration DFM
+
+- **Rayon extérieur** affiché pour les pliages (en plus du rayon intérieur)
+- **Prompts simplifiés** lors des modifications : "Changer X à Y [Face ID: Z]"
+
+### Corrections
+
+- Optimisation des requêtes avec eager loading pour éviter N+1
+
+### Note
+
+La fonctionnalité "poids net" sera ajoutée dans une prochaine version une fois la "surface nette" disponible dans l'API.
+
 ## v1.0.0 - First Stable Release 🎉 - 2026-01-19
 
 ### 🎉 ToleryCAD v1.0.0 - Première version stable !
@@ -9,16 +34,23 @@ All notable changes to `ai-cad` will be documented in this file.
 #### Fonctionnalités principales
 
 - **Chatbot IA** pour génération de fichiers CAO
+  
 - **Viewer 3D** avec panneau de configuration interactif
+  
 - **DFM (Design for Manufacturing)** - Détection et édition des features :
+  
   - Perçages, taraudages, oblongs
   - Pliages avec rayon intérieur
   - Fraisures, filets
   
 - **Streaming en temps réel** de la génération CAO
+  
 - **Export STEP et PDF technique**
+  
 - **Système d'abonnement** intégré (Stripe)
+  
 - **Admin panel** pour gestion des conversations et prompts
+  
 
 #### Améliorations récentes
 
