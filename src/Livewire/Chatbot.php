@@ -226,7 +226,7 @@ class Chatbot extends Component
                 $this->chat->user()->associate($user);
             }
 
-            $this->chat->name = 'Ma nouvelle pièce';
+            $this->chat->name = $this->partName;
             $this->chat->save(); // ← Création en DB au premier message
 
             Log::info('[AICAD] Lazy chat created', [
