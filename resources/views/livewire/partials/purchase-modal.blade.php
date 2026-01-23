@@ -1,7 +1,7 @@
-<flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 min-w-[32rem]" x-data="{ cgvAccepted: false }">
+<flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 min-w-[32rem]">
     <div class="space-y-6">
         <div>
-            <flux:heading size="lg" class="mb-2">Débloquer ce fichier CAO</flux:heading>
+            <flux:heading size="lg" class="mb-2">Télécharger ce fichier CAO</flux:heading>
             <flux:subheading>
                 @if($downloadStatus && $downloadStatus['reason'] === 'no_subscription')
                     Vous devez être abonné ou acheter ce fichier pour le télécharger.
@@ -21,23 +21,23 @@
                     <div class="flex flex-col h-full">
                         <div class="flex-1">
                             <flux:heading size="base" class="mb-2 text-violet-600">
-                                Télécharger ce fichier CAO
+                                Abonnement
                             </flux:heading>
                             <flux:subheading class="mb-4">
-                                Accès illimité aux téléchargements selon votre plan
+                                Téléchargez plusieurs fichiers CAO par mois selon votre plan
                             </flux:subheading>
                             <ul class="space-y-2 text-sm text-zinc-600">
                                 <li class="flex items-start gap-2">
                                     <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
-                                    <span>Plusieurs fichiers par mois</span>
+                                    <span>Prix par fichier dégressif</span>
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
-                                    <span>Accès prioritaire au support</span>
+                                    <span>Téléchargement immédiat</span>
                                 </li>
                                 <li class="flex items-start gap-2">
                                     <flux:icon.check class="size-4 text-green-600 shrink-0 mt-0.5" />
-                                    <span>Nouvelles fonctionnalités en avant-première</span>
+                                    <span>Accès illimité à ce fichier</span>
                                 </li>
                             </ul>
                         </div>
@@ -61,7 +61,7 @@
                     <div class="flex flex-col h-full">
                         <div class="flex-1">
                             <flux:heading size="base" class="mb-2">
-                                Acheter ce fichier
+                                Sans abonnement
                             </flux:heading>
                             <flux:subheading class="mb-4">
                                 Paiement unique pour ce fichier uniquement
@@ -86,9 +86,7 @@
                         <flux:button
                             wire:click="purchaseFile"
                             variant="outline"
-                            class="mt-4 w-full"
-                            x-bind:disabled="!cgvAccepted"
-                            x-bind:class="{ 'opacity-50 cursor-not-allowed': !cgvAccepted }">
+                            class="mt-4 w-full">
                             Acheter maintenant
                         </flux:button>
                     </div>
@@ -96,20 +94,6 @@
             @endif
         </div>
 
-        {{-- CGV Checkbox --}}
-        <div class="flex items-start gap-3 p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
-            <input
-                type="checkbox"
-                id="cgv-purchase-checkbox"
-                x-model="cgvAccepted"
-                class="mt-1 rounded border-zinc-300 text-violet-600 focus:ring-violet-500">
-            <label for="cgv-purchase-checkbox" class="text-sm text-zinc-600 dark:text-zinc-400">
-                Je reconnais avoir lu et accepte sans réserve les
-                <a href="{{ route('client.tolerycad.cgv') }}" target="_blank" rel="noopener" class="text-violet-600 hover:text-violet-700 underline">
-                    conditions générales du service ToleryCAD
-                </a>
-            </label>
-        </div>
     </div>
 
     <div class="flex gap-2 justify-end pt-6 border-t border-zinc-200">

@@ -72,6 +72,7 @@
                             cardComplete: false,
                             cardError: null,
                             processing: false,
+                            cgvAccepted: false,
 
                             async init() {
                                 // Wait for Stripe to be available
@@ -171,6 +172,21 @@
                             </div>
                         @endif
 
+                        {{-- CGV Checkbox --}}
+                        <div class="flex items-start gap-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
+                            <input
+                                type="checkbox"
+                                id="cgv-stripe-checkbox"
+                                x-model="cgvAccepted"
+                                class="mt-0.5 rounded border-zinc-300 text-violet-600 focus:ring-violet-500">
+                            <label for="cgv-stripe-checkbox" class="text-xs text-zinc-600">
+                                J'accepte les
+                                <a href="{{ route('client.tolerycad.cgv') }}" target="_blank" rel="noopener" class="text-violet-600 hover:text-violet-700 underline">
+                                    CGV ToleryCAD
+                                </a>
+                            </label>
+                        </div>
+
                         <div class="flex gap-3 justify-end pt-4 border-t border-zinc-200">
                             <flux:button
                                 wire:click="closeModal"
@@ -182,7 +198,8 @@
                                 @click="handlePayment()"
                                 variant="primary"
                                 color="purple"
-                                x-bind:disabled="processing">
+                                x-bind:disabled="processing || !cgvAccepted"
+                                x-bind:class="{ 'opacity-50 cursor-not-allowed': !cgvAccepted && !processing }">
                                 <span x-show="!processing">
                                     Payer {{ $amount ? number_format($amount / 100, 2) : '' }}€
                                 </span>
