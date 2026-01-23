@@ -468,10 +468,31 @@ class JsonModelViewer3D {
         const size = new THREE.Vector3();
         box.getSize(size);
 
-        // Calculate volume (mm³) and detect thickness (smallest dimension for sheet metal)
+        // Calculate volume (mm³) and detect thickness
         const volume = mesh ? calculateMeshVolume(mesh.geometry) : 0;
         const dims = [size.x, size.y, size.z].sort((a, b) => a - b);
-        const thickness = dims[0]; // Smallest dimension is likely the thickness
+
+        // Try to extract thickness from bending features (more accurate for bent parts)
+        // Thickness = outer.radius - inner.radius
+        let thickness = null;
+        if (this.features) {
+            const bendingFeature = this.features.find(
+                (f) =>
+                    f.type === "bending" &&
+                    f.inner?.radius !== undefined &&
+                    f.outer?.radius !== undefined,
+            );
+            if (bendingFeature) {
+                thickness = bendingFeature.outer.radius - bendingFeature.inner.radius;
+                console.log(
+                    `[JsonModelViewer3D] Thickness extracted from bending feature: ${thickness}mm`,
+                );
+            }
+        }
+        // Fallback: smallest bounding box dimension (works for flat plates)
+        if (thickness === null) {
+            thickness = dims[0];
+        }
 
         const detail = {
             sizeX: size.x,
