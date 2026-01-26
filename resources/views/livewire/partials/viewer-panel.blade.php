@@ -117,12 +117,16 @@
              class="h-full w-full">
         </div>
 
-        @include('ai-cad::partials.cad-config-panel', [
-            'stepExportUrl' => $stepExportUrl,
-            'objExportUrl' => $objExportUrl,
-            'technicalDrawingUrl' => $technicalDrawingUrl,
-            'screenshotUrl' => $screenshotUrl
-        ])
+        {{-- wire:ignore prevents Livewire from re-rendering the Alpine component after piece generation --}}
+        {{-- This fixes the issue where selection buttons stop working after dynamic updates --}}
+        <div wire:ignore>
+            @include('ai-cad::partials.cad-config-panel', [
+                'stepExportUrl' => $stepExportUrl,
+                'objExportUrl' => $objExportUrl,
+                'technicalDrawingUrl' => $technicalDrawingUrl,
+                'screenshotUrl' => $screenshotUrl
+            ])
+        </div>
 
         @if(!$objExportUrl && !$stepExportUrl)
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-8">
