@@ -108,6 +108,9 @@ class AiCadStripe
             'success_url' => $successUrl,
             'cancel_url' => $cancelUrl,
             'metadata' => $metadata,
+            'consent_collection' => [
+                'terms_of_service' => 'required',
+            ],
         ];
 
         if ($customerId) {
