@@ -1,4 +1,4 @@
-<footer class="bg-white shrink-0" x-data="{ hasContent: false, hasFaceSelection: false }">
+<footer class="bg-white shrink-0" x-data="{ hasContent: false }">
     <form wire:submit.prevent="send" class="px-6 pb-2 pt-6">
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
@@ -7,30 +7,15 @@
                 data-face-selection-chips
                 class="hidden flex flex-wrap gap-2 mb-2"
                 @face-selection-changed.window="
-                    console.log('[DEBUG] Event received:', $event.detail);
-                    hasFaceSelection = $event.detail.hasSelection;
-                    console.log('[DEBUG] hasFaceSelection set to:', hasFaceSelection);
-                "
-                x-effect="
-                    console.log('[DEBUG] x-effect running, hasFaceSelection:', hasFaceSelection);
-                    const textarea = $el.closest('form').querySelector('textarea');
-                    console.log('[DEBUG] textarea found:', textarea);
-                    if (textarea) {
-                        const newPlaceholder = hasFaceSelection
-                            ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
-                            : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici';
-                        console.log('[DEBUG] Setting placeholder to:', newPlaceholder);
-                        textarea.setAttribute('placeholder', newPlaceholder);
-                    } else {
-                        console.error('[DEBUG] Textarea not found!');
-                    }
+                    console.log('[DEBUG] Dispatching to Livewire, hasSelection:', $event.detail.hasSelection);
+                    $wire.dispatch('face-selection-state-changed', { hasSelection: $event.detail.hasSelection });
                 ">
             </div>
 
             <flux:composer
                 wire:model="message"
                 submit="send"
-                placeholder="Décrivez le plus précisément votre pièce ou insérez un lien url ici"
+                placeholder="{{ $composerPlaceholder }}"
                 x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; } }"
                 x-init="resize()"
                 x-on:input="resize(); $dispatch('composer-input', { value: $event.target.value })"
