@@ -1,4 +1,4 @@
-<header class="flex items-center justify-between gap-2.5 px-6 pt-8 pb-6 border-b border-grey-stroke bg-white rounded-tl-4xl shrink-0">
+<header class="flex items-center justify-between gap-2.5 px-4 pt-4 pb-3 border-b border-grey-stroke bg-white rounded-tl-4xl shrink-0">
     <div
         x-data="{ editing: false, name: @entangle('partName').live, originalName: '{{ $chat->name }}' }"
         >

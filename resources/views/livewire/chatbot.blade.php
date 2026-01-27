@@ -1,6 +1,7 @@
 <div class="relative h-screen flex flex-col bg-grey-background"
      x-data="{
          isGenerating: false,
+         chatPanelCollapsed: false,
          init() {
              // Écouter les événements de génération
              window.addEventListener('cad-generation-started', () => {
@@ -29,50 +30,69 @@
 
     {{-- Main Content Area: Chat (left) + Preview (right) --}}
     <div class="flex-1 flex overflow-hidden">
-        {{-- LEFT PANEL: Chat Area (narrower: 400px) --}}
-        <section id="chat-scroll"
-                 class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl overflow-y-auto"
-                 x-data="{
-                     scrollToEnd() {
-                         // Ne scroller que si on a des messages
-                         if (@js(count($messages)) > 0) {
-                             this.$el.scrollTop = this.$el.scrollHeight;
-                         }
-                     },
-                     isGenerating: false
-                 }"
-                 x-init="$nextTick(()=>scrollToEnd())"
-                 x-on:tolery-chat-append.window="scrollToEnd()"
-                 @cad-generation-started.window="isGenerating = true"
-                 @cad-generation-ended.window="isGenerating = false">
+        {{-- LEFT PANEL: Chat Area with collapsible functionality --}}
+        <div :class="chatPanelCollapsed ? 'w-16' : 'w-[35%]'"
+             class="shrink-0 flex flex-col bg-grey-background rounded-bl-4xl transition-all duration-300 ease-in-out relative overflow-hidden">
 
-            @if(empty($messages))
-                {{-- Greeting Header (visible uniquement quand la conversation est vide) --}}
-                <div class="bg-white px-6 pt-6 pb-4">
-                    <flux:text size="lg" class="flex items-start gap-2">
-                        <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}"
-                             alt="Tolery Bot"
-                             class="h-8 w-8 p-1 bot-avatar"
-                             :class="{ 'bot-thinking': isGenerating }">
-                        <span>
-                            Bienvenue dans notre configurateur intelligent de création de fichier CAO (STEP) sur-mesure et instantanément <span class="italic text-violet-600">pour des pièces simples de tôlerie</span>. Vous pouvez démarrer la création de vos fichiers CAO de 3 manières :
-                        </span>
-                    </flux:text>
-                </div>
-            @endif
-
-            {{-- Messages Area --}}
-            <div class="flex-1 px-6 py-6 bg-white border-b border-grey-stroke">
-
-                @if(empty($messages))
-                    @include('ai-cad::livewire.partials.chat-empty-state')
-                @else
-                    @include('ai-cad::livewire.partials.chat-messages')
-                @endif
+            {{-- Collapsed State --}}
+            <div x-show="chatPanelCollapsed" class="flex flex-col items-center justify-start pt-6 gap-4 h-full">
+                <flux:button @click="chatPanelCollapsed = false" icon="chevron-right" variant="ghost" size="sm" title="Développer le panneau" />
+                <img src="{{ Vite::asset('resources/images/tolerycad-large-logo.svg') }}" alt="ToleryCAD" class="h-8 w-8 object-contain" />
             </div>
 
-            @include('ai-cad::livewire.partials.chat-composer')
-        </section>
+            {{-- Expanded State --}}
+            <div x-show="!chatPanelCollapsed" class="flex flex-col h-full">
+                {{-- Sticky Toggle Button Bar --}}
+                <div class="sticky top-0 z-10 flex justify-end p-2 bg-white/80 backdrop-blur-sm border-b border-grey-stroke/50">
+                    <flux:button @click="chatPanelCollapsed = true" icon="chevron-left" variant="ghost" size="sm" title="Réduire le panneau" />
+                </div>
+
+                {{-- Scrollable Content --}}
+                <section id="chat-scroll"
+                         class="flex-1 flex flex-col overflow-y-auto"
+                         x-data="{
+                             scrollToEnd() {
+                                 // Ne scroller que si on a des messages
+                                 if (@js(count($messages)) > 0) {
+                                     this.$el.scrollTop = this.$el.scrollHeight;
+                                 }
+                             },
+                             isGenerating: false
+                         }"
+                         x-init="$nextTick(()=>scrollToEnd())"
+                         x-on:tolery-chat-append.window="scrollToEnd()"
+                         @cad-generation-started.window="isGenerating = true"
+                         @cad-generation-ended.window="isGenerating = false">
+
+                    @if(empty($messages))
+                        {{-- Greeting Header (visible uniquement quand la conversation est vide) --}}
+                        <div class="bg-white px-6 pt-6 pb-4">
+                            <flux:text size="lg" class="flex items-start gap-2">
+                                <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}"
+                                     alt="Tolery Bot"
+                                     class="h-8 w-8 p-1 bot-avatar"
+                                     :class="{ 'bot-thinking': isGenerating }">
+                                <span>
+                                    Bienvenue dans notre configurateur intelligent de création de fichier CAO (STEP) sur-mesure et instantanément <span class="italic text-violet-600">pour des pièces simples de tôlerie</span>. Vous pouvez démarrer la création de vos fichiers CAO de 3 manières :
+                                </span>
+                            </flux:text>
+                        </div>
+                    @endif
+
+                    {{-- Messages Area --}}
+                    <div class="flex-1 px-6 py-6 bg-white border-b border-grey-stroke">
+
+                        @if(empty($messages))
+                            @include('ai-cad::livewire.partials.chat-empty-state')
+                        @else
+                            @include('ai-cad::livewire.partials.chat-messages')
+                        @endif
+                    </div>
+
+                    @include('ai-cad::livewire.partials.chat-composer')
+                </section>
+            </div>
+        </div>
 
         {{-- RIGHT PANEL: Preview/Status Area --}}
         @include('ai-cad::livewire.partials.viewer-panel')
