@@ -6,15 +6,23 @@
                 id="face-selection-chips"
                 data-face-selection-chips
                 class="hidden flex flex-wrap gap-2 mb-2"
-                @face-selection-changed.window="hasFaceSelection = $event.detail.hasSelection"
+                @face-selection-changed.window="
+                    console.log('[DEBUG] Event received:', $event.detail);
+                    hasFaceSelection = $event.detail.hasSelection;
+                    console.log('[DEBUG] hasFaceSelection set to:', hasFaceSelection);
+                "
                 x-effect="
+                    console.log('[DEBUG] x-effect running, hasFaceSelection:', hasFaceSelection);
                     const textarea = $el.closest('form').querySelector('textarea');
+                    console.log('[DEBUG] textarea found:', textarea);
                     if (textarea) {
-                        textarea.setAttribute('placeholder',
-                            hasFaceSelection
-                                ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
-                                : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici'
-                        );
+                        const newPlaceholder = hasFaceSelection
+                            ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
+                            : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici';
+                        console.log('[DEBUG] Setting placeholder to:', newPlaceholder);
+                        textarea.setAttribute('placeholder', newPlaceholder);
+                    } else {
+                        console.error('[DEBUG] Textarea not found!');
                     }
                 ">
             </div>
