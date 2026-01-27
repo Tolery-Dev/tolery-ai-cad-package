@@ -3,15 +3,21 @@
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
             <div
+                wire:ignore
                 id="face-selection-chips"
                 data-face-selection-chips
-                class="hidden flex flex-wrap gap-2 mb-2">
+                class="hidden flex flex-wrap gap-2 mb-2"
+                @face-selection-changed.window="
+                    console.log('[DEBUG] Dispatching to Livewire, hasSelection:', $event.detail.hasSelection);
+                    $wire.dispatch('face-selection-state-changed', { hasSelection: $event.detail.hasSelection });
+                ">
             </div>
 
             <flux:composer
+                wire:key="{{ $composerPlaceholder }}"
                 wire:model="message"
                 submit="send"
-                placeholder="Décrivez le plus précisément votre pièce ou insérez un lien url ici"
+                placeholder="{{ $composerPlaceholder }}"
                 x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; } }"
                 x-init="resize()"
                 x-on:input="resize(); $dispatch('composer-input', { value: $event.target.value })"

@@ -32,6 +32,8 @@ class Chatbot extends Component
 
     public bool $isProcessing = false;
 
+    public string $composerPlaceholder = 'Décrivez le plus précisément votre pièce ou insérez un lien url ici';
+
     /** Streaming */
     protected ?int $streamingIndex = null; // index du message assistant courant
 
@@ -128,6 +130,14 @@ class Chatbot extends Component
             $this->chat->save();
             $this->dispatch('tolery-chat-name-updated', name: $this->partName);
         }
+    }
+
+    #[On('face-selection-state-changed')]
+    public function updateComposerPlaceholder(bool $hasSelection): void
+    {
+        $this->composerPlaceholder = $hasSelection
+            ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
+            : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici';
     }
 
     public function render(): View

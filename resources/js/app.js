@@ -1918,6 +1918,10 @@ class FaceSelectionManager {
 
         if (this.selections.size === 0) {
             this.container.classList.add("hidden");
+            console.log('[DEBUG] Dispatching face-selection-changed with hasSelection:', false);
+            window.dispatchEvent(new CustomEvent('face-selection-changed', {
+                detail: { hasSelection: false }
+            }));
             return;
         }
 
@@ -1956,6 +1960,11 @@ class FaceSelectionManager {
 
             this.container.appendChild(chip);
         }
+
+        console.log('[DEBUG] Dispatching face-selection-changed with hasSelection:', true);
+        window.dispatchEvent(new CustomEvent('face-selection-changed', {
+            detail: { hasSelection: true }
+        }));
     }
 
     /**
