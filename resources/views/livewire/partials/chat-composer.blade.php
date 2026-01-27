@@ -3,6 +3,7 @@
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
             <div
+                wire:ignore
                 id="face-selection-chips"
                 data-face-selection-chips
                 class="hidden flex flex-wrap gap-2 mb-2"
