@@ -1,11 +1,22 @@
-<footer class="bg-white shrink-0" x-data="{ hasContent: false }">
+<footer class="bg-white shrink-0" x-data="{ hasContent: false, hasFaceSelection: false }">
     <form wire:submit.prevent="send" class="px-6 pb-2 pt-6">
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
             <div
                 id="face-selection-chips"
                 data-face-selection-chips
-                class="hidden flex flex-wrap gap-2 mb-2">
+                class="hidden flex flex-wrap gap-2 mb-2"
+                @face-selection-changed.window="hasFaceSelection = $event.detail.hasSelection"
+                x-effect="
+                    const textarea = $el.closest('form').querySelector('textarea');
+                    if (textarea) {
+                        textarea.setAttribute('placeholder',
+                            hasFaceSelection
+                                ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
+                                : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici'
+                        );
+                    }
+                ">
             </div>
 
             <flux:composer

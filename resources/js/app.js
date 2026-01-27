@@ -1918,6 +1918,9 @@ class FaceSelectionManager {
 
         if (this.selections.size === 0) {
             this.container.classList.add("hidden");
+            window.dispatchEvent(new CustomEvent('face-selection-changed', {
+                detail: { hasSelection: false }
+            }));
             return;
         }
 
@@ -1956,6 +1959,10 @@ class FaceSelectionManager {
 
             this.container.appendChild(chip);
         }
+
+        window.dispatchEvent(new CustomEvent('face-selection-changed', {
+            detail: { hasSelection: true }
+        }));
     }
 
     /**
