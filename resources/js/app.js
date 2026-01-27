@@ -221,6 +221,18 @@ class JsonModelViewer3D {
                 this.controls,
             );
             console.log("[JsonModelViewer3D] Navigation cube initialized");
+
+            // Hide navigation cube during CAD generation
+            window.addEventListener('cad-generation-started', () => {
+                if (this.navigationCube) {
+                    this.navigationCube.setVisible(false);
+                }
+            });
+            window.addEventListener('cad-generation-ended', () => {
+                if (this.navigationCube) {
+                    this.navigationCube.setVisible(true);
+                }
+            });
         } catch (error) {
             console.error(
                 "[JsonModelViewer3D] Failed to initialize navigation cube:",
@@ -2430,6 +2442,10 @@ class NavigationCube {
 
     render() {
         this.renderer.render(this.scene, this.camera);
+    }
+
+    setVisible(visible) {
+        this.container.style.display = visible ? 'block' : 'none';
     }
 
     dispose() {
