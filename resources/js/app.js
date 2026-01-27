@@ -200,20 +200,32 @@ class JsonModelViewer3D {
             this._down.y = e.clientY;
         });
 
-        // Navigation Cube
+        // Navigation Cube - créer le canvas dynamiquement
         this.navigationCube = null;
-        const navCubeCanvas = document.getElementById('navigation-cube');
-        if (navCubeCanvas) {
-            try {
-                this.navigationCube = new NavigationCube(
-                    navCubeCanvas,
-                    this.camera,
-                    this.controls
-                );
-                console.log('[JsonModelViewer3D] Navigation cube initialized');
-            } catch (error) {
-                console.error('[JsonModelViewer3D] Failed to initialize navigation cube:', error);
-            }
+        const navCubeCanvas = document.createElement("canvas");
+        navCubeCanvas.id = "navigation-cube";
+        navCubeCanvas.width = 150;
+        navCubeCanvas.height = 150;
+        navCubeCanvas.style.cssText =
+            "position: absolute; top: 16px; right: 16px; width: 150px; height: 150px; pointer-events: auto; z-index: 50; cursor: pointer; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);";
+        this.container.appendChild(navCubeCanvas);
+        console.log(
+            "[JsonModelViewer3D] Navigation cube canvas created and appended:",
+            navCubeCanvas,
+        );
+
+        try {
+            this.navigationCube = new NavigationCube(
+                navCubeCanvas,
+                this.camera,
+                this.controls,
+            );
+            console.log("[JsonModelViewer3D] Navigation cube initialized");
+        } catch (error) {
+            console.error(
+                "[JsonModelViewer3D] Failed to initialize navigation cube:",
+                error,
+            );
         }
 
         this.animate();
@@ -499,7 +511,8 @@ class JsonModelViewer3D {
                     f.outer?.radius !== undefined,
             );
             if (bendingFeature) {
-                thickness = bendingFeature.outer.radius - bendingFeature.inner.radius;
+                thickness =
+                    bendingFeature.outer.radius - bendingFeature.inner.radius;
                 console.log(
                     `[JsonModelViewer3D] Thickness extracted from bending feature: ${thickness}mm`,
                 );
@@ -1935,9 +1948,11 @@ class FaceSelectionManager {
 
         if (this.selections.size === 0) {
             this.container.classList.add("hidden");
-            window.dispatchEvent(new CustomEvent('face-selection-changed', {
-                detail: { hasSelection: false }
-            }));
+            window.dispatchEvent(
+                new CustomEvent("face-selection-changed", {
+                    detail: { hasSelection: false },
+                }),
+            );
             return;
         }
 
@@ -1977,9 +1992,11 @@ class FaceSelectionManager {
             this.container.appendChild(chip);
         }
 
-        window.dispatchEvent(new CustomEvent('face-selection-changed', {
-            detail: { hasSelection: true }
-        }));
+        window.dispatchEvent(
+            new CustomEvent("face-selection-changed", {
+                detail: { hasSelection: true },
+            }),
+        );
     }
 
     /**
@@ -2095,6 +2112,10 @@ class NavigationCube {
         this.mainCamera = mainCamera;
         this.mainControls = mainControls;
 
+        console.log("[NavigationCube] Constructor called");
+        console.log("[NavigationCube] Container:", containerElement);
+        console.log("[NavigationCube] Main camera:", mainCamera);
+
         // Créer le mini-renderer THREE.js
         this.renderer = new THREE.WebGLRenderer({
             canvas: containerElement,
@@ -2124,6 +2145,15 @@ class NavigationCube {
 
         // Créer les axes XYZ
         this.createAxes();
+
+        // Créer les flèches directionnelles
+        this.createDirectionalArrows();
+
+        // Créer le bouton de vue inversée
+        this.createFlipViewButton();
+
+        // Créer le menu mini-cube
+        this.createMiniCubeButton();
 
         // Setup raycaster pour les clics
         this.raycaster = new THREE.Raycaster();
@@ -2210,34 +2240,345 @@ class NavigationCube {
     }
 
     createAxes() {
-        // Axes XYZ avec couleurs RGB
+        // Axes XYZ avec couleurs RGB et labels
         const axesGroup = new THREE.Group();
+        axesGroup.userData.nonInteractive = true; // Marqueur pour ignorer dans raycasting
 
-        // X axis - Rouge
-        const xGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+        const axisLength = 1.4; // Longueur des axes
+        const axisRadius = 0.025; // Rayon légèrement plus épais
+
+        // === X axis - Rouge ===
+        const xGeometry = new THREE.CylinderGeometry(
+            axisRadius,
+            axisRadius,
+            axisLength,
+            8,
+        );
         const xMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         const xAxis = new THREE.Mesh(xGeometry, xMaterial);
         xAxis.rotation.z = -Math.PI / 2;
-        xAxis.position.set(0.6, 0, 0);
+        xAxis.position.set(axisLength / 2, 0, 0);
         axesGroup.add(xAxis);
 
-        // Y axis - Vert
-        const yGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+        // Pointe de l'axe X (cône)
+        const xCone = new THREE.Mesh(
+            new THREE.ConeGeometry(axisRadius * 2, axisRadius * 4, 8),
+            xMaterial,
+        );
+        xCone.rotation.z = -Math.PI / 2;
+        xCone.position.set(axisLength + axisRadius * 2, 0, 0);
+        axesGroup.add(xCone);
+
+        // Label X
+        const xLabel = this.createAxisLabel("X", 0xff0000);
+        xLabel.position.set(axisLength + 0.15, 0, 0);
+        axesGroup.add(xLabel);
+
+        // === Y axis - Vert ===
+        const yGeometry = new THREE.CylinderGeometry(
+            axisRadius,
+            axisRadius,
+            axisLength,
+            8,
+        );
         const yMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
         const yAxis = new THREE.Mesh(yGeometry, yMaterial);
-        yAxis.position.set(0, 0.6, 0);
+        yAxis.position.set(0, axisLength / 2, 0);
         axesGroup.add(yAxis);
 
-        // Z axis - Bleu
-        const zGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+        // Pointe de l'axe Y (cône)
+        const yCone = new THREE.Mesh(
+            new THREE.ConeGeometry(axisRadius * 2, axisRadius * 4, 8),
+            yMaterial,
+        );
+        yCone.position.set(0, axisLength + axisRadius * 2, 0);
+        axesGroup.add(yCone);
+
+        // Label Y
+        const yLabel = this.createAxisLabel("Y", 0x00ff00);
+        yLabel.position.set(0, axisLength + 0.15, 0);
+        axesGroup.add(yLabel);
+
+        // === Z axis - Bleu ===
+        const zGeometry = new THREE.CylinderGeometry(
+            axisRadius,
+            axisRadius,
+            axisLength,
+            8,
+        );
         const zMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
         const zAxis = new THREE.Mesh(zGeometry, zMaterial);
         zAxis.rotation.x = Math.PI / 2;
-        zAxis.position.set(0, 0, 0.6);
+        zAxis.position.set(0, 0, axisLength / 2);
         axesGroup.add(zAxis);
+
+        // Pointe de l'axe Z (cône)
+        const zCone = new THREE.Mesh(
+            new THREE.ConeGeometry(axisRadius * 2, axisRadius * 4, 8),
+            zMaterial,
+        );
+        zCone.rotation.x = Math.PI / 2;
+        zCone.position.set(0, 0, axisLength + axisRadius * 2);
+        axesGroup.add(zCone);
+
+        // Label Z
+        const zLabel = this.createAxisLabel("Z", 0x0000ff);
+        zLabel.position.set(0, 0, axisLength + 0.15);
+        axesGroup.add(zLabel);
 
         this.scene.add(axesGroup);
         this.axes = axesGroup;
+    }
+
+    createAxisLabel(text, color) {
+        // Créer un sprite avec du texte
+        const canvas = document.createElement("canvas");
+        const size = 64;
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d");
+
+        // Background transparent
+        context.clearRect(0, 0, size, size);
+
+        // Texte
+        context.font = "bold 48px Arial";
+        context.fillStyle = "#" + color.toString(16).padStart(6, "0");
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(text, size / 2, size / 2);
+
+        // Créer la texture
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.scale.set(0.3, 0.3, 1);
+        sprite.userData.nonInteractive = true; // Non-cliquable
+
+        return sprite;
+    }
+
+    createDirectionalArrows() {
+        // Groupe pour toutes les flèches
+        const arrowsGroup = new THREE.Group();
+
+        // Distance depuis le centre du cube
+        const distance = 1.3;
+
+        // === 4 flèches triangulaires (haut, bas, gauche, droite) ===
+
+        // Flèche HAUT (triangle pointant vers le haut)
+        const topArrow = this.createTriangleArrow();
+        topArrow.position.set(0, distance, 0);
+        topArrow.rotation.x = Math.PI;
+        topArrow.userData = { type: "arrow-top", direction: "up" };
+        arrowsGroup.add(topArrow);
+
+        // Flèche BAS (triangle pointant vers le bas)
+        const bottomArrow = this.createTriangleArrow();
+        bottomArrow.position.set(0, -distance, 0);
+        bottomArrow.userData = { type: "arrow-bottom", direction: "down" };
+        arrowsGroup.add(bottomArrow);
+
+        // Flèche GAUCHE (triangle pointant vers la gauche)
+        const leftArrow = this.createTriangleArrow();
+        leftArrow.position.set(-distance, 0, 0);
+        leftArrow.rotation.z = Math.PI / 2;
+        leftArrow.userData = { type: "arrow-left", direction: "left" };
+        arrowsGroup.add(leftArrow);
+
+        // Flèche DROITE (triangle pointant vers la droite)
+        const rightArrow = this.createTriangleArrow();
+        rightArrow.position.set(distance, 0, 0);
+        rightArrow.rotation.z = -Math.PI / 2;
+        rightArrow.userData = { type: "arrow-right", direction: "right" };
+        arrowsGroup.add(rightArrow);
+
+        // === 2 flèches courbes (rotation) ===
+
+        // Flèche courbe GAUCHE (rotation antihoraire)
+        const curveLeftArrow = this.createCurvedArrow(true);
+        curveLeftArrow.position.set(-distance * 0.7, distance * 0.7, 0);
+        curveLeftArrow.userData = {
+            type: "arrow-curve-left",
+            direction: "rotate-ccw",
+        };
+        arrowsGroup.add(curveLeftArrow);
+
+        // Flèche courbe DROITE (rotation horaire)
+        const curveRightArrow = this.createCurvedArrow(false);
+        curveRightArrow.position.set(distance * 0.7, distance * 0.7, 0);
+        curveRightArrow.userData = {
+            type: "arrow-curve-right",
+            direction: "rotate-cw",
+        };
+        arrowsGroup.add(curveRightArrow);
+
+        this.scene.add(arrowsGroup);
+        this.arrows = arrowsGroup;
+        this.arrowObjects = arrowsGroup.children;
+    }
+
+    createTriangleArrow() {
+        // Créer un cône qui représente une flèche triangulaire
+        const geometry = new THREE.ConeGeometry(0.15, 0.3, 3);
+        const material = new THREE.MeshBasicMaterial({ color: 0x999999 });
+        const arrow = new THREE.Mesh(geometry, material);
+        return arrow;
+    }
+
+    createCurvedArrow(isLeft) {
+        // Créer une flèche courbe avec une ligne courbée + pointe
+        const group = new THREE.Group();
+
+        // Arc de cercle
+        const curve = new THREE.EllipseCurve(
+            0,
+            0, // centre
+            0.3,
+            0.3, // rayon X, rayon Y
+            isLeft ? Math.PI : 0, // angle de début
+            isLeft ? Math.PI * 1.5 : Math.PI * 0.5, // angle de fin
+            !isLeft, // sens horaire
+            0, // rotation
+        );
+
+        const points = curve.getPoints(20);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({
+            color: 0x999999,
+            linewidth: 2,
+        });
+        const line = new THREE.Line(geometry, material);
+        group.add(line);
+
+        // Pointe de flèche à l'extrémité
+        const arrowHead = new THREE.Mesh(
+            new THREE.ConeGeometry(0.08, 0.15, 3),
+            new THREE.MeshBasicMaterial({ color: 0x999999 }),
+        );
+        const lastPoint = points[points.length - 1];
+        arrowHead.position.set(lastPoint.x, lastPoint.y, 0);
+        arrowHead.rotation.z = isLeft ? -Math.PI / 4 : Math.PI / 4;
+        group.add(arrowHead);
+
+        return group;
+    }
+
+    createFlipViewButton() {
+        // Bouton circulaire en haut à droite
+        const geometry = new THREE.CircleGeometry(0.15, 32);
+        const material = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+        const button = new THREE.Mesh(geometry, material);
+
+        // Positionner en haut à droite du cube
+        button.position.set(1.1, 1.1, 0);
+        button.userData = { type: "flip-view", direction: "flip" };
+
+        // Ajouter un cercle de contour
+        const edgeGeometry = new THREE.RingGeometry(0.14, 0.16, 32);
+        const edgeMaterial = new THREE.MeshBasicMaterial({ color: 0x666666 });
+        const edge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+        button.add(edge);
+
+        this.scene.add(button);
+        this.flipButton = button;
+    }
+
+    createMiniCubeButton() {
+        // Mini-cube en bas à droite
+        const geometry = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+        const material = new THREE.MeshBasicMaterial({ color: 0xaaaaaa });
+        const miniCube = new THREE.Mesh(geometry, material);
+
+        // Edges pour le contour
+        const edges = new THREE.EdgesGeometry(geometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({
+            color: 0x666666,
+            linewidth: 2,
+        });
+        const edgesLine = new THREE.LineSegments(edges, edgeMaterial);
+        miniCube.add(edgesLine);
+
+        // Positionner en bas à droite
+        miniCube.position.set(1.1, -1.1, 0);
+        miniCube.userData = { type: "mini-cube-menu", direction: "menu" };
+
+        this.scene.add(miniCube);
+        this.miniCube = miniCube;
+
+        // Créer le menu HTML
+        this.createMenuOverlay();
+    }
+
+    createMenuOverlay() {
+        // Créer le menu HTML qui sera affiché au clic
+        const menu = document.createElement("div");
+        menu.id = "navigation-cube-menu";
+        menu.style.cssText = `
+            display: none;
+            position: fixed;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            font-size: 13px;
+            font-family: system-ui, -apple-system, sans-serif;
+        `;
+
+        const options = [
+            { label: "Vue isométrique", action: "isometric" },
+            { label: "Vue orthographique", action: "orthographic" },
+            { label: "Vue perspective", action: "perspective" },
+            { label: "Afficher tout", action: "fit-all" },
+            { label: "Recentrer vue", action: "reset-view" },
+        ];
+
+        options.forEach((opt) => {
+            const item = document.createElement("div");
+            item.textContent = opt.label;
+            item.style.cssText = `
+                padding: 6px 16px;
+                cursor: pointer;
+                user-select: none;
+            `;
+            item.addEventListener("mouseenter", () => {
+                item.style.background = "#f0f0f0";
+            });
+            item.addEventListener("mouseleave", () => {
+                item.style.background = "transparent";
+            });
+            item.addEventListener("click", () => {
+                this.handleMenuAction(opt.action);
+                this.hideMenu();
+            });
+            menu.appendChild(item);
+        });
+
+        document.body.appendChild(menu);
+        this.menu = menu;
+
+        // Fermer le menu si on clique ailleurs
+        document.addEventListener("click", (e) => {
+            if (
+                this.menu.style.display === "block" &&
+                !this.menu.contains(e.target)
+            ) {
+                this.hideMenu();
+            }
+        });
+    }
+
+    showMenu(x, y) {
+        this.menu.style.display = "block";
+        this.menu.style.left = x + "px";
+        this.menu.style.top = y + "px";
+    }
+
+    hideMenu() {
+        this.menu.style.display = "none";
     }
 
     onClick(event) {
@@ -2246,8 +2587,47 @@ class NavigationCube {
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-        // Raycasting sur le cube
+        // Raycasting sur les flèches
         this.raycaster.setFromCamera(this.mouse, this.camera);
+        const arrowIntersects = this.raycaster.intersectObjects(
+            this.arrowObjects,
+            true,
+        );
+        if (arrowIntersects.length > 0) {
+            const arrow = arrowIntersects[0].object;
+            // Trouver le parent qui a les userData
+            let target = arrow;
+            while (target && !target.userData.direction) {
+                target = target.parent;
+            }
+            if (target && target.userData.direction) {
+                this.handleArrowClick(target.userData.direction);
+                return;
+            }
+        }
+
+        // Raycasting sur le bouton flip
+        const flipIntersects = this.raycaster.intersectObject(
+            this.flipButton,
+            true,
+        );
+        if (flipIntersects.length > 0) {
+            this.handleFlipView();
+            return;
+        }
+
+        // Raycasting sur le mini-cube menu
+        const miniCubeIntersects = this.raycaster.intersectObject(
+            this.miniCube,
+            true,
+        );
+        if (miniCubeIntersects.length > 0) {
+            // Afficher le menu à la position de la souris
+            this.showMenu(event.clientX, event.clientY);
+            return;
+        }
+
+        // Raycasting sur le cube
         const intersects = this.raycaster.intersectObject(this.cube);
 
         if (intersects.length > 0) {
@@ -2308,6 +2688,120 @@ class NavigationCube {
         animate();
     }
 
+    handleArrowClick(direction) {
+        const rotationAngle = Math.PI / 4; // 45 degrés
+        const currentPos = this.mainCamera.position.clone();
+        const target = this.mainControls.target.clone();
+        const radius = currentPos.distanceTo(target);
+
+        let newPos = currentPos.clone().sub(target);
+
+        switch (direction) {
+            case "up":
+                // Rotation vers le haut autour de l'axe X
+                newPos.applyAxisAngle(
+                    new THREE.Vector3(1, 0, 0),
+                    -rotationAngle,
+                );
+                break;
+            case "down":
+                // Rotation vers le bas autour de l'axe X
+                newPos.applyAxisAngle(
+                    new THREE.Vector3(1, 0, 0),
+                    rotationAngle,
+                );
+                break;
+            case "left":
+                // Rotation vers la gauche autour de l'axe Y
+                newPos.applyAxisAngle(
+                    new THREE.Vector3(0, 1, 0),
+                    rotationAngle,
+                );
+                break;
+            case "right":
+                // Rotation vers la droite autour de l'axe Y
+                newPos.applyAxisAngle(
+                    new THREE.Vector3(0, 1, 0),
+                    -rotationAngle,
+                );
+                break;
+            case "rotate-cw":
+                // Rotation horaire autour de l'axe Z
+                newPos.applyAxisAngle(
+                    new THREE.Vector3(0, 0, 1),
+                    -rotationAngle,
+                );
+                break;
+            case "rotate-ccw":
+                // Rotation antihoraire autour de l'axe Z
+                newPos.applyAxisAngle(
+                    new THREE.Vector3(0, 0, 1),
+                    rotationAngle,
+                );
+                break;
+        }
+
+        newPos.normalize().multiplyScalar(radius).add(target);
+        this.animateCameraTo(newPos, target);
+    }
+
+    handleFlipView() {
+        // Rotation de 180° autour de l'axe Y vertical
+        const currentPos = this.mainCamera.position.clone();
+        const target = this.mainControls.target.clone();
+        const radius = currentPos.distanceTo(target);
+
+        // Calculer la nouvelle position (180° autour de Y)
+        let newPos = currentPos.clone().sub(target);
+        newPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+        newPos.normalize().multiplyScalar(radius).add(target);
+
+        this.animateCameraTo(newPos, target);
+    }
+
+    handleMenuAction(action) {
+        console.log("[NavigationCube] Menu action:", action);
+
+        const target = this.mainControls.target.clone();
+
+        switch (action) {
+            case "isometric":
+                // Vue isométrique (1, 1, 1)
+                const isoDistance = this.mainCamera.position.distanceTo(target);
+                const isoPos = new THREE.Vector3(1, 1, 1)
+                    .normalize()
+                    .multiplyScalar(isoDistance)
+                    .add(target);
+                this.animateCameraTo(isoPos, target);
+                break;
+
+            case "orthographic":
+                // Passer en vue orthographique
+                console.log(
+                    "[NavigationCube] Orthographic projection not yet implemented",
+                );
+                // TODO: Implémenter si nécessaire
+                break;
+
+            case "perspective":
+                // Passer en vue perspective
+                console.log(
+                    "[NavigationCube] Perspective projection (already active)",
+                );
+                break;
+
+            case "fit-all":
+                // Recentrer et cadrer tout
+                window.dispatchEvent(new CustomEvent("viewer-fit"));
+                break;
+
+            case "reset-view":
+                // Réinitialiser la vue
+                window.dispatchEvent(new CustomEvent("viewer-reset-view"));
+                break;
+        }
+    }
+
     update() {
         // Synchroniser l'orientation du cube avec la caméra principale
         // Copier la rotation de la caméra principale (inversée)
@@ -2315,6 +2809,15 @@ class NavigationCube {
         this.cube.quaternion.copy(quaternion);
         if (this.axes) {
             this.axes.quaternion.copy(quaternion);
+        }
+        if (this.arrows) {
+            this.arrows.quaternion.copy(quaternion);
+        }
+        if (this.flipButton) {
+            this.flipButton.quaternion.copy(quaternion);
+        }
+        if (this.miniCube) {
+            this.miniCube.quaternion.copy(quaternion);
         }
 
         this.render();
@@ -2329,6 +2832,9 @@ class NavigationCube {
         this.container.removeEventListener("click", this.onClick);
         this.container.removeEventListener("mousemove", this.onMouseMove);
         this.renderer.dispose();
+        if (this.menu) {
+            this.menu.remove();
+        }
     }
 }
 

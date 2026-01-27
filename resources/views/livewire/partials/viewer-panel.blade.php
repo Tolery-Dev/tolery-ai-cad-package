@@ -114,18 +114,8 @@
         <div id="viewer"
              wire:ignore
              data-screenshot-exists="{{ $screenshotUrl ? 'true' : 'false' }}"
-             class="h-full w-full">
+             class="relative h-full w-full">
         </div>
-
-        {{-- Navigation Cube --}}
-        <canvas
-            id="navigation-cube"
-            wire:ignore
-            class="absolute top-4 right-4 z-20 cursor-pointer rounded-lg shadow-lg"
-            width="150"
-            height="150"
-            style="width: 150px; height: 150px;">
-        </canvas>
 
         {{-- wire:ignore prevents Livewire from re-rendering the Alpine component after piece generation --}}
         {{-- This fixes the issue where selection buttons stop working after dynamic updates --}}
