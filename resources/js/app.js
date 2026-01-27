@@ -2099,9 +2099,9 @@ class FaceContextParser {
 window.FaceContextParser = FaceContextParser;
 
 /**
- * NavigationCube - Simple navigation cube
+ * NavigationCube - Onshape-style navigation cube
  * Components:
- * - Main cube with 6 labeled faces (FRONT, BACK, LEFT, RIGHT, TOP, BOTTOM)
+ * - Main cube with 6 labeled faces (Front, Rear, Top, Bottom, Left, Right)
  * - XYZ axis indicators with colored labels
  */
 class NavigationCube {
@@ -2114,11 +2114,12 @@ class NavigationCube {
         this.hoveredObject = null;
         this.isAnimating = false;
 
-        // Colors
+        // Colors - Onshape style (light gray cube)
         this.colors = {
-            cubeBase: 0x6b7280,      // Gray
-            cubeHover: 0x3b82f6,     // Blue
-            text: 0xffffff,          // White text
+            cubeBase: 0xe5e7eb,      // Light gray
+            cubeHover: 0x93c5fd,     // Light blue hover
+            cubeBorder: 0x9ca3af,    // Gray border
+            text: 0x374151,          // Dark gray text
             axisX: 0xef4444,         // Red
             axisY: 0x22c55e,         // Green
             axisZ: 0x3b82f6          // Blue
@@ -2138,13 +2139,13 @@ class NavigationCube {
         this.scene = new THREE.Scene();
 
         // Setup camera
-        this.camera = new THREE.OrthographicCamera(-2.5, 2.5, 2.5, -2.5, 0.1, 20);
+        this.camera = new THREE.OrthographicCamera(-2.2, 2.2, 2.2, -2.2, 0.1, 20);
         this.camera.position.set(0, 0, 5);
         this.camera.lookAt(0, 0, 0);
 
-        // Lighting
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        // Lighting - brighter for Onshape style
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.3);
         dirLight.position.set(2, 3, 4);
         this.scene.add(dirLight);
 
@@ -2172,27 +2173,27 @@ class NavigationCube {
         this.cubeGroup = new THREE.Group();
         this.cubeFaces = [];
 
-        const size = 1.0;
+        const size = 1.2;
         const halfSize = size / 2;
 
-        // Face definitions
+        // Face definitions with proper labels
         const faces = [
-            { name: 'FRONT', pos: [0, 0, halfSize], rot: [0, 0, 0], normal: [0, 0, 1] },
-            { name: 'BACK', pos: [0, 0, -halfSize], rot: [0, Math.PI, 0], normal: [0, 0, -1] },
-            { name: 'RIGHT', pos: [halfSize, 0, 0], rot: [0, Math.PI/2, 0], normal: [1, 0, 0] },
-            { name: 'LEFT', pos: [-halfSize, 0, 0], rot: [0, -Math.PI/2, 0], normal: [-1, 0, 0] },
-            { name: 'TOP', pos: [0, halfSize, 0], rot: [-Math.PI/2, 0, 0], normal: [0, 1, 0] },
-            { name: 'BOTTOM', pos: [0, -halfSize, 0], rot: [Math.PI/2, 0, 0], normal: [0, -1, 0] }
+            { name: 'Front', pos: [0, 0, halfSize], rot: [0, 0, 0], normal: [0, 0, 1] },
+            { name: 'Rear', pos: [0, 0, -halfSize], rot: [0, Math.PI, 0], normal: [0, 0, -1] },
+            { name: 'Right', pos: [halfSize, 0, 0], rot: [0, Math.PI/2, 0], normal: [1, 0, 0] },
+            { name: 'Left', pos: [-halfSize, 0, 0], rot: [0, -Math.PI/2, 0], normal: [-1, 0, 0] },
+            { name: 'Top', pos: [0, halfSize, 0], rot: [-Math.PI/2, 0, 0], normal: [0, 1, 0] },
+            { name: 'Bottom', pos: [0, -halfSize, 0], rot: [Math.PI/2, 0, 0], normal: [0, -1, 0] }
         ];
 
         faces.forEach(face => {
-            // Create face
-            const geometry = new THREE.PlaneGeometry(size * 0.95, size * 0.95);
-            const material = new THREE.MeshStandardMaterial({
-                color: this.colors.cubeBase,
+            // Create textured face with label
+            const texture = this.createFaceTexture(face.name);
+            const geometry = new THREE.PlaneGeometry(size, size);
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
                 side: THREE.DoubleSide,
-                metalness: 0.1,
-                roughness: 0.8
+                transparent: true
             });
 
             const mesh = new THREE.Mesh(geometry, material);
@@ -2202,47 +2203,49 @@ class NavigationCube {
                 type: 'face',
                 name: face.name,
                 normal: new THREE.Vector3(...face.normal),
-                originalColor: this.colors.cubeBase
+                originalTexture: texture,
+                isHovered: false
             };
-
-            // Add label
-            const label = this.createLabel(face.name);
-            label.position.z = 0.01;
-            mesh.add(label);
 
             this.cubeGroup.add(mesh);
             this.cubeFaces.push(mesh);
         });
 
-        // Add edges
+        // Add edges with thicker lines
         const boxGeometry = new THREE.BoxGeometry(size, size, size);
         const edges = new THREE.EdgesGeometry(boxGeometry);
-        const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x374151 });
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: this.colors.cubeBorder, linewidth: 2 });
         const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
         this.cubeGroup.add(edgeLines);
 
         this.scene.add(this.cubeGroup);
     }
 
-    createLabel(text) {
+    createFaceTexture(text, isHovered = false) {
         const canvas = document.createElement('canvas');
         canvas.width = 128;
         canvas.height = 128;
         const ctx = canvas.getContext('2d');
 
-        ctx.clearRect(0, 0, 128, 128);
-        ctx.font = 'bold 24px system-ui, sans-serif';
-        ctx.fillStyle = '#ffffff';
+        // Background
+        ctx.fillStyle = isHovered ? '#93c5fd' : '#e5e7eb';
+        ctx.fillRect(0, 0, 128, 128);
+
+        // Border
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(2, 2, 124, 124);
+
+        // Text
+        ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = '#374151';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(text, 64, 64);
 
         const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-        const sprite = new THREE.Sprite(material);
-        sprite.scale.set(0.5, 0.5, 1);
-
-        return sprite;
+        texture.needsUpdate = true;
+        return texture;
     }
 
     createAxes() {
@@ -2333,8 +2336,10 @@ class NavigationCube {
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
         // Reset previous hover
-        if (this.hoveredObject) {
-            this.hoveredObject.material.color.setHex(this.hoveredObject.userData.originalColor);
+        if (this.hoveredObject && this.hoveredObject.userData.isHovered) {
+            this.hoveredObject.material.map = this.hoveredObject.userData.originalTexture;
+            this.hoveredObject.material.needsUpdate = true;
+            this.hoveredObject.userData.isHovered = false;
             this.hoveredObject = null;
         }
 
@@ -2344,7 +2349,10 @@ class NavigationCube {
         const faceIntersects = this.raycaster.intersectObjects(this.cubeFaces);
         if (faceIntersects.length > 0) {
             this.hoveredObject = faceIntersects[0].object;
-            this.hoveredObject.material.color.setHex(this.colors.cubeHover);
+            const hoverTexture = this.createFaceTexture(this.hoveredObject.userData.name, true);
+            this.hoveredObject.material.map = hoverTexture;
+            this.hoveredObject.material.needsUpdate = true;
+            this.hoveredObject.userData.isHovered = true;
             this.container.style.cursor = 'pointer';
         }
 
@@ -2352,8 +2360,10 @@ class NavigationCube {
     }
 
     onMouseLeave() {
-        if (this.hoveredObject) {
-            this.hoveredObject.material.color.setHex(this.hoveredObject.userData.originalColor);
+        if (this.hoveredObject && this.hoveredObject.userData.isHovered) {
+            this.hoveredObject.material.map = this.hoveredObject.userData.originalTexture;
+            this.hoveredObject.material.needsUpdate = true;
+            this.hoveredObject.userData.isHovered = false;
             this.hoveredObject = null;
         }
         this.container.style.cursor = 'default';
