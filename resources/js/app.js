@@ -200,6 +200,22 @@ class JsonModelViewer3D {
             this._down.y = e.clientY;
         });
 
+        // Navigation Cube
+        this.navigationCube = null;
+        const navCubeCanvas = document.getElementById('navigation-cube');
+        if (navCubeCanvas) {
+            try {
+                this.navigationCube = new NavigationCube(
+                    navCubeCanvas,
+                    this.camera,
+                    this.controls
+                );
+                console.log('[JsonModelViewer3D] Navigation cube initialized');
+            } catch (error) {
+                console.error('[JsonModelViewer3D] Failed to initialize navigation cube:', error);
+            }
+        }
+
         this.animate();
 
         // Force initial resize after DOM is ready to ensure canvas takes full container width
@@ -1744,6 +1760,7 @@ class JsonModelViewer3D {
     animate() {
         requestAnimationFrame(() => this.animate());
         this.controls?.update();
+        this.navigationCube?.update(); // Synchroniser le cube de navigation
         if (this._dirty) {
             this.renderer.render(this.scene, this.camera);
             this._dirty = false;
@@ -1918,7 +1935,6 @@ class FaceSelectionManager {
 
         if (this.selections.size === 0) {
             this.container.classList.add("hidden");
-            console.log('[DEBUG] Dispatching face-selection-changed with hasSelection:', false);
             window.dispatchEvent(new CustomEvent('face-selection-changed', {
                 detail: { hasSelection: false }
             }));
@@ -1961,7 +1977,6 @@ class FaceSelectionManager {
             this.container.appendChild(chip);
         }
 
-        console.log('[DEBUG] Dispatching face-selection-changed with hasSelection:', true);
         window.dispatchEvent(new CustomEvent('face-selection-changed', {
             detail: { hasSelection: true }
         }));
@@ -2065,6 +2080,260 @@ class FaceContextParser {
 
 // Export for use in Blade templates
 window.FaceContextParser = FaceContextParser;
+
+/**
+ * NavigationCube - Mini 3D cube for camera orientation
+ * Syncs with main camera and allows click-to-orient navigation
+ */
+class NavigationCube {
+    constructor(containerElement, mainCamera, mainControls) {
+        // containerElement: le canvas HTML pour le mini-renderer
+        // mainCamera: référence à la caméra principale (PerspectiveCamera)
+        // mainControls: référence aux OrbitControls principaux
+
+        this.container = containerElement;
+        this.mainCamera = mainCamera;
+        this.mainControls = mainControls;
+
+        // Créer le mini-renderer THREE.js
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: containerElement,
+            alpha: true,
+            antialias: true,
+        });
+        this.renderer.setSize(150, 150);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+
+        // Créer la scène pour le cube
+        this.scene = new THREE.Scene();
+
+        // Créer la caméra orthographique pour le cube
+        this.camera = new THREE.OrthographicCamera(-2, 2, 2, -2, 0.1, 10);
+        this.camera.position.set(0, 0, 5);
+        this.camera.lookAt(0, 0, 0);
+
+        // Ajouter lumières
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(2, 2, 3);
+        this.scene.add(directionalLight);
+
+        // Créer le cube de navigation
+        this.createCube();
+
+        // Créer les axes XYZ
+        this.createAxes();
+
+        // Setup raycaster pour les clics
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+
+        // Bind events
+        this.container.addEventListener("click", this.onClick.bind(this));
+        this.container.addEventListener(
+            "mousemove",
+            this.onMouseMove.bind(this),
+        );
+
+        // Render initial
+        this.render();
+    }
+
+    createCube() {
+        // Créer la géométrie du cube (taille 1.5)
+        const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+
+        // Matériaux pour chaque face avec couleur légèrement différente
+        const materials = [
+            new THREE.MeshStandardMaterial({ color: 0xdddddd }), // RIGHT (+X)
+            new THREE.MeshStandardMaterial({ color: 0xcccccc }), // LEFT (-X)
+            new THREE.MeshStandardMaterial({ color: 0xdddddd }), // TOP (+Y)
+            new THREE.MeshStandardMaterial({ color: 0xcccccc }), // BOTTOM (-Y)
+            new THREE.MeshStandardMaterial({ color: 0xdddddd }), // FRONT (+Z)
+            new THREE.MeshStandardMaterial({ color: 0xcccccc }), // BACK (-Z)
+        ];
+
+        this.cube = new THREE.Mesh(geometry, materials);
+        this.scene.add(this.cube);
+
+        // Créer les labels de texte pour chaque face
+        this.createLabels();
+
+        // Créer les edges (contours noirs)
+        const edges = new THREE.EdgesGeometry(geometry);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+            color: 0x000000,
+            linewidth: 2,
+        });
+        const edgesLine = new THREE.LineSegments(edges, edgesMaterial);
+        this.cube.add(edgesLine);
+    }
+
+    createLabels() {
+        // Labels pour chaque face: RIGHT, LEFT, TOP, BOTTOM, FRONT, BACK
+        const labels = [
+            {
+                text: "RIGHT",
+                position: new THREE.Vector3(0.76, 0, 0),
+                rotation: new THREE.Euler(0, Math.PI / 2, 0),
+            },
+            {
+                text: "LEFT",
+                position: new THREE.Vector3(-0.76, 0, 0),
+                rotation: new THREE.Euler(0, -Math.PI / 2, 0),
+            },
+            {
+                text: "TOP",
+                position: new THREE.Vector3(0, 0.76, 0),
+                rotation: new THREE.Euler(-Math.PI / 2, 0, 0),
+            },
+            {
+                text: "BOTTOM",
+                position: new THREE.Vector3(0, -0.76, 0),
+                rotation: new THREE.Euler(Math.PI / 2, 0, 0),
+            },
+            {
+                text: "FRONT",
+                position: new THREE.Vector3(0, 0, 0.76),
+                rotation: new THREE.Euler(0, 0, 0),
+            },
+            {
+                text: "BACK",
+                position: new THREE.Vector3(0, 0, -0.76),
+                rotation: new THREE.Euler(0, Math.PI, 0),
+            },
+        ];
+
+        // Utiliser CSS2DRenderer serait idéal mais pour simplifier on peut utiliser des sprites
+        // Pour l'instant, on skip les labels texte (peut être ajouté plus tard avec canvas texture)
+    }
+
+    createAxes() {
+        // Axes XYZ avec couleurs RGB
+        const axesGroup = new THREE.Group();
+
+        // X axis - Rouge
+        const xGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+        const xMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const xAxis = new THREE.Mesh(xGeometry, xMaterial);
+        xAxis.rotation.z = -Math.PI / 2;
+        xAxis.position.set(0.6, 0, 0);
+        axesGroup.add(xAxis);
+
+        // Y axis - Vert
+        const yGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+        const yMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const yAxis = new THREE.Mesh(yGeometry, yMaterial);
+        yAxis.position.set(0, 0.6, 0);
+        axesGroup.add(yAxis);
+
+        // Z axis - Bleu
+        const zGeometry = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+        const zMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        const zAxis = new THREE.Mesh(zGeometry, zMaterial);
+        zAxis.rotation.x = Math.PI / 2;
+        zAxis.position.set(0, 0, 0.6);
+        axesGroup.add(zAxis);
+
+        this.scene.add(axesGroup);
+        this.axes = axesGroup;
+    }
+
+    onClick(event) {
+        // Calculer la position de la souris normalisée
+        const rect = this.container.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        // Raycasting sur le cube
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const intersects = this.raycaster.intersectObject(this.cube);
+
+        if (intersects.length > 0) {
+            const face = intersects[0].face;
+            const faceIndex = Math.floor(intersects[0].faceIndex / 2); // 2 triangles par face
+
+            // Orienter la caméra principale selon la face cliquée
+            this.orientMainCamera(faceIndex);
+        }
+    }
+
+    onMouseMove(event) {
+        // Pour futur: ajouter hover effect sur les faces
+    }
+
+    orientMainCamera(faceIndex) {
+        // Positions de caméra pour chaque face
+        const positions = [
+            new THREE.Vector3(200, 0, 0), // RIGHT (+X)
+            new THREE.Vector3(-200, 0, 0), // LEFT (-X)
+            new THREE.Vector3(0, 200, 0), // TOP (+Y)
+            new THREE.Vector3(0, -200, 0), // BOTTOM (-Y)
+            new THREE.Vector3(0, 0, 200), // FRONT (+Z)
+            new THREE.Vector3(0, 0, -200), // BACK (-Z)
+        ];
+
+        const targetPos = positions[faceIndex].clone();
+        const target = this.mainControls.target.clone();
+
+        // Animer la caméra vers la nouvelle position
+        this.animateCameraTo(targetPos.add(target), target);
+    }
+
+    animateCameraTo(position, target) {
+        // Animation simple avec GSAP si disponible, sinon direct
+        const duration = 0.5;
+        const startPos = this.mainCamera.position.clone();
+        const startTarget = this.mainControls.target.clone();
+
+        const startTime = Date.now();
+
+        const animate = () => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const t = Math.min(elapsed / duration, 1);
+
+            // Easing
+            const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+            this.mainCamera.position.lerpVectors(startPos, position, eased);
+            this.mainControls.target.lerpVectors(startTarget, target, eased);
+            this.mainControls.update();
+
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+
+        animate();
+    }
+
+    update() {
+        // Synchroniser l'orientation du cube avec la caméra principale
+        // Copier la rotation de la caméra principale (inversée)
+        const quaternion = this.mainCamera.quaternion.clone().invert();
+        this.cube.quaternion.copy(quaternion);
+        if (this.axes) {
+            this.axes.quaternion.copy(quaternion);
+        }
+
+        this.render();
+    }
+
+    render() {
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    dispose() {
+        // Cleanup
+        this.container.removeEventListener("click", this.onClick);
+        this.container.removeEventListener("mousemove", this.onMouseMove);
+        this.renderer.dispose();
+    }
+}
+
+// Export for use globally
+window.NavigationCube = NavigationCube;
 
 // --- Global wiring ---
 let JSON_VIEWER = null;
