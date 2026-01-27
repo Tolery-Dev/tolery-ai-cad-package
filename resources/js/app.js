@@ -2099,11 +2099,9 @@ class FaceContextParser {
 window.FaceContextParser = FaceContextParser;
 
 /**
- * NavigationCube - FreeCAD-style navigation cube
+ * NavigationCube - Simple navigation cube
  * Components:
  * - Main cube with 6 labeled faces (FRONT, BACK, LEFT, RIGHT, TOP, BOTTOM)
- * - 4 triangular arrows (up, down, left, right) - rotate view perpendicular to arrow direction
- * - 2 curved arrows - rotate view around the viewing axis (roll)
  * - XYZ axis indicators with colored labels
  */
 class NavigationCube {
@@ -2121,8 +2119,6 @@ class NavigationCube {
             cubeBase: 0x6b7280,      // Gray
             cubeHover: 0x3b82f6,     // Blue
             text: 0xffffff,          // White text
-            arrow: 0x9ca3af,         // Light gray arrows
-            arrowHover: 0x3b82f6,    // Blue hover
             axisX: 0xef4444,         // Red
             axisY: 0x22c55e,         // Green
             axisZ: 0x3b82f6          // Blue
@@ -2152,10 +2148,9 @@ class NavigationCube {
         dirLight.position.set(2, 3, 4);
         this.scene.add(dirLight);
 
-        // Create components
+        // Create components (cube + axes only)
         this.createCube();
         this.createAxes();
-        this.createArrows();
 
         // Raycaster
         this.raycaster = new THREE.Raycaster();
@@ -2330,113 +2325,6 @@ class NavigationCube {
         return sprite;
     }
 
-    createArrows() {
-        this.arrowsGroup = new THREE.Group();
-        this.arrows = [];
-
-        const distance = 1.4;
-
-        // 4 triangular directional arrows (up, down, left, right)
-        const triangularArrows = [
-            { name: 'up', pos: [0, distance, 0], rot: [Math.PI, 0, 0] },
-            { name: 'down', pos: [0, -distance, 0], rot: [0, 0, 0] },
-            { name: 'left', pos: [-distance, 0, 0], rot: [0, 0, Math.PI/2] },
-            { name: 'right', pos: [distance, 0, 0], rot: [0, 0, -Math.PI/2] }
-        ];
-
-        triangularArrows.forEach(def => {
-            const geometry = new THREE.ConeGeometry(0.12, 0.25, 3);
-            const material = new THREE.MeshBasicMaterial({ color: this.colors.arrow });
-            const arrow = new THREE.Mesh(geometry, material);
-
-            arrow.position.set(...def.pos);
-            arrow.rotation.set(...def.rot);
-            arrow.userData = {
-                type: 'arrow',
-                direction: def.name,
-                originalColor: this.colors.arrow
-            };
-
-            this.arrowsGroup.add(arrow);
-            this.arrows.push(arrow);
-        });
-
-        // 2 curved arrows for rotation around view axis
-        this.createCurvedArrow('rotate_cw', 1.5, -0.4);   // Clockwise (right side)
-        this.createCurvedArrow('rotate_ccw', -1.5, -0.4); // Counter-clockwise (left side)
-
-        this.scene.add(this.arrowsGroup);
-    }
-
-    createCurvedArrow(name, xPos, yPos) {
-        const group = new THREE.Group();
-
-        // Create curved arc
-        const arcRadius = 0.2;
-        const arcStart = name === 'rotate_cw' ? Math.PI * 0.2 : Math.PI * 0.8;
-        const arcEnd = name === 'rotate_cw' ? Math.PI * 1.3 : Math.PI * 1.7;
-
-        const curve = new THREE.EllipseCurve(
-            0, 0,
-            arcRadius, arcRadius,
-            arcStart, arcEnd,
-            name === 'rotate_ccw', // Clockwise for CW, counter-clockwise for CCW
-            0
-        );
-
-        const points = curve.getPoints(20);
-        const arcGeometry = new THREE.BufferGeometry().setFromPoints(points);
-        const arcMaterial = new THREE.LineBasicMaterial({
-            color: this.colors.arrow,
-            linewidth: 2
-        });
-        const arc = new THREE.Line(arcGeometry, arcMaterial);
-        group.add(arc);
-
-        // Create arrow head at the end of the curve
-        const arrowHeadGeom = new THREE.ConeGeometry(0.06, 0.12, 3);
-        const arrowHeadMat = new THREE.MeshBasicMaterial({ color: this.colors.arrow });
-        const arrowHead = new THREE.Mesh(arrowHeadGeom, arrowHeadMat);
-
-        // Position arrow head at end of arc
-        const lastPoint = points[points.length - 1];
-        const secondLastPoint = points[points.length - 2];
-        arrowHead.position.set(lastPoint.x, lastPoint.y, 0);
-
-        // Rotate arrow head to point in direction of curve
-        const angle = Math.atan2(lastPoint.y - secondLastPoint.y, lastPoint.x - secondLastPoint.x);
-        arrowHead.rotation.z = angle - Math.PI / 2;
-
-        group.add(arrowHead);
-
-        // Position the group
-        group.position.set(xPos, yPos, 0);
-
-        // Create invisible hitbox for click detection
-        const hitboxGeom = new THREE.CircleGeometry(0.3, 16);
-        const hitboxMat = new THREE.MeshBasicMaterial({
-            color: this.colors.arrow,
-            transparent: true,
-            opacity: 0
-        });
-        const hitbox = new THREE.Mesh(hitboxGeom, hitboxMat);
-        hitbox.position.set(xPos, yPos, 0);
-        hitbox.userData = {
-            type: 'curvedArrow',
-            direction: name,
-            originalColor: this.colors.arrow,
-            visualGroup: group
-        };
-
-        this.arrowsGroup.add(group);
-        this.arrowsGroup.add(hitbox);
-        this.arrows.push(hitbox);
-
-        // Store reference to visual elements for hover effect
-        hitbox.userData.arcLine = arc;
-        hitbox.userData.arrowHead = arrowHead;
-    }
-
     onMouseMove(event) {
         const rect = this.container.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -2446,14 +2334,7 @@ class NavigationCube {
 
         // Reset previous hover
         if (this.hoveredObject) {
-            if (this.hoveredObject.userData.type === 'curvedArrow') {
-                // Reset curved arrow visual elements
-                const { arcLine, arrowHead } = this.hoveredObject.userData;
-                if (arcLine) arcLine.material.color.setHex(this.hoveredObject.userData.originalColor);
-                if (arrowHead) arrowHead.material.color.setHex(this.hoveredObject.userData.originalColor);
-            } else {
-                this.hoveredObject.material.color.setHex(this.hoveredObject.userData.originalColor);
-            }
+            this.hoveredObject.material.color.setHex(this.hoveredObject.userData.originalColor);
             this.hoveredObject = null;
         }
 
@@ -2465,24 +2346,6 @@ class NavigationCube {
             this.hoveredObject = faceIntersects[0].object;
             this.hoveredObject.material.color.setHex(this.colors.cubeHover);
             this.container.style.cursor = 'pointer';
-            this.render();
-            return;
-        }
-
-        // Check arrows (including curved arrows)
-        const arrowIntersects = this.raycaster.intersectObjects(this.arrows);
-        if (arrowIntersects.length > 0) {
-            this.hoveredObject = arrowIntersects[0].object;
-
-            if (this.hoveredObject.userData.type === 'curvedArrow') {
-                // Highlight curved arrow visual elements
-                const { arcLine, arrowHead } = this.hoveredObject.userData;
-                if (arcLine) arcLine.material.color.setHex(this.colors.arrowHover);
-                if (arrowHead) arrowHead.material.color.setHex(this.colors.arrowHover);
-            } else {
-                this.hoveredObject.material.color.setHex(this.colors.arrowHover);
-            }
-            this.container.style.cursor = 'pointer';
         }
 
         this.render();
@@ -2490,14 +2353,7 @@ class NavigationCube {
 
     onMouseLeave() {
         if (this.hoveredObject) {
-            if (this.hoveredObject.userData.type === 'curvedArrow') {
-                // Reset curved arrow visual elements
-                const { arcLine, arrowHead } = this.hoveredObject.userData;
-                if (arcLine) arcLine.material.color.setHex(this.hoveredObject.userData.originalColor);
-                if (arrowHead) arrowHead.material.color.setHex(this.hoveredObject.userData.originalColor);
-            } else {
-                this.hoveredObject.material.color.setHex(this.hoveredObject.userData.originalColor);
-            }
+            this.hoveredObject.material.color.setHex(this.hoveredObject.userData.originalColor);
             this.hoveredObject = null;
         }
         this.container.style.cursor = 'default';
@@ -2518,14 +2374,6 @@ class NavigationCube {
         if (faceIntersects.length > 0) {
             const face = faceIntersects[0].object;
             this.orientToNormal(face.userData.normal);
-            return;
-        }
-
-        // Check arrows
-        const arrowIntersects = this.raycaster.intersectObjects(this.arrows);
-        if (arrowIntersects.length > 0) {
-            const arrow = arrowIntersects[0].object;
-            this.handleArrowClick(arrow.userData.direction);
         }
     }
 
@@ -2534,75 +2382,6 @@ class NavigationCube {
         const distance = this.mainCamera.position.distanceTo(target);
         const newPos = normal.clone().multiplyScalar(distance).add(target);
         this.animateCameraTo(newPos, target);
-    }
-
-    handleArrowClick(direction) {
-        const angle = Math.PI / 6; // 30 degrees
-        const target = this.mainControls.target.clone();
-        const distance = this.mainCamera.position.distanceTo(target);
-
-        // Handle curved arrows (rotation around view axis)
-        if (direction === 'rotate_cw' || direction === 'rotate_ccw') {
-            const rotAngle = direction === 'rotate_cw' ? -angle : angle;
-            // Get the view direction (from camera to target)
-            const viewDir = target.clone().sub(this.mainCamera.position).normalize();
-            // Get the current up vector
-            const up = this.mainCamera.up.clone();
-            // Rotate the up vector around the view direction
-            up.applyAxisAngle(viewDir, rotAngle);
-            // Animate the camera roll
-            this.animateCameraRoll(up);
-            return;
-        }
-
-        // Handle triangular arrows (rotation perpendicular to arrow direction)
-        let pos = this.mainCamera.position.clone().sub(target);
-
-        // Get camera's right and up vectors for view-relative rotation
-        const cameraRight = new THREE.Vector3();
-        const cameraUp = new THREE.Vector3();
-        this.mainCamera.matrix.extractBasis(cameraRight, cameraUp, new THREE.Vector3());
-
-        switch (direction) {
-            case 'up':
-                pos.applyAxisAngle(cameraRight, -angle);
-                break;
-            case 'down':
-                pos.applyAxisAngle(cameraRight, angle);
-                break;
-            case 'left':
-                pos.applyAxisAngle(cameraUp, angle);
-                break;
-            case 'right':
-                pos.applyAxisAngle(cameraUp, -angle);
-                break;
-        }
-
-        pos.normalize().multiplyScalar(distance).add(target);
-        this.animateCameraTo(pos, target);
-    }
-
-    animateCameraRoll(targetUp) {
-        this.isAnimating = true;
-        const duration = 400;
-        const startUp = this.mainCamera.up.clone();
-        const startTime = Date.now();
-
-        const animate = () => {
-            const t = Math.min((Date.now() - startTime) / duration, 1);
-            const eased = 1 - Math.pow(1 - t, 3);
-
-            this.mainCamera.up.lerpVectors(startUp, targetUp, eased).normalize();
-            this.mainControls.update();
-
-            if (t < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                this.isAnimating = false;
-            }
-        };
-
-        animate();
     }
 
     animateCameraTo(position, target) {
@@ -2635,7 +2414,6 @@ class NavigationCube {
 
         if (this.cubeGroup) this.cubeGroup.quaternion.copy(quaternion);
         if (this.axesGroup) this.axesGroup.quaternion.copy(quaternion);
-        if (this.arrowsGroup) this.arrowsGroup.quaternion.copy(quaternion);
 
         this.render();
     }
