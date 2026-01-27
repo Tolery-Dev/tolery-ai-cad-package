@@ -13,6 +13,7 @@
             </div>
 
             <flux:composer
+                wire:key="{{ $composerPlaceholder }}"
                 wire:model="message"
                 submit="send"
                 placeholder="{{ $composerPlaceholder }}"
