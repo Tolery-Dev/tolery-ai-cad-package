@@ -24,6 +24,8 @@ use Tolery\AiCad\Livewire\Admin\Dashboard;
 use Tolery\AiCad\Livewire\Admin\FilePurchaseTable;
 use Tolery\AiCad\Livewire\Admin\PredefinedPromptForm;
 use Tolery\AiCad\Livewire\Admin\PredefinedPromptTable;
+use Tolery\AiCad\Livewire\Admin\StepMessageForm;
+use Tolery\AiCad\Livewire\Admin\StepMessageTable;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Livewire\ChatHistoryPanel;
@@ -94,6 +96,7 @@ class AiCadServiceProvider extends PackageServiceProvider
         Gate::policy(\Tolery\AiCad\Models\FilePurchase::class, \Tolery\AiCad\Policies\FilePurchasePolicy::class);
         Gate::policy(\Tolery\AiCad\Models\ChatDownload::class, \Tolery\AiCad\Policies\ChatDownloadPolicy::class);
         Gate::policy(\Tolery\AiCad\Models\PredefinedPrompt::class, \Tolery\AiCad\Policies\PredefinedPromptPolicy::class);
+        Gate::policy(\Tolery\AiCad\Models\StepMessage::class, \Tolery\AiCad\Policies\StepMessagePolicy::class);
     }
 
     protected function registerLivewireComponents(): self
@@ -122,6 +125,8 @@ class AiCadServiceProvider extends PackageServiceProvider
             Livewire::component('ai-cad-admin-chat-download-table', ChatDownloadTable::class);
             Livewire::component('ai-cad-admin-predefined-prompt-table', PredefinedPromptTable::class);
             Livewire::component('ai-cad-admin-predefined-prompt-form', PredefinedPromptForm::class);
+            Livewire::component('ai-cad-admin-step-message-table', StepMessageTable::class);
+            Livewire::component('ai-cad-admin-step-message-form', StepMessageForm::class);
         });
 
         return $this;

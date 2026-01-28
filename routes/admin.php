@@ -7,6 +7,7 @@ use Tolery\AiCad\Http\Controllers\Admin\DashboardController;
 use Tolery\AiCad\Http\Controllers\Admin\DownloadController;
 use Tolery\AiCad\Http\Controllers\Admin\FilePurchaseController;
 use Tolery\AiCad\Http\Controllers\Admin\PredefinedPromptController;
+use Tolery\AiCad\Http\Controllers\Admin\StepMessageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,5 +58,13 @@ Route::middleware(config('ai-cad.admin.middleware', ['web', 'auth', 'admin']))
             Route::get('/create', [PredefinedPromptController::class, 'create'])->name('create');
             Route::get('/{prompt}/edit', [PredefinedPromptController::class, 'edit'])->name('edit');
             Route::delete('/{prompt}', [PredefinedPromptController::class, 'destroy'])->name('destroy');
+        });
+
+        // Step Messages
+        Route::prefix('step-messages')->name('step-messages.')->group(function () {
+            Route::get('/', [StepMessageController::class, 'index'])->name('index');
+            Route::get('/create', [StepMessageController::class, 'create'])->name('create');
+            Route::get('/{stepMessage}/edit', [StepMessageController::class, 'edit'])->name('edit');
+            Route::delete('/{stepMessage}', [StepMessageController::class, 'destroy'])->name('destroy');
         });
     });

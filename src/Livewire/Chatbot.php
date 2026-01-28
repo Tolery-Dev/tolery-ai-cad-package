@@ -16,6 +16,7 @@ use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
 use Tolery\AiCad\Models\PredefinedPrompt;
+use Tolery\AiCad\Models\StepMessage;
 use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\FileAccessService;
 use Tolery\AiCad\Services\ZipGeneratorService;
@@ -160,6 +161,7 @@ class Chatbot extends Component
 
         return view('ai-cad::livewire.chatbot', [
             'predefinedPrompts' => $predefinedPrompts,
+            'stepMessages' => StepMessage::getStepMessagesForFrontend(),
         ]);
     }
 
