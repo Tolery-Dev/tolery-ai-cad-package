@@ -114,7 +114,7 @@
         <div id="viewer"
              wire:ignore
              data-screenshot-exists="{{ $screenshotUrl ? 'true' : 'false' }}"
-             class="h-full w-full">
+             class="relative h-full w-full">
         </div>
 
         {{-- wire:ignore prevents Livewire from re-rendering the Alpine component after piece generation --}}
