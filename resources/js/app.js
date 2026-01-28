@@ -542,6 +542,7 @@ class JsonModelViewer3D {
             unit: "mm",
             volume: volume, // mm³
             thickness: thickness, // mm (detected from smallest dimension)
+            geometry: json?.geometry || null, // FreeCAD geometry data (surface_area, volume, mass)
         };
         window.dispatchEvent(new CustomEvent("cad-model-stats", { detail }));
 

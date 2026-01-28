@@ -491,6 +491,18 @@
                         <span class="text-gray-500">Poids</span>
                         <span class="font-semibold" x-text="stats.weight ? fmtWeight(stats.weight) : '—'"></span>
                     </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">Aire totale</span>
+                        <span class="font-semibold" x-text="fmtSurfaceArea(stats.geometry?.surface_area)"></span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">Volume</span>
+                        <span class="font-semibold" x-text="fmtVolume(stats.geometry?.volume)"></span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-gray-500">Poids</span>
+                        <span class="font-semibold" x-text="fmtMass(stats.geometry?.mass)"></span>
+                    </div>
                 </div>
             </div>
 
@@ -636,7 +648,7 @@
                 },
 
                 // State alimenté par app.js (events window)
-                stats: {sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm', volume: 0, thickness: 0, weight: 0},
+                stats: {sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm', volume: 0, thickness: 0, weight: 0, geometry: null},
                 selection: null,
 
                 // Edit mode
@@ -792,6 +804,19 @@
                     const kg = v / 1000;
                     // Afficher 3 décimales si < 1kg, 2 sinon
                     return kg < 1 ? `${kg.toFixed(3)} kg` : `${kg.toFixed(2)} kg`;
+                },
+                fmtSurfaceArea(sa) {
+                    if (!sa) return '—';
+                    return `${(+sa.cm2).toFixed(2)} cm²`;
+                },
+                fmtVolume(vol) {
+                    if (!vol) return '—';
+                    return `${(+vol.cm3).toFixed(2)} cm³`;
+                },
+                fmtMass(mass) {
+                    if (!mass) return '—';
+                    const kg = +mass.kg;
+                    return kg < 1 ? `${kg.toFixed(4)} kg` : `${kg.toFixed(2)} kg`;
                 },
                 fmtThickness() {
                     return '—'
