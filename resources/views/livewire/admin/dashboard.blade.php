@@ -96,5 +96,9 @@
             <flux:icon name="document-text" class="mr-2" />
             Gérer les prompts
         </flux:button>
+        <flux:button href="{{ route('ai-cad.admin.step-messages.index') }}" variant="outline" class="justify-start">
+            <flux:icon name="chat-bubble-bottom-center" class="mr-2" />
+            Gérer les messages d'étapes
+        </flux:button>
     </div>
 </div>
