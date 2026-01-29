@@ -131,15 +131,11 @@ class JsonModelViewer3D {
         this.navigationCube = null;
         const navCubeCanvas = document.createElement("canvas");
         navCubeCanvas.id = "navigation-cube";
-        navCubeCanvas.width = 150;
-        navCubeCanvas.height = 150;
+        navCubeCanvas.width = 180;
+        navCubeCanvas.height = 180;
         navCubeCanvas.style.cssText =
-            "position: absolute; top: 16px; right: 16px; width: 150px; height: 150px; pointer-events: auto; z-index: 50; cursor: pointer; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);";
+            "position: absolute; top: 16px; right: 16px; width: 180px; height: 180px; pointer-events: auto; z-index: 50; cursor: pointer; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);";
         this.container.appendChild(navCubeCanvas);
-        console.log(
-            "[JsonModelViewer3D] Navigation cube canvas created and appended:",
-            navCubeCanvas,
-        );
 
         try {
             this.navigationCube = new NavigationCube(
@@ -147,7 +143,6 @@ class JsonModelViewer3D {
                 this.camera,
                 this.controls,
             );
-            console.log("[JsonModelViewer3D] Navigation cube initialized");
 
             // Hide navigation cube during CAD generation
             window.addEventListener('cad-generation-started', () => {
@@ -235,6 +230,11 @@ class JsonModelViewer3D {
 
         this.mesh = mesh;
         this.modelGroup.add(mesh);
+
+        // Update navigation cube orientations from JSON data
+        if (this.navigationCube) {
+            this.navigationCube.updateOrientationsFromJson(json);
+        }
 
         // build edges once and respect current toggle
         this.buildEdges();
