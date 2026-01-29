@@ -15,6 +15,7 @@ parameters:
         - src/Livewire/Admin/ChatTable.php
         - src/Livewire/Admin/FilePurchaseTable.php
         - src/Livewire/Admin/PredefinedPromptTable.php
+        - src/Livewire/Admin/StepMessageTable.php
     ignoreErrors:
         # ChatUser model is configured dynamically via config('ai-cad.chat_user_model')
         - '#.*(unknown class|Class).*ChatUser#'

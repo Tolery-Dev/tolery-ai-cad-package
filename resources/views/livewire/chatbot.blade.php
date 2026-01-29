@@ -224,34 +224,9 @@
                 {key: 'export', shortLabel: 'Export', label: 'Export', state: 'inactive'},
                 {key: 'complete', shortLabel: 'Terminé', label: 'Terminé', state: 'inactive'},
             ],
-            // Messages détaillés par étape pour un meilleur feedback utilisateur
-            stepMessages: {
-                'analysis': [
-                    'Analyse des dimensions de la pièce...',
-                    'Vérification des contraintes de fabrication...',
-                    'Validation de la géométrie...',
-                ],
-                'parameters': [
-                    'Calcul des paramètres de génération...',
-                    'Optimisation de la géométrie...',
-                    'Définition des tolérances...',
-                ],
-                'generation_code': [
-                    'Génération du code CAO...',
-                    'Construction de la géométrie 3D...',
-                    'Application des opérations...',
-                ],
-                'export': [
-                    'Export des fichiers STEP et PDF technique...',
-                    'Génération de la mise en plan...',
-                    'Création du rendu 3D...',
-                ],
-                'complete': [
-                    'Finalisation des exports...',
-                    'Vérification de la qualité...',
-                    'Pièce prête !',
-                ],
-            },
+            // Messages detailles par etape pour un meilleur feedback utilisateur
+            // Charges dynamiquement depuis la base de donnees via StepMessage
+            stepMessages: @js($stepMessages),
             stepMessageIndex: {},
             init() {
                 const comp = this;
