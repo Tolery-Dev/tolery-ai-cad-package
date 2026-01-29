@@ -17,7 +17,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @if($downloadStatus && isset($downloadStatus['options']['can_subscribe']) && $downloadStatus['options']['can_subscribe'])
-                <flux:card class="border-2 border-violet-200">
+                <flux:card class="border-2 border-violet-200 transition-colors hover:border-violettes cursor-pointer">
                     <div class="flex flex-col h-full">
                         <div class="flex-1">
                             <flux:heading size="base" class="mb-2 text-violet-600">
@@ -57,7 +57,7 @@
             @endif
 
             @if($downloadStatus && isset($downloadStatus['options']['can_purchase']) && $downloadStatus['options']['can_purchase'])
-                <flux:card class="border-2 border-zinc-200">
+                <flux:card class="border-2 border-violet-200 transition-colors hover:border-violettes cursor-pointer">
                     <div class="flex flex-col h-full">
                         <div class="flex-1">
                             <flux:heading size="base" class="mb-2">
@@ -86,7 +86,7 @@
                         <flux:button
                             wire:click="purchaseFile"
                             variant="outline"
-                            class="mt-4 w-full">
+                            class="mt-4 w-full !border-violettes hover:!bg-purple-100">
                             Acheter maintenant
                         </flux:button>
                     </div>
