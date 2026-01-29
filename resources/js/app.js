@@ -231,9 +231,17 @@ class JsonModelViewer3D {
         this.mesh = mesh;
         this.modelGroup.add(mesh);
 
-        // Update navigation cube orientations from JSON data
+        // Update navigation cube orientations and labels from JSON data
         if (this.navigationCube) {
             this.navigationCube.updateOrientationsFromJson(json);
+            this.navigationCube.updateFaceLabels({
+                front: 'Avant',
+                rear: 'Arrière',
+                right: 'Droite',
+                left: 'Gauche',
+                top: 'Dessus',
+                bottom: 'Dessous'
+            });
         }
 
         // build edges once and respect current toggle
