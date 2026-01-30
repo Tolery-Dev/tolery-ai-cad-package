@@ -1,4 +1,4 @@
-<section class="flex-1 bg-grey-background p-4">
+<section class="flex-1 min-w-0 bg-grey-background p-4">
     <div class="relative h-full w-full bg-white border border-grey-stroke rounded-xl overflow-hidden">
         <div x-data="cadStreamModal()"
              x-show="open"
