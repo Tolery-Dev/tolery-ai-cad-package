@@ -8,6 +8,8 @@ use Ultraviolettes\FluxDataTable\Livewire\FluxDataTable;
 
 class StepMessageTable extends FluxDataTable
 {
+    public ?string $sortBy = 'sort_order';
+
     public function builder(): Builder
     {
         return StepMessage::query()
