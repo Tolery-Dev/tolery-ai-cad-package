@@ -128,7 +128,13 @@ class Chatbot extends Component
         $this->partName = trim($value) === '' ? null : $value;
         if ($this->partName) {
             $this->chat->name = $this->partName;
-            $this->chat->save();
+
+            // Ne sauvegarder que si le chat existe déjà en base
+            // Sinon, le nom sera persisté au premier message (send())
+            if ($this->chat->exists) {
+                $this->chat->save();
+            }
+
             $this->dispatch('tolery-chat-name-updated', name: $this->partName);
         }
     }
@@ -171,7 +177,10 @@ class Chatbot extends Component
         try {
             $validated = MaterialFamily::from($materialFamily);
             $this->chat->material_family = $validated;
-            $this->chat->save();
+
+            if ($this->chat->exists) {
+                $this->chat->save();
+            }
 
             Flux::toast(
                 variant: 'success',
