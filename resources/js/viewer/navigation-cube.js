@@ -263,32 +263,81 @@ export class NavigationCube {
     }
 
     /**
+     * Normalize orientation key from various API formats to internal keys.
+     * Supports English, French, and common aliases.
+     *
+     * @param {string} orientation - Raw orientation string from API
+     * @returns {string|null} - Normalized key (front, rear, right, left, top, bottom) or null
+     */
+    normalizeOrientationKey(orientation) {
+        const aliases = {
+            // English standard
+            front: 'front',
+            rear: 'rear',
+            right: 'right',
+            left: 'left',
+            top: 'top',
+            bottom: 'bottom',
+            // English alternatives
+            back: 'rear',
+            behind: 'rear',
+            up: 'top',
+            down: 'bottom',
+            // French
+            avant: 'front',
+            arrière: 'rear',
+            arriere: 'rear',
+            droite: 'right',
+            gauche: 'left',
+            dessus: 'top',
+            dessous: 'bottom',
+            haut: 'top',
+            bas: 'bottom',
+        };
+
+        return aliases[orientation.toLowerCase().trim()] || null;
+    }
+
+    /**
      * Update face normals from JSON orientation data.
      *
      * @param {object} json - The full JSON model data containing faces.bodies[].faces[].orientation
      */
     updateOrientationsFromJson(json) {
         if (!json?.faces?.bodies) {
+            console.log('[NavigationCube] No faces.bodies in JSON, skipping orientation update');
             return;
         }
 
         const orientationMap = {};
+        const unmapped = [];
+
         for (const body of json.faces.bodies) {
             for (const face of (body.faces || [])) {
                 if (face.orientation && face.normal) {
-                    const key = face.orientation.toLowerCase();
-                    if (!orientationMap[key]) {
-                        orientationMap[key] = {
+                    const normalizedKey = this.normalizeOrientationKey(face.orientation);
+                    if (normalizedKey && !orientationMap[normalizedKey]) {
+                        // Transform from CAD Z-up to Three.js Y-up: (x, y, z) → (x, z, -y)
+                        orientationMap[normalizedKey] = {
                             x: face.normal.x,
-                            y: face.normal.y,
-                            z: face.normal.z
+                            y: face.normal.z,
+                            z: -face.normal.y
                         };
+                    } else if (!normalizedKey) {
+                        unmapped.push(face.orientation);
                     }
                 }
             }
         }
 
+        if (unmapped.length > 0) {
+            console.warn('[NavigationCube] Unmapped orientation values from API:', unmapped);
+        }
+
+        console.log('[NavigationCube] Orientation map from JSON:', orientationMap);
+
         if (Object.keys(orientationMap).length === 0) {
+            console.log('[NavigationCube] No orientation data found in JSON');
             return;
         }
 
