@@ -1,7 +1,6 @@
 <div class="relative h-screen flex flex-col bg-grey-background"
      x-data="{
          isGenerating: false,
-         chatPanelCollapsed: false,
          init() {
              // Écouter les événements de génération
              window.addEventListener('cad-generation-started', () => {
@@ -30,23 +29,10 @@
 
     {{-- Main Content Area: Chat (left) + Preview (right) --}}
     <div class="flex-1 flex overflow-hidden">
-        {{-- LEFT PANEL: Chat Area with collapsible functionality --}}
-        <div :class="chatPanelCollapsed ? 'w-16' : 'w-[35%]'"
-             class="shrink-0 flex flex-col bg-grey-background rounded-bl-4xl transition-all duration-300 ease-in-out relative overflow-hidden">
+        {{-- LEFT PANEL: Chat Area --}}
+        <div class="w-[35%] shrink-0 flex flex-col bg-grey-background rounded-bl-4xl relative overflow-hidden">
 
-            {{-- Collapsed State --}}
-            <div x-show="chatPanelCollapsed" class="flex flex-col items-center justify-start pt-6 gap-4 h-full">
-                <flux:button @click="chatPanelCollapsed = false" icon="chevron-right" variant="ghost" size="sm" title="Développer le panneau" />
-                <img src="{{ Vite::asset('resources/images/tolerycad-large-logo.svg') }}" alt="ToleryCAD" class="h-8 w-8 object-contain" />
-            </div>
-
-            {{-- Expanded State --}}
-            <div x-show="!chatPanelCollapsed" class="flex flex-col h-full">
-                {{-- Sticky Toggle Button Bar --}}
-                <div class="sticky top-0 z-10 flex justify-end p-2 bg-white/80 backdrop-blur-sm border-b border-grey-stroke/50">
-                    <flux:button @click="chatPanelCollapsed = true" icon="chevron-left" variant="ghost" size="sm" title="Réduire le panneau" />
-                </div>
-
+            <div class="flex flex-col h-full">
                 {{-- Scrollable Content --}}
                 <section id="chat-scroll"
                          class="flex-1 flex flex-col overflow-y-auto"
@@ -66,7 +52,7 @@
 
                     @if(empty($messages))
                         {{-- Greeting Header (visible uniquement quand la conversation est vide) --}}
-                        <div class="bg-white px-6 pt-6 pb-4">
+                        <div class="bg-white px-6 pt-3 pb-2">
                             <flux:text size="lg" class="flex items-start gap-2">
                                 <img src="{{ asset('vendor/ai-cad/images/bot-icon.svg') }}"
                                      alt="Tolery Bot"
@@ -80,7 +66,7 @@
                     @endif
 
                     {{-- Messages Area --}}
-                    <div class="flex-1 px-6 py-6 bg-white border-b border-grey-stroke">
+                    <div class="flex-1 px-6 pt-3 pb-6 bg-white border-b border-grey-stroke">
 
                         @if(empty($messages))
                             @include('ai-cad::livewire.partials.chat-empty-state')
