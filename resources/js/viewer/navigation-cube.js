@@ -24,14 +24,14 @@ export class NavigationCube {
         this.dragStart = new THREE.Vector2();
         this.dragThreshold = 4; // px before drag starts
 
-        // Default face labels
+        // Default face labels (French)
         this.faceLabels = {
-            front: 'Front',
-            rear: 'Rear',
-            right: 'Right',
-            left: 'Left',
-            top: 'Top',
-            bottom: 'Bottom'
+            front: 'Avant',
+            rear: 'Arrière',
+            right: 'Droite',
+            left: 'Gauche',
+            top: 'Dessus',
+            bottom: 'Dessous'
         };
 
         // Colors - Onshape style
