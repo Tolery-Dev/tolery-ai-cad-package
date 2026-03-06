@@ -41,8 +41,8 @@
                 x-data="{
                     content: @js($msg['content'] ?? ''),
                     role: @js($msg['role']),
+                    shouldTypewrite: @js(($msg['id'] ?? null) === $typewriteMessageId),
                     isTyping: false,
-                    wasTyping: false,
                     parsedContent: '',
                     displayedContent: '',
                     typewriterDone: true,
@@ -104,29 +104,23 @@
                     parseContent() {
                         if (this.content === '[TYPING_INDICATOR]') {
                             this.isTyping = true;
-                            this.wasTyping = true;
                             this.parsedContent = '';
                             this.displayedContent = '';
                         } else {
-                            const wasPreviouslyTyping = this.wasTyping;
                             this.isTyping = false;
-                            this.wasTyping = false;
                             let parsed = this.parseFaceContext(this.content);
                             this.parsedContent = this.parseUrls(parsed);
-
-                            if (this.role === 'assistant' && wasPreviouslyTyping) {
-                                this.typewrite(this.parsedContent.replace(/\n/g, '<br>'));
-                            } else {
-                                this.displayedContent = this.parsedContent.replace(/\n/g, '<br>');
-                                this.typewriterDone = true;
-                            }
+                            this.displayedContent = this.parsedContent.replace(/\n/g, '<br>');
+                            this.typewriterDone = true;
                         }
                     }
                 }"
-                x-init="parseContent()"
-                @tolery-assistant-response.window="
-                    if (role === 'assistant' && isTyping) {
-                        content = $event.detail.content;
+                x-init="
+                    if (shouldTypewrite) {
+                        let parsed = parseFaceContext(content);
+                        parsedContent = parseUrls(parsed);
+                        typewrite(parsedContent.replace(/\n/g, '<br>'));
+                    } else {
                         parseContent();
                     }
                 ">

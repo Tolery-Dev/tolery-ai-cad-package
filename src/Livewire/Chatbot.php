@@ -73,6 +73,9 @@ class Chatbot extends Component
     /** Suggestions contextuelles affichées après la dernière réponse du bot */
     public array $contextualSuggestions = [];
 
+    /** ID du message assistant qui doit être affiché avec l'effet typewriter */
+    public ?int $typewriteMessageId = null;
+
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -184,6 +187,12 @@ class Chatbot extends Component
 
         // Chat vide : pas de suggestions (les predefined prompts dans l'empty state suffisent)
         return [];
+    }
+
+    public function rendered(): void
+    {
+        // Reset après rendu pour que le typewriter ne se déclenche qu'une seule fois
+        $this->typewriteMessageId = null;
     }
 
     public function render(): View
@@ -542,6 +551,9 @@ class Chatbot extends Component
             ]);
         }
 
+        // Flagge le message pour l'effet typewriter avant le re-rendu
+        $this->typewriteMessageId = $asst->id;
+
         // Rafraîchit les messages depuis la DB pour mettre à jour la vue (et supprimer le typing indicator)
         $this->messages = $this->mapDbMessagesToArray();
 
@@ -550,7 +562,6 @@ class Chatbot extends Component
 
         // Déclenche le rafraîchissement UI (scroll + viewer) puis chargement des assets
         $this->dispatch('tolery-chat-append');
-        $this->dispatch('tolery-assistant-response', content: $messageText);
         $this->dispatchViewerEvents($asst);
     }
 
@@ -1279,11 +1290,11 @@ class Chatbot extends Component
         if ($asst && $asst->message === '[TYPING_INDICATOR]') {
             $asst->message = $failureMessage;
             $asst->save();
+            $this->typewriteMessageId = $asst->id;
         }
 
         // Refresh messages to update UI
         $this->messages = $this->mapDbMessagesToArray();
         $this->dispatch('tolery-chat-append');
-        $this->dispatch('tolery-assistant-response', content: $failureMessage);
     }
 }
