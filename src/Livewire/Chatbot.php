@@ -70,6 +70,9 @@ class Chatbot extends Component
     /** Quota information */
     public ?array $quotaStatus = null;
 
+    /** Suggestions contextuelles affichées après la dernière réponse du bot */
+    public array $contextualSuggestions = [];
+
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -121,6 +124,9 @@ class Chatbot extends Component
         /** @var ChatUser $user */
         $user = auth()->user();
         $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
+
+        // Charger les suggestions contextuelles selon l'état du chat
+        $this->contextualSuggestions = $this->getContextualSuggestions();
     }
 
     public function updatedPartName($value): void
@@ -145,6 +151,39 @@ class Chatbot extends Component
         $this->composerPlaceholder = $hasSelection
             ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
             : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici';
+
+        // Met à jour les suggestions selon le contexte de sélection
+        $this->contextualSuggestions = $this->getContextualSuggestions($hasSelection ? 'face' : null);
+    }
+
+    /**
+     * Retourne les suggestions contextuelles selon l'état du chat.
+     *
+     * @param  ?string  $context  Forcer un contexte ('face') ou null pour auto-détection
+     * @return array<int, array{label: string, prompt: string}>
+     */
+    protected function getContextualSuggestions(?string $context = null): array
+    {
+        if ($context === 'face') {
+            return [
+                ['label' => 'Percer un trou', 'prompt' => 'Perce un trou de 10mm au centre de cette face'],
+                ['label' => 'Ajouter une découpe', 'prompt' => 'Ajoute une découpe rectangulaire sur cette face'],
+                ['label' => 'Chanfreiner les bords', 'prompt' => 'Chanfreine les bords de cette face'],
+                ['label' => 'Ajouter des perçages', 'prompt' => 'Ajoute des perçages réguliers sur cette face'],
+            ];
+        }
+
+        if ($this->chat->has_generated_piece) {
+            return [
+                ['label' => 'Modifier les dimensions', 'prompt' => 'Modifie les dimensions de la pièce'],
+                ['label' => 'Ajouter des perçages', 'prompt' => 'Ajoute des perçages sur la pièce'],
+                ['label' => 'Changer l\'épaisseur', 'prompt' => 'Change l\'épaisseur de la tôle'],
+                ['label' => 'Ajouter un pli', 'prompt' => 'Ajoute un pli supplémentaire'],
+            ];
+        }
+
+        // Chat vide : pas de suggestions (les predefined prompts dans l'empty state suffisent)
+        return [];
     }
 
     public function render(): View
@@ -505,6 +544,9 @@ class Chatbot extends Component
 
         // Rafraîchit les messages depuis la DB pour mettre à jour la vue (et supprimer le typing indicator)
         $this->messages = $this->mapDbMessagesToArray();
+
+        // Met à jour les suggestions contextuelles selon le nouvel état
+        $this->contextualSuggestions = $this->getContextualSuggestions();
 
         // Déclenche le rafraîchissement UI (scroll + viewer) puis chargement des assets
         $this->dispatch('tolery-chat-append');
