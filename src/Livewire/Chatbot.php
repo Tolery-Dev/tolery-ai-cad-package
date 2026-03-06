@@ -726,6 +726,60 @@ class Chatbot extends Component
         ]);
     }
 
+    /**
+     * Simule une réponse du bot pour tester l'effet typewriter et les suggestions contextuelles.
+     * Crée un typing indicator puis le remplace par un texte de test après un court délai.
+     * À utiliser uniquement en local (APP_DEBUG=true).
+     */
+    public function simulateBotResponse(): void
+    {
+        if (! config('app.debug')) {
+            return;
+        }
+
+        // Crée le chat si nécessaire (ghost chat)
+        if (! $this->chat->exists) {
+            /** @var ChatUser $user */
+            $user = auth()->user();
+            $this->chat->team()->associate($user->team);
+            $this->chat->user()->associate($user);
+            $this->chat->name = $this->partName;
+            $this->chat->save();
+        }
+
+        // 1. Ajoute un message user fictif
+        $mUser = $this->storeMessage('user', 'Message de test pour le typewriter');
+        $mUser->load('user');
+        $this->messages[] = [
+            'role' => 'user',
+            'content' => 'Message de test pour le typewriter',
+            'created_at' => Carbon::parse($mUser->created_at)->toIso8601String(),
+            'screenshot_url' => null,
+            'user' => $mUser->user,
+        ];
+        $this->dispatch('tolery-chat-append');
+
+        // 2. Placeholder assistant avec typing indicator
+        $mAsst = $this->storeMessage('assistant', '[TYPING_INDICATOR]');
+        $mAsst->load('user');
+        $this->messages[] = [
+            'role' => 'assistant',
+            'content' => '[TYPING_INDICATOR]',
+            'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
+            'screenshot_url' => null,
+            'user' => $mAsst->user,
+        ];
+        $this->dispatch('tolery-chat-append');
+
+        // 3. Après 2s, remplace par le vrai texte via saveStreamFinal
+        $sampleText = "Voici une réponse simulée du bot ToleryCAD pour tester l'effet typewriter.\n\n"
+            .'La pièce a été générée avec succès. Vous pouvez maintenant modifier les dimensions, '
+            ."ajouter des perçages ou changer l'épaisseur de la tôle.\n\n"
+            ."N'hésitez pas à me demander des modifications supplémentaires !";
+
+        $this->js('setTimeout(() => { $wire.saveStreamFinal({ chat_response: '.json_encode($sampleText).' }) }, 2000)');
+    }
+
     protected function appendAssistant(string $text): void
     {
         $m = $this->storeMessage('assistant', $text);
