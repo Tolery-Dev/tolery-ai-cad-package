@@ -124,8 +124,12 @@
                     }
                 }"
                 x-init="parseContent()"
-                x-effect="parseContent()"
-                @tolery-chat-append.window="content = @js($msg['content'] ?? ''); parseContent();">
+                @tolery-assistant-response.window="
+                    if (role === 'assistant' && isTyping) {
+                        content = $event.detail.content;
+                        parseContent();
+                    }
+                ">
                 {{-- Typing indicator --}}
                 <div x-show="isTyping" class="typing-indicator">
                     <span></span>
