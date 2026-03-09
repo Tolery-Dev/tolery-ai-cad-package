@@ -70,6 +70,12 @@ class Chatbot extends Component
     /** Quota information */
     public ?array $quotaStatus = null;
 
+    /** Suggestions contextuelles affichées après la dernière réponse du bot */
+    public array $contextualSuggestions = [];
+
+    /** ID du message assistant qui doit être affiché avec l'effet typewriter */
+    public ?int $typewriteMessageId = null;
+
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -121,6 +127,9 @@ class Chatbot extends Component
         /** @var ChatUser $user */
         $user = auth()->user();
         $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
+
+        // Charger les suggestions contextuelles selon l'état du chat
+        $this->contextualSuggestions = $this->getContextualSuggestions();
     }
 
     public function updatedPartName($value): void
@@ -145,6 +154,45 @@ class Chatbot extends Component
         $this->composerPlaceholder = $hasSelection
             ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
             : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici';
+
+        // Met à jour les suggestions selon le contexte de sélection
+        $this->contextualSuggestions = $this->getContextualSuggestions($hasSelection ? 'face' : null);
+    }
+
+    /**
+     * Retourne les suggestions contextuelles selon l'état du chat.
+     *
+     * @param  ?string  $context  Forcer un contexte ('face') ou null pour auto-détection
+     * @return array<int, array{label: string, prompt: string}>
+     */
+    protected function getContextualSuggestions(?string $context = null): array
+    {
+        if ($context === 'face') {
+            return [
+                ['label' => 'Percer un trou', 'prompt' => 'Perce un trou de 10mm au centre de cette face'],
+                ['label' => 'Ajouter une découpe', 'prompt' => 'Ajoute une découpe rectangulaire sur cette face'],
+                ['label' => 'Chanfreiner les bords', 'prompt' => 'Chanfreine les bords de cette face'],
+                ['label' => 'Ajouter des perçages', 'prompt' => 'Ajoute des perçages réguliers sur cette face'],
+            ];
+        }
+
+        if ($this->chat->has_generated_piece) {
+            return [
+                ['label' => 'Modifier les dimensions', 'prompt' => 'Modifie les dimensions de la pièce'],
+                ['label' => 'Ajouter des perçages', 'prompt' => 'Ajoute des perçages sur la pièce'],
+                ['label' => 'Changer l\'épaisseur', 'prompt' => 'Change l\'épaisseur de la tôle'],
+                ['label' => 'Ajouter un pli', 'prompt' => 'Ajoute un pli supplémentaire'],
+            ];
+        }
+
+        // Chat vide : pas de suggestions (les predefined prompts dans l'empty state suffisent)
+        return [];
+    }
+
+    public function rendered(): void
+    {
+        // Reset après rendu pour que le typewriter ne se déclenche qu'une seule fois
+        $this->typewriteMessageId = null;
     }
 
     public function render(): View
@@ -503,8 +551,14 @@ class Chatbot extends Component
             ]);
         }
 
+        // Flagge le message pour l'effet typewriter avant le re-rendu
+        $this->typewriteMessageId = $asst->id;
+
         // Rafraîchit les messages depuis la DB pour mettre à jour la vue (et supprimer le typing indicator)
         $this->messages = $this->mapDbMessagesToArray();
+
+        // Met à jour les suggestions contextuelles selon le nouvel état
+        $this->contextualSuggestions = $this->getContextualSuggestions();
 
         // Déclenche le rafraîchissement UI (scroll + viewer) puis chargement des assets
         $this->dispatch('tolery-chat-append');
@@ -682,6 +736,60 @@ class Chatbot extends Component
             'message' => $content,
             'user_id' => auth()->id(),
         ]);
+    }
+
+    /**
+     * Simule une réponse du bot pour tester l'effet typewriter et les suggestions contextuelles.
+     * Crée un typing indicator puis le remplace par un texte de test après un court délai.
+     * À utiliser uniquement en local (APP_DEBUG=true).
+     */
+    public function simulateBotResponse(): void
+    {
+        if (! config('app.debug')) {
+            return;
+        }
+
+        // Crée le chat si nécessaire (ghost chat)
+        if (! $this->chat->exists) {
+            /** @var ChatUser $user */
+            $user = auth()->user();
+            $this->chat->team()->associate($user->team);
+            $this->chat->user()->associate($user);
+            $this->chat->name = $this->partName;
+            $this->chat->save();
+        }
+
+        // 1. Ajoute un message user fictif
+        $mUser = $this->storeMessage('user', 'Message de test pour le typewriter');
+        $mUser->load('user');
+        $this->messages[] = [
+            'role' => 'user',
+            'content' => 'Message de test pour le typewriter',
+            'created_at' => Carbon::parse($mUser->created_at)->toIso8601String(),
+            'screenshot_url' => null,
+            'user' => $mUser->user,
+        ];
+        $this->dispatch('tolery-chat-append');
+
+        // 2. Placeholder assistant avec typing indicator
+        $mAsst = $this->storeMessage('assistant', '[TYPING_INDICATOR]');
+        $mAsst->load('user');
+        $this->messages[] = [
+            'role' => 'assistant',
+            'content' => '[TYPING_INDICATOR]',
+            'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
+            'screenshot_url' => null,
+            'user' => $mAsst->user,
+        ];
+        $this->dispatch('tolery-chat-append');
+
+        // 3. Après 2s, remplace par le vrai texte via saveStreamFinal
+        $sampleText = "Voici une réponse simulée du bot ToleryCAD pour tester l'effet typewriter.\n\n"
+            .'La pièce a été générée avec succès. Vous pouvez maintenant modifier les dimensions, '
+            ."ajouter des perçages ou changer l'épaisseur de la tôle.\n\n"
+            ."N'hésitez pas à me demander des modifications supplémentaires !";
+
+        $this->js('setTimeout(() => { $wire.saveStreamFinal({ chat_response: '.json_encode($sampleText).' }) }, 2000)');
     }
 
     protected function appendAssistant(string $text): void
@@ -1182,6 +1290,7 @@ class Chatbot extends Component
         if ($asst && $asst->message === '[TYPING_INDICATOR]') {
             $asst->message = $failureMessage;
             $asst->save();
+            $this->typewriteMessageId = $asst->id;
         }
 
         // Refresh messages to update UI

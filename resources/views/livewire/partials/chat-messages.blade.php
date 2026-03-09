@@ -40,8 +40,13 @@
                 wire:key="message-content-{{ $msg['id'] ?? $loop->index }}"
                 x-data="{
                     content: @js($msg['content'] ?? ''),
+                    role: @js($msg['role']),
+                    shouldTypewrite: @js(($msg['id'] ?? null) === $typewriteMessageId),
                     isTyping: false,
                     parsedContent: '',
+                    displayedContent: '',
+                    typewriterDone: true,
+                    typewriterTimer: null,
                     parseUrls(text) {
                         if (!text) return text;
                         const urlRegex = /(https?:\/\/[^\s<]+)/g;
@@ -70,21 +75,55 @@
                                 `</span>`;
                         });
                     },
+                    async typewrite(html) {
+                        this.typewriterDone = false;
+                        this.displayedContent = '';
+                        const plainText = html.replace(/<[^>]*>/g, '');
+                        const speed = 15;
+                        for (let i = 0; i < plainText.length; i++) {
+                            if (this.typewriterTimer === 'cancel') break;
+                            await new Promise(r => setTimeout(r, speed));
+                            this.displayedContent = html.slice(0, this._findHtmlIndex(html, i + 1));
+                        }
+                        this.displayedContent = html;
+                        this.typewriterDone = true;
+                    },
+                    _findHtmlIndex(html, charCount) {
+                        let chars = 0;
+                        let inTag = false;
+                        for (let i = 0; i < html.length; i++) {
+                            if (html[i] === '<') { inTag = true; continue; }
+                            if (html[i] === '>') { inTag = false; continue; }
+                            if (!inTag) {
+                                chars++;
+                                if (chars >= charCount) return i + 1;
+                            }
+                        }
+                        return html.length;
+                    },
                     parseContent() {
-                        // Check if this is a typing indicator
                         if (this.content === '[TYPING_INDICATOR]') {
                             this.isTyping = true;
                             this.parsedContent = '';
+                            this.displayedContent = '';
                         } else {
                             this.isTyping = false;
                             let parsed = this.parseFaceContext(this.content);
                             this.parsedContent = this.parseUrls(parsed);
+                            this.displayedContent = this.parsedContent.replace(/\n/g, '<br>');
+                            this.typewriterDone = true;
                         }
                     }
                 }"
-                x-init="parseContent()"
-                x-effect="parseContent()"
-                @tolery-chat-append.window="content = @js($msg['content'] ?? ''); parseContent();">
+                x-init="
+                    if (shouldTypewrite) {
+                        let parsed = parseFaceContext(content);
+                        parsedContent = parseUrls(parsed);
+                        typewrite(parsedContent.replace(/\n/g, '<br>'));
+                    } else {
+                        parseContent();
+                    }
+                ">
                 {{-- Typing indicator --}}
                 <div x-show="isTyping" class="typing-indicator">
                     <span></span>
@@ -92,9 +131,25 @@
                     <span></span>
                 </div>
 
-                {{-- Normal message content --}}
-                <div x-show="!isTyping" x-html="parsedContent.replace(/\n/g, '<br>')"></div>
+                {{-- Normal message content with typewriter effect for assistant --}}
+                <div x-show="!isTyping" x-html="displayedContent"></div>
+
+                {{-- Typewriter cursor for assistant messages --}}
+                <span x-show="!isTyping && role === 'assistant' && !typewriterDone"
+                      class="inline-block w-0.5 h-4 bg-gray-500 align-middle animate-pulse"></span>
             </div>
+
+            {{-- Suggestions contextuelles (dernier message assistant uniquement) --}}
+            @if($msg['role'] === 'assistant' && $loop->last && ($msg['content'] ?? '') !== '[TYPING_INDICATOR]' && !empty($contextualSuggestions))
+                <div class="flex flex-wrap gap-2 mt-3" x-data x-show="$el.closest('article').dataset.isLast === 'true'">
+                    @foreach($contextualSuggestions as $suggestion)
+                        <button wire:click="sendPredefinedPrompt('{{ addslashes($suggestion['prompt']) }}')"
+                                class="cursor-pointer px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-xs font-medium hover:bg-violet-100 hover:border-violet-300 transition-all duration-200">
+                            {{ $suggestion['label'] }}
+                        </button>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </article>
 @empty
