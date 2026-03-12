@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,9 +18,9 @@ use Tolery\AiCad\Database\Factories\SubscriptionPriceFactory;
  * @property string $currency
  * @property string $interval
  * @property bool $active
- * @property ?\Carbon\Carbon $archived_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property ?Carbon $archived_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read SubscriptionProduct $product
  * @property-read float $price
  */

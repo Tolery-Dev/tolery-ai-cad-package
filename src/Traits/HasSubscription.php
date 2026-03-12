@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Traits;
 
+use Laravel\Cashier\SubscriptionItem;
 use Tolery\AiCad\Models\SubscriptionProduct;
 
 trait HasSubscription
@@ -16,7 +17,7 @@ trait HasSubscription
 
         $subscription->loadMissing('items');
 
-        /** @var \Laravel\Cashier\SubscriptionItem|null $firstItem */
+        /** @var SubscriptionItem|null $firstItem */
         $firstItem = $subscription->items->first();
 
         if (! $firstItem) {

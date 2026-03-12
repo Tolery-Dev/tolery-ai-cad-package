@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Models;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -22,7 +23,7 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property string $stripe_id
  * @property string $stripe_price_id
  * @property ResetFrequency $frequency
- * @property-read \Illuminate\Database\Eloquent\Collection<int, SubscriptionPrice> $prices
+ * @property-read Collection<int, SubscriptionPrice> $prices
  * @property-read ?SubscriptionPrice $activeMonthlyPrice
  * @property-read ?SubscriptionPrice $activeYearlyPrice
  */

@@ -2,12 +2,14 @@
 
 namespace Tolery\AiCad\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
+use Stripe\Subscription;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
 use Tolery\AiCad\Models\ChatTeam;
@@ -451,17 +453,17 @@ class StripeWebhookController extends Controller
     /**
      * Create a limit for a team based on their subscription
      *
-     * @param  \Stripe\Subscription  $subscription  Subscription object with current_period_start and current_period_end properties
+     * @param  Subscription  $subscription  Subscription object with current_period_start and current_period_end properties
      */
-    protected function createLimitForTeam(ChatTeam $team, SubscriptionProduct $product, \Stripe\Subscription $subscription): void
+    protected function createLimitForTeam(ChatTeam $team, SubscriptionProduct $product, Subscription $subscription): void
     {
         /** @phpstan-ignore-next-line */
         $currentPeriodStart = $subscription->current_period_start;
         /** @phpstan-ignore-next-line */
         $currentPeriodEnd = $subscription->current_period_end;
 
-        $startDate = \Carbon\Carbon::createFromTimestamp($currentPeriodStart);
-        $endDate = \Carbon\Carbon::createFromTimestamp($currentPeriodEnd);
+        $startDate = Carbon::createFromTimestamp($currentPeriodStart);
+        $endDate = Carbon::createFromTimestamp($currentPeriodEnd);
 
         // Check if a limit already exists for this period
         $existingLimit = Limit::where('team_id', $team->id)
@@ -509,7 +511,7 @@ class StripeWebhookController extends Controller
      * When a plan is changed via the Stripe Billing Portal, Stripe keeps the same subscription ID
      * but the product changes. This method handles that by updating the existing record.
      */
-    protected function syncSubscriptionRecord(ChatTeam $team, \Stripe\Subscription $stripeSubscription, ?string $priceStripeId = null): void
+    protected function syncSubscriptionRecord(ChatTeam $team, Subscription $stripeSubscription, ?string $priceStripeId = null): void
     {
         // Get price from Stripe subscription if not provided
         if (! $priceStripeId) {
@@ -604,15 +606,15 @@ class StripeWebhookController extends Controller
      * This method handles plan changes by updating the existing limit's subscription_product_id
      * instead of creating duplicate limits for the same period.
      */
-    protected function createOrUpdateLimitForTeam(ChatTeam $team, SubscriptionProduct $product, \Stripe\Subscription $stripeSubscription): void
+    protected function createOrUpdateLimitForTeam(ChatTeam $team, SubscriptionProduct $product, Subscription $stripeSubscription): void
     {
         /** @phpstan-ignore-next-line */
         $currentPeriodStart = $stripeSubscription->current_period_start;
         /** @phpstan-ignore-next-line */
         $currentPeriodEnd = $stripeSubscription->current_period_end;
 
-        $startDate = \Carbon\Carbon::createFromTimestamp($currentPeriodStart);
-        $endDate = \Carbon\Carbon::createFromTimestamp($currentPeriodEnd);
+        $startDate = Carbon::createFromTimestamp($currentPeriodStart);
+        $endDate = Carbon::createFromTimestamp($currentPeriodEnd);
 
         // First, check if a limit already exists for this EXACT product and period
         $existingLimitForProduct = Limit::where('team_id', $team->id)

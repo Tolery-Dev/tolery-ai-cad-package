@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Http;
+use Tolery\AiCad\Http\Controllers\StripeWebhookController;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
@@ -214,8 +215,8 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = app(\Tolery\AiCad\Http\Controllers\StripeWebhookController::class);
-        $method = new \ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
+        $controller = app(StripeWebhookController::class);
+        $method = new ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
         $response = $method->invoke($controller, $payload['data']);
 
         expect($response->getStatusCode())->toBe(200);
@@ -258,8 +259,8 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = app(\Tolery\AiCad\Http\Controllers\StripeWebhookController::class);
-        $method = new \ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
+        $controller = app(StripeWebhookController::class);
+        $method = new ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
         $response = $method->invoke($controller, $payload['data']);
 
         expect($response->getStatusCode())->toBe(200);
@@ -285,8 +286,8 @@ describe('FilePurchase - Webhook Integration', function () {
             ],
         ];
 
-        $controller = app(\Tolery\AiCad\Http\Controllers\StripeWebhookController::class);
-        $method = new \ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
+        $controller = app(StripeWebhookController::class);
+        $method = new ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
         $response = $method->invoke($controller, $payload['data']);
 
         expect($response->getStatusCode())->toBe(200);

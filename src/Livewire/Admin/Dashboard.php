@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Livewire\Admin;
 use Flux\DateRange;
 use Illuminate\View\View;
 use Laravel\Cashier\Subscription;
+use Laravel\Cashier\SubscriptionItem;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
@@ -69,7 +70,7 @@ class Dashboard extends Component
         // Grouper par produit
         $subscriptionsByProduct = [];
         foreach ($activeSubscriptions as $subscription) {
-            /** @var \Laravel\Cashier\SubscriptionItem|null $item */
+            /** @var SubscriptionItem|null $item */
             $item = $subscription->items()->first();
             if ($item) {
                 /** @phpstan-ignore-next-line - stripe_product is a dynamic attribute from Cashier */

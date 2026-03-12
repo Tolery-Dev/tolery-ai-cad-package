@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -10,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $team_id
  * @property int $chat_id
  * @property int|null $message_id
- * @property \Carbon\Carbon $downloaded_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $downloaded_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class ChatDownload extends Model
 {

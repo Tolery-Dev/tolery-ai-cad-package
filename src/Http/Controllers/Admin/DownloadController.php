@@ -2,11 +2,13 @@
 
 namespace Tolery\AiCad\Http\Controllers\Admin;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Services\ZipGeneratorService;
@@ -21,7 +23,7 @@ class DownloadController extends Controller
      * - Middleware 'auth' (utilisateur authentifié)
      * - Gate authorization (vérification des permissions)
      */
-    public function download(Chat $chat): Response|StreamedResponse|\Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function download(Chat $chat): Response|StreamedResponse|BinaryFileResponse
     {
         // Vérifier l'autorisation explicite
         Gate::authorize('downloadFiles', $chat);
@@ -70,7 +72,7 @@ class DownloadController extends Controller
      * Télécharge le ZIP via stockage S3 avec URL temporaire.
      * Utilisé uniquement si S3 est configuré.
      */
-    public function downloadFromS3(Chat $chat): Response|\Illuminate\Http\RedirectResponse
+    public function downloadFromS3(Chat $chat): Response|RedirectResponse
     {
         Gate::authorize('downloadFiles', $chat);
 

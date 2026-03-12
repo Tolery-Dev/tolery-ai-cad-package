@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Tolery\AiCad\Http\Controllers\StreamController;
+use Tolery\AiCad\Http\Controllers\StripeWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,5 +29,5 @@ Route::middleware(['web', 'auth'])->prefix('ai-cad')->name('ai-cad.')->group(fun
 |
 */
 
-Route::post('/ai-cad/stripe/webhook', [\Tolery\AiCad\Http\Controllers\StripeWebhookController::class, 'handleWebhook'])
+Route::post('/ai-cad/stripe/webhook', [StripeWebhookController::class, 'handleWebhook'])
     ->name('ai-cad.stripe.webhook');

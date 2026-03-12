@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Traits;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Laravel\Cashier\SubscriptionItem;
 use Throwable;
 use Tolery\AiCad\Enum\ResetFrequency;
 use Tolery\AiCad\Models\Limit;
@@ -64,7 +65,7 @@ trait HasLimits
                 $items = $subscription->items;
 
                 if ($items->isNotEmpty()) {
-                    /** @var \Laravel\Cashier\SubscriptionItem $item */
+                    /** @var SubscriptionItem $item */
                     $item = $items->first();
                     $stripePrice = $item->asStripeSubscriptionItem()->price;
                     $interval = $stripePrice->recurring->interval ?? null;
