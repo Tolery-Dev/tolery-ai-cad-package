@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Tolery\AiCad\Enum\MaterialFamily;
@@ -13,8 +14,8 @@ use Tolery\AiCad\Enum\MaterialFamily;
  * @property ?MaterialFamily $material_family
  * @property bool $active
  * @property int $sort_order
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class PredefinedPrompt extends Model
 {

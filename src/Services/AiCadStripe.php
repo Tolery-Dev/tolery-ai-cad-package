@@ -2,7 +2,14 @@
 
 namespace Tolery\AiCad\Services;
 
+use Stripe\Checkout\Session;
+use Stripe\Collection;
+use Stripe\Customer;
+use Stripe\Event;
+use Stripe\Exception\SignatureVerificationException;
+use Stripe\PaymentIntent;
 use Stripe\StripeClient;
+use Stripe\Webhook;
 
 /**
  * Service dédié pour les appels API Stripe AI-CAD.
@@ -60,7 +67,7 @@ class AiCadStripe
      * @param  string  $currency  Currency code (default: eur)
      * @param  array  $metadata  Additional metadata
      */
-    public function createPaymentIntent(int $amount, string $currency = 'eur', array $metadata = []): \Stripe\PaymentIntent
+    public function createPaymentIntent(int $amount, string $currency = 'eur', array $metadata = []): PaymentIntent
     {
         return $this->client()->paymentIntents->create([
             'amount' => $amount,
@@ -77,7 +84,7 @@ class AiCadStripe
     /**
      * Retrieve a PaymentIntent by ID.
      */
-    public function retrievePaymentIntent(string $paymentIntentId): \Stripe\PaymentIntent
+    public function retrievePaymentIntent(string $paymentIntentId): PaymentIntent
     {
         return $this->client()->paymentIntents->retrieve($paymentIntentId);
     }
@@ -96,7 +103,7 @@ class AiCadStripe
         string $cancelUrl,
         array $metadata = [],
         ?string $customerId = null
-    ): \Stripe\Checkout\Session {
+    ): Session {
         $params = [
             'mode' => 'subscription',
             'line_items' => [
@@ -140,11 +147,11 @@ class AiCadStripe
      * @param  string  $payload  Raw request body
      * @param  string  $signature  Stripe-Signature header
      *
-     * @throws \Stripe\Exception\SignatureVerificationException
+     * @throws SignatureVerificationException
      */
-    public function verifyWebhookSignature(string $payload, string $signature): \Stripe\Event
+    public function verifyWebhookSignature(string $payload, string $signature): Event
     {
-        return \Stripe\Webhook::constructEvent(
+        return Webhook::constructEvent(
             $payload,
             $signature,
             $this->getWebhookSecret()
@@ -154,7 +161,7 @@ class AiCadStripe
     /**
      * Get all active products from Stripe.
      */
-    public function listProducts(int $limit = 100): \Stripe\Collection
+    public function listProducts(int $limit = 100): Collection
     {
         return $this->client()->products->all([
             'active' => true,
@@ -165,7 +172,7 @@ class AiCadStripe
     /**
      * Get all prices for a product.
      */
-    public function listPrices(string $productId, int $limit = 100): \Stripe\Collection
+    public function listPrices(string $productId, int $limit = 100): Collection
     {
         return $this->client()->prices->all([
             'product' => $productId,
@@ -177,7 +184,7 @@ class AiCadStripe
     /**
      * Create or update a Stripe customer for the team.
      */
-    public function createOrUpdateCustomer(string $email, string $name, ?string $existingCustomerId = null): \Stripe\Customer
+    public function createOrUpdateCustomer(string $email, string $name, ?string $existingCustomerId = null): Customer
     {
         $customerData = [
             'email' => $email,

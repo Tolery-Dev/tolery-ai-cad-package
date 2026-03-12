@@ -101,6 +101,12 @@
                         }
                         return html.length;
                     },
+                    parseMarkdown(text) {
+                        if (!text || typeof window.marked === 'undefined') {
+                            return text ? text.replace(/\n/g, '<br>') : text;
+                        }
+                        return marked.parse(text, { breaks: true });
+                    },
                     parseContent() {
                         if (this.content === '[TYPING_INDICATOR]') {
                             this.isTyping = true;
@@ -109,17 +115,23 @@
                         } else {
                             this.isTyping = false;
                             let parsed = this.parseFaceContext(this.content);
-                            this.parsedContent = this.parseUrls(parsed);
-                            this.displayedContent = this.parsedContent.replace(/\n/g, '<br>');
+                            this.parsedContent = this.role === 'assistant'
+                                ? this.parseMarkdown(parsed)
+                                : this.parseUrls(parsed).replace(/\n/g, '<br>');
+                            this.displayedContent = this.parsedContent;
                             this.typewriterDone = true;
                         }
                     }
                 }"
                 x-init="
-                    if (shouldTypewrite) {
+                    if (content === '[TYPING_INDICATOR]') {
+                        isTyping = true;
+                        parsedContent = '';
+                        displayedContent = '';
+                    } else if (shouldTypewrite && role === 'assistant') {
                         let parsed = parseFaceContext(content);
-                        parsedContent = parseUrls(parsed);
-                        typewrite(parsedContent.replace(/\n/g, '<br>'));
+                        parsedContent = parseMarkdown(parsed);
+                        typewrite(parsedContent);
                     } else {
                         parseContent();
                     }
@@ -132,7 +144,8 @@
                 </div>
 
                 {{-- Normal message content with typewriter effect for assistant --}}
-                <div x-show="!isTyping" x-html="displayedContent"></div>
+                <div x-show="!isTyping" x-html="displayedContent"
+                     :class="role === 'assistant' ? 'prose prose-sm prose-gray max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-a:text-violet-600 hover:prose-a:text-violet-800' : ''"></div>
 
                 {{-- Typewriter cursor for assistant messages --}}
                 <span x-show="!isTyping && role === 'assistant' && !typewriterDone"

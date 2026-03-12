@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Number;
@@ -13,9 +14,9 @@ use Illuminate\Support\Number;
  * @property string $stripe_payment_intent_id
  * @property int $amount
  * @property string $currency
- * @property \Carbon\Carbon $purchased_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon $purchased_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class FilePurchase extends Model
 {

@@ -3,11 +3,13 @@
 namespace Tolery\AiCad\Services;
 
 use Illuminate\Support\Facades\Log;
+use Stripe\Price;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
+use Tolery\AiCad\Models\Limit;
 use Tolery\AiCad\Models\SubscriptionProduct;
 
 class FileAccessService
@@ -86,7 +88,7 @@ class FileAccessService
             ];
         }
 
-        /** @var \Tolery\AiCad\Models\Limit|null $limit */
+        /** @var Limit|null $limit */
         $limit = $team->limits()
             ->where('subscription_product_id', $product->id)
             ->where('end_date', '>', now())
@@ -215,7 +217,7 @@ class FileAccessService
             ];
         }
 
-        /** @var \Tolery\AiCad\Models\Limit|null $limit */
+        /** @var Limit|null $limit */
         $limit = $team->limits()
             ->where('subscription_product_id', $product->id)
             ->where('end_date', '>', now())
@@ -303,7 +305,7 @@ class FileAccessService
             $product = $team->getSubscriptionProduct();
 
             if ($product) {
-                /** @var \Tolery\AiCad\Models\Limit|null $limit */
+                /** @var Limit|null $limit */
                 $limit = $team->limits()
                     ->where('subscription_product_id', $product->id)
                     ->where('end_date', '>', now())
@@ -359,7 +361,7 @@ class FileAccessService
             $product = $team->getSubscriptionProduct();
 
             if ($product) {
-                /** @var \Tolery\AiCad\Models\Limit|null $limit */
+                /** @var Limit|null $limit */
                 $limit = $team->limits()
                     ->where('subscription_product_id', $product->id)
                     ->where('end_date', '>', now())
@@ -403,7 +405,7 @@ class FileAccessService
             return null;
         }
 
-        /** @var \Tolery\AiCad\Models\Limit|null $limit */
+        /** @var Limit|null $limit */
         $limit = $team->limits()
             ->where('subscription_product_id', $product->id)
             ->where('end_date', '>', now())
@@ -464,7 +466,7 @@ class FileAccessService
                 return config('ai-cad.file_purchase_price', 999);
             }
 
-            /** @var \Stripe\Price $price */
+            /** @var Price $price */
             $price = $prices->data[0];
 
             Log::info('Retrieved one-shot price from Stripe', [

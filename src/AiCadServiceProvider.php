@@ -30,8 +30,18 @@ use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Livewire\ChatHistoryPanel;
 use Tolery\AiCad\Livewire\StripePaymentModal;
+use Tolery\AiCad\Models\Chat;
+use Tolery\AiCad\Models\ChatDownload;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\ChatUser;
+use Tolery\AiCad\Models\FilePurchase;
+use Tolery\AiCad\Models\PredefinedPrompt;
+use Tolery\AiCad\Models\StepMessage;
+use Tolery\AiCad\Policies\ChatDownloadPolicy;
+use Tolery\AiCad\Policies\ChatPolicy;
+use Tolery\AiCad\Policies\FilePurchasePolicy;
+use Tolery\AiCad\Policies\PredefinedPromptPolicy;
+use Tolery\AiCad\Policies\StepMessagePolicy;
 
 class AiCadServiceProvider extends PackageServiceProvider
 {
@@ -92,11 +102,11 @@ class AiCadServiceProvider extends PackageServiceProvider
      */
     protected function registerPolicies(): void
     {
-        Gate::policy(\Tolery\AiCad\Models\Chat::class, \Tolery\AiCad\Policies\ChatPolicy::class);
-        Gate::policy(\Tolery\AiCad\Models\FilePurchase::class, \Tolery\AiCad\Policies\FilePurchasePolicy::class);
-        Gate::policy(\Tolery\AiCad\Models\ChatDownload::class, \Tolery\AiCad\Policies\ChatDownloadPolicy::class);
-        Gate::policy(\Tolery\AiCad\Models\PredefinedPrompt::class, \Tolery\AiCad\Policies\PredefinedPromptPolicy::class);
-        Gate::policy(\Tolery\AiCad\Models\StepMessage::class, \Tolery\AiCad\Policies\StepMessagePolicy::class);
+        Gate::policy(Chat::class, ChatPolicy::class);
+        Gate::policy(FilePurchase::class, FilePurchasePolicy::class);
+        Gate::policy(ChatDownload::class, ChatDownloadPolicy::class);
+        Gate::policy(PredefinedPrompt::class, PredefinedPromptPolicy::class);
+        Gate::policy(StepMessage::class, StepMessagePolicy::class);
     }
 
     protected function registerLivewireComponents(): self
