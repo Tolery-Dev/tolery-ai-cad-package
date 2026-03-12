@@ -93,6 +93,7 @@
 
 @push('scripts')
 <script src="{{ asset('vendor/ai-cad/assets/app.js') }}" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
 @endpush
 
 @push('styles')
