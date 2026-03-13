@@ -8,7 +8,9 @@ use Stripe\Customer;
 use Stripe\Event;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\PaymentIntent;
+use Stripe\PromotionCode;
 use Stripe\StripeClient;
+use Stripe\Subscription;
 use Stripe\Webhook;
 
 /**
@@ -102,7 +104,8 @@ class AiCadStripe
         string $successUrl,
         string $cancelUrl,
         array $metadata = [],
-        ?string $customerId = null
+        ?string $customerId = null,
+        ?string $promotionCodeId = null
     ): Session {
         $params = [
             'mode' => 'subscription',
@@ -122,6 +125,10 @@ class AiCadStripe
 
         if ($customerId) {
             $params['customer'] = $customerId;
+        }
+
+        if ($promotionCodeId) {
+            $params['discounts'] = [['promotion_code' => $promotionCodeId]];
         }
 
         return $this->client()->checkout->sessions->create($params);
@@ -196,5 +203,54 @@ class AiCadStripe
         }
 
         return $this->client()->customers->create($customerData);
+    }
+
+    /**
+     * Create a Stripe promotion code linked to a coupon.
+     *
+     * @param  string  $couponId  The parent coupon ID
+     * @param  string  $code  The human-readable promotion code
+     * @param  array  $metadata  Additional metadata
+     */
+    public function createPromotionCode(string $couponId, string $code, array $metadata = []): PromotionCode
+    {
+        return $this->client()->promotionCodes->create([
+            'coupon' => $couponId,
+            'code' => $code,
+            'max_redemptions' => 1,
+            'metadata' => $metadata,
+        ]);
+    }
+
+    /**
+     * Deactivate a Stripe promotion code.
+     */
+    public function deactivatePromotionCode(string $promotionCodeId): PromotionCode
+    {
+        return $this->client()->promotionCodes->update($promotionCodeId, [
+            'active' => false,
+        ]);
+    }
+
+    /**
+     * Retrieve a Stripe subscription by ID with discount info.
+     */
+    public function retrieveSubscription(string $subscriptionId): Subscription
+    {
+        return $this->client()->subscriptions->retrieve($subscriptionId, [
+            'expand' => ['discount', 'discount.promotion_code'],
+        ]);
+    }
+
+    /**
+     * List active subscriptions for a customer.
+     */
+    public function listCustomerSubscriptions(string $customerId): Collection
+    {
+        return $this->client()->subscriptions->all([
+            'customer' => $customerId,
+            'status' => 'active',
+            'expand' => ['data.discount', 'data.discount.promotion_code'],
+        ]);
     }
 }
