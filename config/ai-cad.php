@@ -22,6 +22,7 @@ return [
         'key' => env('AICAD_STRIPE_KEY'),
         'secret' => env('AICAD_STRIPE_SECRET'),
         'webhook_secret' => env('AICAD_STRIPE_WEBHOOK_SECRET'),
+        'beta_coupon_id' => env('AICAD_STRIPE_BETA_COUPON_ID'),
     ],
 
     /*
