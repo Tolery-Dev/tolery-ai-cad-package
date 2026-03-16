@@ -100,5 +100,11 @@
             <flux:icon name="chat-bubble-bottom-center" class="mr-2" />
             Gérer les messages d'étapes
         </flux:button>
+        @if(Route::has('admin.tolerycad.beta-testers'))
+            <flux:button href="{{ route('admin.tolerycad.beta-testers') }}" variant="outline" class="justify-start">
+                <flux:icon name="user-group" class="mr-2" />
+                Gérer les beta testeurs
+            </flux:button>
+        @endif
     </div>
 </div>
