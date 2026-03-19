@@ -109,5 +109,11 @@
                 Gérer les beta testeurs
             </flux:button>
         @endif
+        @if(Route::has('admin.tolerycad.dfm-error-codes'))
+            <flux:button href="{{ route('admin.tolerycad.dfm-error-codes') }}" variant="outline" class="justify-start">
+                <flux:icon name="exclamation-triangle" class="mr-2" />
+                Gérer les codes d'erreurs DFM
+            </flux:button>
+        @endif
     </div>
 </div>
