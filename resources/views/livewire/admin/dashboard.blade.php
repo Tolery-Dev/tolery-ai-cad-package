@@ -2,7 +2,10 @@
     {{-- Header with Period Selector --}}
     <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <flux:heading level="1" size="xl">Dashboard ToleryCAD</flux:heading>
+            <div class="flex items-center gap-3">
+                <flux:heading level="1" size="xl">Dashboard ToleryCAD</flux:heading>
+                <flux:badge color="zinc" size="sm">v{{ $version }}</flux:badge>
+            </div>
             <flux:text class="text-gray-500">Statistiques et revenus</flux:text>
         </div>
         <flux:date-picker

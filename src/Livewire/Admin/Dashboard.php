@@ -97,6 +97,7 @@ class Dashboard extends Component
     {
         return view('ai-cad::livewire.admin.dashboard', [
             'kpis' => $this->getKpis(),
+            'version' => \Composer\InstalledVersions::getPrettyVersion('tolery/ai-cad') ?? 'dev',
         ]);
     }
 }
