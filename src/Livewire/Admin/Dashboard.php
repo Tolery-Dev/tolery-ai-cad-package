@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Livewire\Admin;
 
+use Composer\InstalledVersions;
 use Flux\DateRange;
 use Illuminate\View\View;
 use Laravel\Cashier\Subscription;
@@ -97,7 +98,7 @@ class Dashboard extends Component
     {
         return view('ai-cad::livewire.admin.dashboard', [
             'kpis' => $this->getKpis(),
-            'version' => \Composer\InstalledVersions::getPrettyVersion('tolery/ai-cad') ?? 'dev',
+            'version' => InstalledVersions::getPrettyVersion('tolery/ai-cad') ?? 'dev',
         ]);
     }
 }
