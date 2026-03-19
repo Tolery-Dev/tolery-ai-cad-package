@@ -1,6 +1,5 @@
 {
   "name": "tolery/ai-cad",
-  "version": "1.3.0",
   "description": "Package to use AI CAD in Laravel",
   "keywords": [
     "tolery",
