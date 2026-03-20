@@ -73,6 +73,9 @@ class Chatbot extends Component
     /** Suggestions contextuelles affichées après la dernière réponse du bot */
     public array $contextualSuggestions = [];
 
+    /** Mapping code d'erreur DFM → message traduit (chargé au mount) */
+    public array $dfmErrorCodes = [];
+
     /** ID du message assistant qui doit être affiché avec l'effet typewriter */
     public ?int $typewriteMessageId = null;
 
@@ -130,6 +133,9 @@ class Chatbot extends Component
 
         // Charger les suggestions contextuelles selon l'état du chat
         $this->contextualSuggestions = $this->getContextualSuggestions();
+
+        // Charger les codes d'erreur DFM pour le mapping côté frontend
+        $this->dfmErrorCodes = $this->loadDfmErrorCodes();
     }
 
     public function updatedPartName($value): void
@@ -727,6 +733,29 @@ class Chatbot extends Component
                 'version' => $m->getVersionLabel(), // "v1", "v2", "v3" ou null
                 'user' => $m->user, // Pour afficher l'avatar
             ])->all();
+    }
+
+    /**
+     * Charge les codes d'erreur DFM depuis la base de données.
+     * Retourne un mapping {code: message} selon la locale courante.
+     *
+     * @return array<string, string>
+     */
+    protected function loadDfmErrorCodes(): array
+    {
+        $modelClass = config('ai-cad.dfm_error_code_model');
+
+        if (! $modelClass || ! class_exists($modelClass)) {
+            return [];
+        }
+
+        $locale = app()->getLocale();
+        $messageColumn = $locale === 'fr' ? 'message_fr' : 'message_en';
+
+        return $modelClass::query()
+            ->pluck($messageColumn, 'code')
+            ->filter()
+            ->all();
     }
 
     protected function storeMessage(string $role, string $content): ChatMessage
