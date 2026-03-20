@@ -37,7 +37,7 @@
             </div>
             <div
                 class="{{ $msg['role'] === 'user' ? 'inline-block bg-violet-100 text-gray-900 text-left' : 'inline-block bg-gray-100 text-gray-900' }} rounded-xl px-3 py-2"
-                wire:key="message-content-{{ $msg['id'] ?? $loop->index }}"
+                wire:key="msg-{{ $msg['id'] ?? $loop->index }}-{{ substr(md5($msg['content'] ?? ''), 0, 8) }}"
                 x-data="{
                     content: @js($msg['content'] ?? ''),
                     role: @js($msg['role']),

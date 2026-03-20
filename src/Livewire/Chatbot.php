@@ -522,8 +522,13 @@ class Chatbot extends Component
         /** @var ChatMessage|null $asst */
         $asst = $this->findLatestAssistantMessage();
 
-        // Détermine le texte final du message (priorité à chat_response, sinon conserve, sinon 'OK')
-        $messageText = $chatResponse !== '' ? $chatResponse : (($asst?->message) ?: 'OK');
+        // Détermine le texte final du message (priorité à chat_response, sinon conserve, sinon fallback)
+        // Ne jamais conserver [TYPING_INDICATOR] comme message final
+        $fallbackMessage = $asst?->message;
+        if ($fallbackMessage === '[TYPING_INDICATOR]') {
+            $fallbackMessage = null;
+        }
+        $messageText = $chatResponse !== '' ? $chatResponse : ($fallbackMessage ?: 'Fichier généré avec succès.');
 
         if ($asst) {
             $asst->message = $messageText;
@@ -723,7 +728,9 @@ class Chatbot extends Component
 
     protected function mapDbMessagesToArray(): array
     {
-        return $this->chat->messages()->with('user')->orderBy('created_at')->get()
+        return $this->chat->messages()->with('user')
+            ->where('message', '!=', '[TYPING_INDICATOR]')
+            ->orderBy('created_at')->get()
             ->map(fn (ChatMessage $m) => [
                 'id' => $m->id,
                 'role' => $m->role,
