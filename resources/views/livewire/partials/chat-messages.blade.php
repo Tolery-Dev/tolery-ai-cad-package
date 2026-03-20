@@ -41,12 +41,25 @@
                 x-data="{
                     content: @js($msg['content'] ?? ''),
                     role: @js($msg['role']),
+                    dfmErrorCodes: @js($dfmErrorCodes ?? []),
                     shouldTypewrite: @js(($msg['id'] ?? null) === $typewriteMessageId),
                     isTyping: false,
+                    isErrorCode: false,
+                    errorMessage: '',
                     parsedContent: '',
                     displayedContent: '',
                     typewriterDone: true,
                     typewriterTimer: null,
+                    checkDfmErrorCode(text) {
+                        if (this.role !== 'assistant' || !text) return false;
+                        const trimmed = text.trim();
+                        if (this.dfmErrorCodes[trimmed]) {
+                            this.isErrorCode = true;
+                            this.errorMessage = this.dfmErrorCodes[trimmed];
+                            return true;
+                        }
+                        return false;
+                    },
                     parseUrls(text) {
                         if (!text) return text;
                         const urlRegex = /(https?:\/\/[^\s<]+)/g;
@@ -112,6 +125,9 @@
                             this.isTyping = true;
                             this.parsedContent = '';
                             this.displayedContent = '';
+                        } else if (this.checkDfmErrorCode(this.content)) {
+                            this.isTyping = false;
+                            this.typewriterDone = true;
                         } else {
                             this.isTyping = false;
                             let parsed = this.parseFaceContext(this.content);
@@ -128,6 +144,8 @@
                         isTyping = true;
                         parsedContent = '';
                         displayedContent = '';
+                    } else if (checkDfmErrorCode(content)) {
+                        // DFM error code detected, display handled by template
                     } else if (shouldTypewrite && role === 'assistant') {
                         let parsed = parseFaceContext(content);
                         parsedContent = parseMarkdown(parsed);
@@ -143,12 +161,23 @@
                     <span></span>
                 </div>
 
+                {{-- DFM Error Code display --}}
+                <div x-show="isErrorCode" x-cloak class="flex items-start gap-2 text-amber-800">
+                    <svg class="w-5 h-5 shrink-0 text-amber-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <div>
+                        <span class="text-xs font-mono text-amber-500" x-text="'Code ' + content.trim()"></span>
+                        <p class="text-sm mt-0.5" x-text="errorMessage"></p>
+                    </div>
+                </div>
+
                 {{-- Normal message content with typewriter effect for assistant --}}
-                <div x-show="!isTyping" x-html="displayedContent"
+                <div x-show="!isTyping && !isErrorCode" x-html="displayedContent"
                      :class="role === 'assistant' ? 'prose prose-sm prose-gray max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-a:text-violet-600 hover:prose-a:text-violet-800' : ''"></div>
 
                 {{-- Typewriter cursor for assistant messages --}}
-                <span x-show="!isTyping && role === 'assistant' && !typewriterDone"
+                <span x-show="!isTyping && !isErrorCode && role === 'assistant' && !typewriterDone"
                       class="inline-block w-0.5 h-4 bg-gray-500 align-middle animate-pulse"></span>
             </div>
 

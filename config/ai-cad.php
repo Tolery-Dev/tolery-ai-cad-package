@@ -32,6 +32,17 @@ return [
     */
     'file_purchase_price' => env('AICAD_FILE_PURCHASE_PRICE', 999), // Prix en centimes (9.99€ par défaut)
 
+    /*
+    |--------------------------------------------------------------------------
+    | DFM Error Code Model
+    |--------------------------------------------------------------------------
+    |
+    | The Eloquent model used to resolve DFM error codes to translated messages.
+    | Must have 'code', 'message_fr', and 'message_en' columns.
+    |
+    */
+    'dfm_error_code_model' => env('AICAD_DFM_ERROR_CODE_MODEL', 'App\\Models\\DfmErrorCode'),
+
     'api' => [
         'base_url' => env('AI_CAD_API_URL', 'https://tolery-dfm-docker-api.cleverapps.io/api-production'), // exemple
         'key' => env('AICAD_API_KEY'),
