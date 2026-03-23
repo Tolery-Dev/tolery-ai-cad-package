@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -69,7 +70,7 @@ class DownloadCadAssetsJob implements ShouldQueue
         ];
 
         foreach ($urlsToDownload as $key => $url) {
-            /** @var \Illuminate\Http\Client\Response|null $response */
+            /** @var Response|null $response */
             $response = $responses[$key] ?? null;
 
             if (! $response || ! $response->successful()) {
