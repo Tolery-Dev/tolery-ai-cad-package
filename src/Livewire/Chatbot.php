@@ -6,6 +6,7 @@ use Flux\Flux;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -534,13 +535,13 @@ class Chatbot extends Component
             $asst = $this->storeMessage(ChatMessage::ROLE_ASSISTANT, $messageText);
         }
 
-        // Stocke l'URL JSON externe directement — Three.js la fetche immédiatement sans attendre le Job
-        // getJSONEdgeUrl() retourne l'URL telle quelle si elle commence par http(s)
+        // Télécharge le JSON synchroniquement — indispensable car le browser ne peut pas
+        // fetcher directement l'URL externe (CORS : pas de Access-Control-Allow-Origin sur l'API DFM)
         if ($resolvedJsonUrl) {
-            $asst->ai_json_edge_path = $resolvedJsonUrl;
+            $asst->ai_json_edge_path = $this->downloadFileSynchronously($resolvedJsonUrl, 'json');
         }
 
-        // Les fichiers lourds seront téléchargés en background par DownloadCadAssetsJob
+        // OBJ/STEP/PDF seront téléchargés en background par DownloadCadAssetsJob
         $asst->cad_files_ready = false;
         $asst->save();
 
@@ -553,11 +554,10 @@ class Chatbot extends Component
             Log::info('[AICAD] Première pièce générée avec succès', ['chat_id' => $this->chat->id]);
         }
 
-        // Dispatch du Job background pour OBJ, STEP, PDF + copie locale du JSON
+        // Dispatch du Job background pour OBJ, STEP, PDF uniquement
         $urlsForJob = array_filter([
             'obj' => (is_string($objUrl) && $objUrl !== '') ? $objUrl : null,
             'step' => (is_string($stepUrl) && $stepUrl !== '') ? $stepUrl : null,
-            'json' => $resolvedJsonUrl,
             'pdf' => (is_string($techDrawingUrl) && $techDrawingUrl !== '') ? $techDrawingUrl : null,
         ]);
 
@@ -616,6 +616,37 @@ class Chatbot extends Component
         $this->pendingFilesDownload = false;
         $this->dispatchExportLinks($asst);
         $this->messages = $this->mapDbMessagesToArray();
+    }
+
+    /**
+     * Télécharge un fichier depuis une URL externe et le stocke localement.
+     * Utilisé pour le JSON uniquement (CORS empêche le browser de le fetcher directement).
+     * Retourne le chemin local, ou l'URL externe en cas d'échec (fallback gracieux).
+     */
+    private function downloadFileSynchronously(string $url, string $extension): string
+    {
+        try {
+            $apiKey = config('ai-cad.api.key');
+            $response = Http::when($apiKey, fn ($req) => $req->withToken($apiKey))
+                ->timeout(30)
+                ->get($url);
+
+            if ($response->successful()) {
+                $folder = $this->chat->getStorageFolder();
+                $filename = uniqid("cad_{$extension}_").'.'.$extension;
+                $path = "{$folder}/{$filename}";
+                Storage::put($path, $response->body());
+                logger()->info("[AICAD] JSON téléchargé localement: {$url} → {$path}");
+
+                return $path;
+            }
+
+            logger()->warning("[AICAD] Échec download {$extension} (HTTP {$response->status()})", ['url' => $url]);
+        } catch (\Exception $e) {
+            logger()->warning("[AICAD] Exception download {$extension}", ['url' => $url, 'error' => $e->getMessage()]);
+        }
+
+        return $url; // Fallback sur l'URL externe
     }
 
     /**
