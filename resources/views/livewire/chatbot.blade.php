@@ -5,18 +5,18 @@
              // Écouter les événements de génération
              window.addEventListener('cad-generation-started', () => {
                  this.isGenerating = true;
-                 console.log('[RELOAD PROTECTION] Generation started, protection enabled');
+                 aicadLog('[RELOAD PROTECTION] Generation started, protection enabled');
              });
 
              window.addEventListener('cad-generation-ended', () => {
                  this.isGenerating = false;
-                 console.log('[RELOAD PROTECTION] Generation ended, protection disabled');
+                 aicadLog('[RELOAD PROTECTION] Generation ended, protection disabled');
              });
 
              // Protection contre le reload/fermeture pendant la génération
              window.addEventListener('beforeunload', (e) => {
                  if (this.isGenerating) {
-                     console.log('[RELOAD PROTECTION] Blocking reload/close attempt');
+                     aicadLog('[RELOAD PROTECTION] Blocking reload/close attempt');
                      e.preventDefault();
                      e.returnValue = ''; // Chrome nécessite returnValue
                      return ''; // Firefox/Safari
@@ -180,6 +180,12 @@
 
 @script
 <script>
+    // Logging conditionnel : actif uniquement en mode debug (APP_DEBUG=true)
+    // Évite d'exposer des chemins de fichiers sensibles (OBJ/STEP) en production
+    const aicadLog   = @js(config('app.debug')) ? console.log.bind(console)   : () => {};
+    const aicadWarn  = @js(config('app.debug')) ? console.warn.bind(console)  : () => {};
+    const aicadError = @js(config('app.debug')) ? console.error.bind(console) : () => {};
+
     Alpine.data('cadStreamModal', () => {
         return {
             open: false,
@@ -308,7 +314,7 @@
             async notifyTeamOfFailure() {
                 if (this.teamNotified) return;
 
-                console.log('[AICAD] 📧 Notifying Tolery team of repeated failure...');
+                aicadLog('[AICAD] 📧 Notifying Tolery team of repeated failure...');
                 try {
                     await $wire.notifyStreamFailure({
                         message: this.lastRequest.message?.substring(0, 500),
@@ -318,14 +324,14 @@
                         retryCount: this.retryCount,
                     });
                     this.teamNotified = true;
-                    console.log('[AICAD] ✅ Team notification sent successfully');
+                    aicadLog('[AICAD] ✅ Team notification sent successfully');
                 } catch (e) {
-                    console.error('[AICAD] ❌ Failed to notify team:', e);
+                    aicadError('[AICAD] ❌ Failed to notify team:', e);
                 }
             },
             async retryStream() {
                 if (!this.lastRequest.message) {
-                    console.error('[AICAD] Cannot retry: no previous request stored');
+                    aicadError('[AICAD] Cannot retry: no previous request stored');
                     return;
                 }
 
@@ -397,18 +403,18 @@
 
                 const url = @js(route('ai-cad.stream.generate-cad'));
 
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log(`[AICAD] 🚀 ${isRetryAttempt ? 'RETRY' : 'NEW'} CAD GENERATION REQUEST`);
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('[AICAD] 🔑 Session ID:', sessionId || 'NEW SESSION (no ID provided)');
-                console.log('[AICAD] 📝 Message:', message?.substring(0, 150) + (message?.length > 150 ? '...' : ''));
-                console.log('[AICAD] ✏️  Is Edit Request:', isEdit ? 'YES' : 'NO');
-                console.log('[AICAD] 🔄 Retry Attempt:', isRetryAttempt ? `#${this.retryCount}` : 'N/A (new request)');
-                console.log('[AICAD] 📍 API Endpoint:', url);
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                aicadLog(`[AICAD] 🚀 ${isRetryAttempt ? 'RETRY' : 'NEW'} CAD GENERATION REQUEST`);
+                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                aicadLog('[AICAD] 🔑 Session ID:', sessionId || 'NEW SESSION (no ID provided)');
+                aicadLog('[AICAD] 📝 Message:', message?.substring(0, 150) + (message?.length > 150 ? '...' : ''));
+                aicadLog('[AICAD] ✏️  Is Edit Request:', isEdit ? 'YES' : 'NO');
+                aicadLog('[AICAD] 🔄 Retry Attempt:', isRetryAttempt ? `#${this.retryCount}` : 'N/A (new request)');
+                aicadLog('[AICAD] 📍 API Endpoint:', url);
+                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
                 try {
-                    console.log('[AICAD] 📡 Sending fetch request...');
+                    aicadLog('[AICAD] 📡 Sending fetch request...');
                     const res = await fetch(url, {
                         method: 'POST',
                         headers: {
@@ -425,7 +431,7 @@
                         signal: this.controller.signal,
                     });
 
-                    console.log('[AICAD] 📨 Response received:', {
+                    aicadLog('[AICAD] 📨 Response received:', {
                         status: res.status,
                         statusText: res.statusText,
                         ok: res.ok,
@@ -434,7 +440,7 @@
                     });
 
                     if (!res.ok || !res.body) {
-                        console.error('[AICAD] ❌ Response not OK or no body:', {
+                        aicadError('[AICAD] ❌ Response not OK or no body:', {
                             status: res.status,
                             statusText: res.statusText,
                             ok: res.ok,
@@ -477,37 +483,37 @@
                                     // Extract session_id from various possible locations
                                     const extractedSessionId = resp.session_id || payload.session_id || sessionId;
 
-                                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                                    console.log('[AICAD] ✅ GENERATION COMPLETED - Final Response Received');
-                                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                                    console.log('[AICAD] 🔑 Session ID:', extractedSessionId || 'N/A');
-                                    console.log('[AICAD] 🔍 Full payload keys:', Object.keys(payload));
-                                    console.log('[AICAD] 🔍 Response keys:', Object.keys(resp));
+                                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                    aicadLog('[AICAD] ✅ GENERATION COMPLETED - Final Response Received');
+                                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                    aicadLog('[AICAD] 🔑 Session ID:', extractedSessionId || 'N/A');
+                                    aicadLog('[AICAD] 🔍 Full payload keys:', Object.keys(payload));
+                                    aicadLog('[AICAD] 🔍 Response keys:', Object.keys(resp));
                                     if (resp.obj_export) {
-                                        console.log('[AICAD] 📦 OBJ File:', resp.obj_export);
+                                        aicadLog('[AICAD] 📦 OBJ File:', resp.obj_export);
                                     }
                                     if (resp.step_export) {
-                                        console.log('[AICAD] 📐 STEP File:', resp.step_export);
+                                        aicadLog('[AICAD] 📐 STEP File:', resp.step_export);
                                     }
                                     if (resp.tessellated_export) {
-                                        console.log('[AICAD] 🔺 Tessellated File:', resp.tessellated_export);
+                                        aicadLog('[AICAD] 🔺 Tessellated File:', resp.tessellated_export);
                                     }
                                     if (resp.attribute_and_transientid_map) {
-                                        console.log('[AICAD] 🗺️  Attribute Map:', resp.attribute_and_transientid_map);
+                                        aicadLog('[AICAD] 🗺️  Attribute Map:', resp.attribute_and_transientid_map);
                                     }
                                     if (resp.technical_drawing) {
-                                        console.log('[AICAD] 📄 Technical Drawing:', resp.technical_drawing);
+                                        aicadLog('[AICAD] 📄 Technical Drawing:', resp.technical_drawing);
                                     }
                                     if (resp.screenshot) {
-                                        console.log('[AICAD] 📸 Screenshot:', resp.screenshot);
+                                        aicadLog('[AICAD] 📸 Screenshot:', resp.screenshot);
                                     }
                                     if (resp.manufacturing_errors && resp.manufacturing_errors.length > 0) {
-                                        console.warn('[AICAD] ⚠️  Manufacturing Errors:', resp.manufacturing_errors);
+                                        aicadWarn('[AICAD] ⚠️  Manufacturing Errors:', resp.manufacturing_errors);
                                     }
                                     if (resp.chat_response) {
-                                        console.log('[AICAD] 💬 Chat Response:', resp.chat_response.substring(0, 200) + (resp.chat_response.length > 200 ? '...' : ''));
+                                        aicadLog('[AICAD] 💬 Chat Response:', resp.chat_response.substring(0, 200) + (resp.chat_response.length > 200 ? '...' : ''));
                                     }
-                                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
                                     // Wait for message to be saved before refreshing
                                     await $wire.saveStreamFinal(resp);
@@ -535,33 +541,33 @@
                     }
                 } catch (e) {
                     // Detailed error logging
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.error('[AICAD] ❌ STREAM ERROR');
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    console.error('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
-                    console.error('[AICAD] 📝 Message:', message?.substring(0, 150));
-                    console.error('[AICAD] 📍 Endpoint:', url);
-                    console.error('[AICAD] 🔄 Retry Count:', this.retryCount, '/', this.maxRetries);
-                    console.error('[AICAD] ⚠️  Error Type:', e.constructor.name);
-                    console.error('[AICAD] ⚠️  Error Message:', e.message);
-                    console.error('[AICAD] 📍 Stack:', e.stack);
-                    console.error('[AICAD] 🔍 Error Object:', {
+                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    aicadError('[AICAD] ❌ STREAM ERROR');
+                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    aicadError('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
+                    aicadError('[AICAD] 📝 Message:', message?.substring(0, 150));
+                    aicadError('[AICAD] 📍 Endpoint:', url);
+                    aicadError('[AICAD] 🔄 Retry Count:', this.retryCount, '/', this.maxRetries);
+                    aicadError('[AICAD] ⚠️  Error Type:', e.constructor.name);
+                    aicadError('[AICAD] ⚠️  Error Message:', e.message);
+                    aicadError('[AICAD] 📍 Stack:', e.stack);
+                    aicadError('[AICAD] 🔍 Error Object:', {
                         name: e.name,
                         message: e.message,
                         cause: e.cause,
                         isAbortError: e.name === 'AbortError',
                         isNetworkError: e instanceof TypeError,
                     });
-                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
                     // Classify the error
                     const errorInfo = this.classifyError(e);
                     this.errorType = errorInfo.type;
                     this.errorMessage = errorInfo.message;
 
-                    console.log('[AICAD] 🏷️  Error classified as:', errorInfo.type);
-                    console.log('[AICAD] 💬 User message:', errorInfo.message);
-                    console.log('[AICAD] 🔁 Can retry:', errorInfo.canRetry);
+                    aicadLog('[AICAD] 🏷️  Error classified as:', errorInfo.type);
+                    aicadLog('[AICAD] 💬 User message:', errorInfo.message);
+                    aicadLog('[AICAD] 🔁 Can retry:', errorInfo.canRetry);
 
                     // Handle cancelled requests (user aborted)
                     if (errorInfo.type === 'cancelled') {
@@ -577,7 +583,7 @@
                         this.retryCount++;
                         const delay = this.retryDelays[this.retryCount - 1] || 8000;
 
-                        console.log(`[AICAD] 🔄 Scheduling retry #${this.retryCount} in ${delay}ms...`);
+                        aicadLog(`[AICAD] 🔄 Scheduling retry #${this.retryCount} in ${delay}ms...`);
 
                         this.hasError = false;
                         this.statusText = this.getRetryMessage();
@@ -587,13 +593,13 @@
                         this.isRetrying = true;
                         setTimeout(() => {
                             if (this.open && this.isRetrying) {
-                                console.log(`[AICAD] 🔄 Executing retry #${this.retryCount}...`);
+                                aicadLog(`[AICAD] 🔄 Executing retry #${this.retryCount}...`);
                                 this.retryStream();
                             }
                         }, delay);
                     } else {
                         // Max retries reached or error not retryable
-                        console.error('[AICAD] ❌ Max retries reached or error not retryable');
+                        aicadError('[AICAD] ❌ Max retries reached or error not retryable');
 
                         this.hasError = true;
                         this.cancelable = true;
@@ -624,13 +630,13 @@
     Livewire.on('chat-created', ({chatId}) => {
         const newUrl = @js(route('client.tolerycad.show-chatbot', ['chat' => '__CHAT_ID__'])).replace('__CHAT_ID__', chatId);
 
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('[AICAD] 🔗 Updating URL after chat creation');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('[AICAD] 🔑 Chat ID:', chatId);
-        console.log('[AICAD] 📍 Old URL:', window.location.href);
-        console.log('[AICAD] 📍 New URL:', newUrl);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        aicadLog('[AICAD] 🔗 Updating URL after chat creation');
+        aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        aicadLog('[AICAD] 🔑 Chat ID:', chatId);
+        aicadLog('[AICAD] 📍 Old URL:', window.location.href);
+        aicadLog('[AICAD] 📍 New URL:', newUrl);
+        aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         // Update URL without page reload using HTML5 History API
         window.history.pushState({chatId: chatId}, '', newUrl);
