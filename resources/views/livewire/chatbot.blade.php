@@ -89,6 +89,11 @@
 
     {{-- Modal Achat/Abonnement --}}
     @include('ai-cad::livewire.partials.purchase-modal')
+
+    {{-- Polling pour détecter la fin du téléchargement des fichiers CAO en background --}}
+    @if ($pendingFilesDownload)
+        <div wire:poll.5000ms="checkFilesReady" class="sr-only" aria-hidden="true"></div>
+    @endif
 </div>
 
 @push('scripts')
@@ -202,6 +207,7 @@
                 message: null,
                 sessionId: null,
                 isEdit: false,
+                materialChoice: 'STEEL',
             },
 
             steps: [
@@ -217,7 +223,7 @@
             stepMessageIndex: {},
             init() {
                 const comp = this;
-                this._onLivewire = ({message, sessionId, isEdit = false}) => comp.startStream(message, sessionId, isEdit);
+                this._onLivewire = ({message, sessionId, isEdit = false, materialChoice = 'STEEL'}) => comp.startStream(message, sessionId, isEdit, materialChoice);
                 Livewire.on('aicad:startStream', this._onLivewire);
                 Livewire.on('aicad-start-stream', this._onLivewire);
 
@@ -330,7 +336,8 @@
                 await this.startStream(
                     this.lastRequest.message,
                     this.lastRequest.sessionId,
-                    this.lastRequest.isEdit
+                    this.lastRequest.isEdit,
+                    this.lastRequest.materialChoice ?? 'STEEL'
                 );
             },
             manualRetry() {
@@ -370,7 +377,7 @@
                 const detailedMessage = this.getDetailedMessage(stepKey);
                 this.statusText = detailedMessage || message || status || 'Traitement en cours...';
             },
-            async startStream(message, sessionId, isEdit = false) {
+            async startStream(message, sessionId, isEdit = false, materialChoice = 'STEEL') {
                 // Check if this is a retry or a new request
                 const isRetryAttempt = this.isRetrying;
 
@@ -384,7 +391,7 @@
                 // Store request params for potential retry (only on new requests)
                 if (!isRetryAttempt) {
                     this.resetRetryState();
-                    this.lastRequest = { message, sessionId, isEdit };
+                    this.lastRequest = { message, sessionId, isEdit, materialChoice };
                 }
                 this.isRetrying = false;
 
@@ -413,6 +420,7 @@
                             message: String(message ?? ''),
                             session_id: String(sessionId ?? ''),
                             is_edit_request: isEdit,
+                            material_choice: materialChoice ?? 'STEEL',
                         }),
                         signal: this.controller.signal,
                     });

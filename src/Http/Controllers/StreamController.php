@@ -27,13 +27,15 @@ class StreamController extends Controller
             'message' => 'required|string|min:1',
             'session_id' => 'nullable|string',
             'is_edit_request' => 'nullable|boolean',
+            'material_choice' => 'nullable|string|in:STEEL,ALUMINUM,STAINLESS',
         ]);
 
         $message = $validated['message'];
         $sessionId = $validated['session_id'] ?? null;
         $isEditRequest = $validated['is_edit_request'] ?? false;
+        $materialChoice = $validated['material_choice'] ?? 'STEEL';
 
-        return new StreamedResponse(function () use ($message, $sessionId, $isEditRequest) {
+        return new StreamedResponse(function () use ($message, $sessionId, $isEditRequest, $materialChoice) {
             // PHP Configuration: Disable timeouts and enable continuous execution
             set_time_limit(0);              // No PHP timeout
             ignore_user_abort(true);        // Keep running if client disconnects
@@ -68,7 +70,7 @@ class StreamController extends Controller
             try {
                 // Direct streaming: AICADClient will echo SSE events directly to output
                 // No Generator, no foreach loop, no nested streaming
-                $this->client->streamDirectlyToOutput($message, $sessionId, $isEditRequest, 600);
+                $this->client->streamDirectlyToOutput($message, $sessionId, $isEditRequest, 600, $materialChoice);
 
                 Log::info('[AICAD] StreamController: Stream completed successfully', [
                     'session_id' => $sessionId,

@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $ai_step_path
  * @property string|null $ai_technical_drawing_path
  * @property string|null $ai_screenshot_path
+ * @property bool $cad_files_ready
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
