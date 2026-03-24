@@ -2,6 +2,14 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.3.4 - 2026-03-24
+
+### What's Changed
+
+* perf: téléchargement async des fichiers CAO + material_choice + dual-key API by @croustibat in https://github.com/Tolery-Dev/tolery-ai-cad-package/pull/111
+
+**Full Changelog**: https://github.com/Tolery-Dev/tolery-ai-cad-package/compare/v1.3.3...v1.3.4
+
 ## v1.2.0 - CGV ToleryCAD - 2026-01-21
 
 ### Nouveautés
