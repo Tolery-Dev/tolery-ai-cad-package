@@ -19,7 +19,7 @@ readonly class AICADClient
      *
      * @throws \RuntimeException
      */
-    public function streamDirectlyToOutput(string $message, ?string $projectId = null, bool $isEditRequest = false, int $timeoutSec = 600): void
+    public function streamDirectlyToOutput(string $message, ?string $projectId = null, bool $isEditRequest = false, int $timeoutSec = 600, string $materialChoice = 'STEEL'): void
     {
         $url = $this->endpoint('/api/generate-cad-stream');
 
@@ -27,6 +27,7 @@ readonly class AICADClient
         $queryParams = [
             'message' => $message,
             'stream' => 'true',
+            'material_choice' => $materialChoice,
         ];
 
         if ($projectId !== null) {

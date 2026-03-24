@@ -6,12 +6,14 @@ use Flux\Flux;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Tolery\AiCad\Enum\MaterialFamily;
+use Tolery\AiCad\Jobs\DownloadCadAssetsJob;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
@@ -76,8 +78,8 @@ class Chatbot extends Component
     /** Mapping code d'erreur DFM → message traduit (chargé au mount) */
     public array $dfmErrorCodes = [];
 
-    /** ID du message assistant qui doit être affiché avec l'effet typewriter */
-    public ?int $typewriteMessageId = null;
+    /** true si le Job DownloadCadAssetsJob est en cours (polling actif) */
+    public bool $pendingFilesDownload = false;
 
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
@@ -195,33 +197,26 @@ class Chatbot extends Component
         return [];
     }
 
-    public function rendered(): void
-    {
-        // Reset après rendu pour que le typewriter ne se déclenche qu'une seule fois
-        $this->typewriteMessageId = null;
-    }
+    public function rendered(): void {}
 
     public function render(): View
     {
-        // Charger les prompts depuis la DB (actifs uniquement, triés par sort_order)
-        // Avec fallback sur la config si la table est vide
-        $predefinedPrompts = PredefinedPrompt::where('active', true)
-            ->orderBy('sort_order')
-            ->get()
-            ->map(fn ($prompt) => [
-                'name' => $prompt->name,
-                'prompt' => $prompt->prompt_text,
-            ])
-            ->toArray();
+        $predefinedPrompts = Cache::remember('ai-cad:predefined-prompts', 300, function () {
+            $prompts = PredefinedPrompt::where('active', true)
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn ($prompt) => [
+                    'name' => $prompt->name,
+                    'prompt' => $prompt->prompt_text,
+                ])
+                ->toArray();
 
-        // Fallback sur la config si aucun prompt en DB
-        if (empty($predefinedPrompts)) {
-            $predefinedPrompts = config('ai-cad.predefined_prompts', []);
-        }
+            return ! empty($prompts) ? $prompts : config('ai-cad.predefined_prompts', []);
+        });
 
         return view('ai-cad::livewire.chatbot', [
             'predefinedPrompts' => $predefinedPrompts,
-            'stepMessages' => StepMessage::getStepMessagesForFrontend(),
+            'stepMessages' => Cache::remember('ai-cad:step-messages', 300, fn () => StepMessage::getStepMessagesForFrontend()),
         ]);
     }
 
@@ -375,7 +370,12 @@ class Chatbot extends Component
                 'is_edit' => $isEdit,
             ]);
 
-            $this->dispatch('aicad-start-stream', message: $userText, sessionId: (string) $this->chat->session_id, isEdit: $isEdit);
+            $this->dispatch('aicad-start-stream',
+                message: $userText,
+                sessionId: (string) $this->chat->session_id,
+                isEdit: $isEdit,
+                materialChoice: $this->chat->material_family?->value ?? 'STEEL',
+            );
 
         } finally {
             $this->isProcessing = false;
@@ -489,91 +489,145 @@ class Chatbot extends Component
      */
     public function saveStreamFinal(array $final): void
     {
-        Log::info('[AICAD] saveStreamFinal', ['final' => $final]);
+        Log::info('[AICAD] saveStreamFinal', ['final_keys' => array_keys($final)]);
 
         $chatResponse = (string) ($final['chat_response'] ?? '');
-        $objUrl = $final['obj_export'] ?? null;
-        $stepUrl = $final['step_export'] ?? null; // STEP export
-        $jsonModelUrl = $final['json_export'] ?? null; // JSON principal pour affichage
-        $tessUrl = $final['tessellated_export'] ?? null; // JSON tessellé (héritage)
-        $techDrawingUrl = $final['technical_drawing_export'] ?? null; // plan technique
-        $screenshotUrl = $final['screenshot_export'] ?? null; // screenshot 800x800px
 
-        // Save session_id
+        // Support dual-key format pour la compatibilité ascendante de l'API
+        $objUrl = $final['obj_export'] ?? $final['obj_path'] ?? null;
+        $stepUrl = $final['step_export'] ?? $final['step_path'] ?? null;
+        $jsonModelUrl = $final['json_export'] ?? $final['json_path'] ?? null;
+        $tessUrl = $final['tessellated_export'] ?? $final['tessellated_path'] ?? null;
+        $techDrawingUrl = $final['technical_drawing_export'] ?? $final['technical_drawing_path'] ?? null;
+
+        // Résolution de l'URL JSON : préférence json_export, fallback tessellated
+        $resolvedJsonUrl = (is_string($jsonModelUrl) && $jsonModelUrl !== '') ? $jsonModelUrl
+            : ((is_string($tessUrl) && $tessUrl !== '') ? $tessUrl : null);
+
+        // Save session_id si changé
         if (isset($final['session_id']) && $this->chat->session_id !== $final['session_id']) {
-            $oldSessionId = $this->chat->session_id;
             $this->chat->session_id = $final['session_id'];
             $this->chat->save();
-            $this->chat->refresh(); // Rafraîchit le modèle depuis la DB pour éviter la staleness
+            $this->chat->refresh();
 
             logger()->info('[AICAD] Session ID updated in DB', [
                 'chat_id' => $this->chat->id,
-                'old_session_id' => $oldSessionId,
                 'new_session_id' => $this->chat->session_id,
-            ]);
-        } else {
-            logger()->info('[AICAD] Session ID unchanged', [
-                'chat_id' => $this->chat->id,
-                'session_id' => $this->chat->session_id,
-                'received_session_id' => $final['session_id'] ?? null,
             ]);
         }
 
         /** @var ChatMessage|null $asst */
         $asst = $this->findLatestAssistantMessage();
 
-        // Détermine le texte final du message (priorité à chat_response, sinon conserve, sinon fallback)
-        // Ne jamais conserver [TYPING_INDICATOR] comme message final
-        $fallbackMessage = $asst?->message;
-        if ($fallbackMessage === '[TYPING_INDICATOR]') {
-            $fallbackMessage = null;
-        }
+        $fallbackMessage = ($asst?->message === '[TYPING_INDICATOR]') ? null : $asst?->message;
         $messageText = $chatResponse !== '' ? $chatResponse : ($fallbackMessage ?: 'Fichier généré avec succès.');
 
         if ($asst) {
             $asst->message = $messageText;
         } else {
-            // Filet de sécurité: si pas de placeholder, on crée un message assistant
             $asst = $this->storeMessage(ChatMessage::ROLE_ASSISTANT, $messageText);
         }
 
-        // Applique les URLs/exports aux champs du message
-        $this->applyFinalAssetsToMessage($asst, $objUrl, $stepUrl, $jsonModelUrl, $tessUrl, $techDrawingUrl, $screenshotUrl);
+        // Télécharge le JSON synchroniquement et le stocke localement.
+        // Three.js accède ensuite via la route proxy Laravel (même domaine, pas de CORS).
+        // En cas d'échec, l'URL externe reste en fallback (servie via la route proxy).
+        if ($resolvedJsonUrl) {
+            try {
+                $apiKey = config('ai-cad.api.key');
+                $jsonResponse = Http::when($apiKey, fn ($req) => $req->withToken($apiKey))
+                    ->timeout(30)
+                    ->get($resolvedJsonUrl);
 
-        // Optionnel: journaliser la réponse complète pour audit/debug
-        logger()->info('[AICAD] final_response saved', ['chat_id' => $this->chat->id, 'final' => $final]);
+                if ($jsonResponse->successful()) {
+                    $folder = $this->chat->getStorageFolder();
+                    $filename = uniqid('cad_json_').'.json';
+                    $localPath = "{$folder}/{$filename}";
+                    Storage::put($localPath, $jsonResponse->body());
+                    $asst->ai_json_edge_path = $localPath;
+                    logger()->info("[AICAD] JSON téléchargé et stocké: {$resolvedJsonUrl} → {$localPath}");
+                } else {
+                    logger()->warning('[AICAD] Échec download JSON', ['status' => $jsonResponse->status(), 'url' => $resolvedJsonUrl]);
+                    $asst->ai_json_edge_path = $resolvedJsonUrl; // Fallback URL externe (proxifiée par CadFileController)
+                }
+            } catch (\Exception $e) {
+                logger()->warning('[AICAD] Exception download JSON', ['url' => $resolvedJsonUrl, 'error' => $e->getMessage()]);
+                $asst->ai_json_edge_path = $resolvedJsonUrl; // Fallback URL externe (proxifiée par CadFileController)
+            }
+        }
 
+        // OBJ/STEP/PDF seront téléchargés en background par DownloadCadAssetsJob
+        $asst->cad_files_ready = false;
         $asst->save();
 
-        // Détecter si c'est une génération réussie (présence de fichiers exportés)
-        $isSuccessfulGeneration =
-            ! empty($objUrl) ||
-            ! empty($stepUrl) ||
-            ! empty($tessUrl);
-
-        // Si génération réussie et pas encore marquée, marquer maintenant
+        // Marquer la première génération réussie
+        $isSuccessfulGeneration = $resolvedJsonUrl || $objUrl || $stepUrl;
         if ($isSuccessfulGeneration && ! $this->chat->has_generated_piece) {
             $this->chat->has_generated_piece = true;
             $this->chat->save();
 
-            Log::info('[AICAD] First piece generated successfully', [
-                'chat_id' => $this->chat->id,
-                'session_id' => $final['session_id'] ?? null,
-            ]);
+            Log::info('[AICAD] Première pièce générée avec succès', ['chat_id' => $this->chat->id]);
         }
 
-        // Flagge le message pour l'effet typewriter avant le re-rendu
-        $this->typewriteMessageId = $asst->id;
+        // Dispatch du Job background pour OBJ, STEP, PDF uniquement
+        $urlsForJob = array_filter([
+            'obj' => (is_string($objUrl) && $objUrl !== '') ? $objUrl : null,
+            'step' => (is_string($stepUrl) && $stepUrl !== '') ? $stepUrl : null,
+            'pdf' => (is_string($techDrawingUrl) && $techDrawingUrl !== '') ? $techDrawingUrl : null,
+        ]);
 
-        // Rafraîchit les messages depuis la DB pour mettre à jour la vue (et supprimer le typing indicator)
+        if (! empty($urlsForJob)) {
+            DownloadCadAssetsJob::dispatch($asst->id, $urlsForJob, $this->chat->getStorageFolder());
+            $this->pendingFilesDownload = true;
+        } else {
+            $asst->cad_files_ready = true;
+            $asst->save();
+        }
+
         $this->messages = $this->mapDbMessagesToArray();
-
-        // Met à jour les suggestions contextuelles selon le nouvel état
         $this->contextualSuggestions = $this->getContextualSuggestions();
 
-        // Déclenche le rafraîchissement UI (scroll + viewer) puis chargement des assets
         $this->dispatch('tolery-chat-append');
-        $this->dispatchViewerEvents($asst);
+
+        // Dispatch vers Three.js via la route proxy Laravel (même domaine, pas de CORS,
+        // pas de problème d'accessibilité du Storage)
+        $this->dispatch('jsonEdgesLoaded', jsonPath: route('ai-cad.file.json', ['messageId' => $asst->id]));
+
+        // Export links initiaux (OBJ/STEP/PDF seront null jusqu'à la fin du Job)
+        $this->dispatchExportLinks($asst);
+
+        logger()->info('[AICAD] saveStreamFinal: Job dispatché pour téléchargements', [
+            'chat_id' => $this->chat->id,
+            'pending_keys' => array_keys($urlsForJob),
+        ]);
+    }
+
+    /**
+     * Vérifie si le Job DownloadCadAssetsJob a terminé ses téléchargements.
+     * Appelé par wire:poll toutes les 5s tant que $pendingFilesDownload est true.
+     */
+    public function checkFilesReady(): void
+    {
+        if (! $this->pendingFilesDownload) {
+            return;
+        }
+
+        $asst = $this->findLatestAssistantMessage();
+
+        if (! $asst) {
+            $this->pendingFilesDownload = false;
+
+            return;
+        }
+
+        $asst->refresh();
+
+        if (! $asst->cad_files_ready) {
+            return; // Continuer le polling
+        }
+
+        $this->pendingFilesDownload = false;
+        $this->dispatchExportLinks($asst);
+        $this->messages = $this->mapDbMessagesToArray();
     }
 
     /**
@@ -585,115 +639,6 @@ class Chatbot extends Component
             ->where('role', ChatMessage::ROLE_ASSISTANT)
             ->orderByDesc('id')
             ->first();
-    }
-
-    /**
-     * Applique les exports finaux (OBJ, STEP, JSON edges, plan technique, screenshot) au message.
-     * Préférence: json_export, fallback: tessellated_export.
-     */
-    private function applyFinalAssetsToMessage(
-        ChatMessage $asst,
-        mixed $objUrl,
-        mixed $stepUrl,
-        mixed $jsonModelUrl,
-        mixed $tessUrl,
-        mixed $techDrawingUrl,
-        mixed $screenshotUrl
-    ): void {
-        // Télécharge et stocke les fichiers localement si ce sont des URLs externes
-        if (is_string($objUrl) && $objUrl !== '') {
-            $asst->ai_cad_path = $this->downloadAndStoreFile($objUrl, 'obj');
-        }
-
-        if (is_string($stepUrl) && $stepUrl !== '') {
-            $asst->ai_step_path = $this->downloadAndStoreFile($stepUrl, 'step');
-        }
-
-        // Priorité à json_export pour l'affichage 3D JSON (fallback compat sur tessellated_export)
-        if (is_string($jsonModelUrl) && $jsonModelUrl !== '') {
-            $asst->ai_json_edge_path = $this->downloadAndStoreFile($jsonModelUrl, 'json');
-        } elseif (is_string($tessUrl) && $tessUrl !== '') {
-            $asst->ai_json_edge_path = $this->downloadAndStoreFile($tessUrl, 'json');
-        }
-
-        if (is_string($techDrawingUrl) && $techDrawingUrl !== '') {
-            $asst->ai_technical_drawing_path = $this->downloadAndStoreFile($techDrawingUrl, 'pdf');
-        }
-
-        if (is_string($screenshotUrl) && $screenshotUrl !== '') {
-            $asst->ai_screenshot_path = $this->downloadAndStoreFile($screenshotUrl, 'png');
-        }
-    }
-
-    /**
-     * Télécharge un fichier depuis une URL et le stocke localement
-     * Retourne le chemin de stockage ou l'URL si ce n'est pas une URL HTTP
-     */
-    private function downloadAndStoreFile(string $url, string $extension): string
-    {
-        // Si ce n'est pas une URL HTTP/HTTPS, on retourne tel quel (peut-être déjà un chemin local)
-        if (! filter_var($url, FILTER_VALIDATE_URL) || ! preg_match('/^https?:\/\//i', $url)) {
-            return $url;
-        }
-
-        try {
-            // Prépare les en-têtes HTTP avec Bearer token si configuré
-            $apiKey = config('ai-cad.api.key');
-            $headers = [];
-            if ($apiKey) {
-                $headers[] = "Authorization: Bearer {$apiKey}";
-            }
-
-            $contextOptions = [
-                'http' => [
-                    'timeout' => 30,
-                    'ignore_errors' => true,
-                    'header' => implode("\r\n", $headers),
-                ],
-            ];
-
-            // Télécharge le contenu
-            $content = file_get_contents($url, false, stream_context_create($contextOptions));
-
-            if ($content === false) {
-                logger()->warning("[AICAD] Failed to download file from {$url}");
-
-                return $url; // Fallback sur l'URL originale
-            }
-
-            // Génère un chemin de stockage dans le dossier du chat
-            $folder = $this->chat->getStorageFolder();
-            $filename = uniqid('cad_').'.'.$extension;
-            $path = "{$folder}/{$filename}";
-
-            // Stocke le fichier
-            Storage::put($path, $content);
-
-            logger()->info("[AICAD] Downloaded and stored file: {$url} -> {$path}");
-
-            return $path;
-        } catch (\Exception $e) {
-            logger()->error("[AICAD] Error downloading file: {$url}", ['error' => $e->getMessage()]);
-
-            return $url; // Fallback sur l'URL originale
-        }
-    }
-
-    /**
-     * Déclenche les événements de viewer selon l'asset disponible (préférence JSON, fallback OBJ).
-     */
-    private function dispatchViewerEvents(ChatMessage $asst): void
-    {
-        // Préférence: JSON
-        if ($asst->ai_json_edge_path) {
-            $this->dispatch('jsonEdgesLoaded', jsonPath: $asst->getJSONEdgeUrl());
-        } elseif ($asst->ai_cad_path) {
-            // Fallback OBJ
-            $this->dispatch('objLoaded', objPath: $asst->getObjUrl());
-        }
-
-        // Dispatch des liens de téléchargement vers le panneau Alpine
-        $this->dispatchExportLinks($asst);
     }
 
     /**
@@ -1312,7 +1257,7 @@ class Chatbot extends Component
         // Utiliser try-catch au cas où le channel n'est pas configuré
         try {
             Log::channel('slack')->critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives', $errorDetails);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             // Fallback: log to default channel if slack is not configured
             Log::critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives (Slack unavailable)', $errorDetails);
         }
@@ -1326,7 +1271,6 @@ class Chatbot extends Component
         if ($asst && $asst->message === '[TYPING_INDICATOR]') {
             $asst->message = $failureMessage;
             $asst->save();
-            $this->typewriteMessageId = $asst->id;
         }
 
         // Refresh messages to update UI
