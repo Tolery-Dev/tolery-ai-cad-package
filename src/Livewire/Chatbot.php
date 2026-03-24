@@ -675,7 +675,7 @@ class Chatbot extends Component
     {
         return $this->chat->messages()->with('user')
             ->where('message', '!=', '[TYPING_INDICATOR]')
-            ->orderBy('created_at')->get()
+            ->orderBy('created_at')->orderBy('id')->get()
             ->map(fn (ChatMessage $m) => [
                 'id' => $m->id,
                 'role' => $m->role,
