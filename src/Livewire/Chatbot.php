@@ -197,9 +197,7 @@ class Chatbot extends Component
         return [];
     }
 
-    public function rendered(): void
-    {
-    }
+    public function rendered(): void {}
 
     public function render(): View
     {
@@ -631,7 +629,6 @@ class Chatbot extends Component
         $this->dispatchExportLinks($asst);
         $this->messages = $this->mapDbMessagesToArray();
     }
-
 
     /**
      * Récupère le dernier message assistant inséré (placeholder avec typing indicator).
