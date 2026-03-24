@@ -81,9 +81,6 @@ class Chatbot extends Component
     /** true si le Job DownloadCadAssetsJob est en cours (polling actif) */
     public bool $pendingFilesDownload = false;
 
-    /** ID du message assistant qui doit être affiché avec l'effet typewriter */
-    public ?int $typewriteMessageId = null;
-
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -202,8 +199,6 @@ class Chatbot extends Component
 
     public function rendered(): void
     {
-        // Reset après rendu pour que le typewriter ne se déclenche qu'une seule fois
-        $this->typewriteMessageId = null;
     }
 
     public function render(): View
@@ -535,10 +530,31 @@ class Chatbot extends Component
             $asst = $this->storeMessage(ChatMessage::ROLE_ASSISTANT, $messageText);
         }
 
-        // Télécharge le JSON synchroniquement — indispensable car le browser ne peut pas
-        // fetcher directement l'URL externe (CORS : pas de Access-Control-Allow-Origin sur l'API DFM)
+        // Télécharge le JSON synchroniquement et le stocke localement.
+        // Three.js accède ensuite via la route proxy Laravel (même domaine, pas de CORS).
+        // En cas d'échec, l'URL externe reste en fallback (servie via la route proxy).
         if ($resolvedJsonUrl) {
-            $asst->ai_json_edge_path = $this->downloadFileSynchronously($resolvedJsonUrl, 'json');
+            try {
+                $apiKey = config('ai-cad.api.key');
+                $jsonResponse = Http::when($apiKey, fn ($req) => $req->withToken($apiKey))
+                    ->timeout(30)
+                    ->get($resolvedJsonUrl);
+
+                if ($jsonResponse->successful()) {
+                    $folder = $this->chat->getStorageFolder();
+                    $filename = uniqid('cad_json_').'.json';
+                    $localPath = "{$folder}/{$filename}";
+                    Storage::put($localPath, $jsonResponse->body());
+                    $asst->ai_json_edge_path = $localPath;
+                    logger()->info("[AICAD] JSON téléchargé et stocké: {$resolvedJsonUrl} → {$localPath}");
+                } else {
+                    logger()->warning('[AICAD] Échec download JSON', ['status' => $jsonResponse->status(), 'url' => $resolvedJsonUrl]);
+                    $asst->ai_json_edge_path = $resolvedJsonUrl; // Fallback URL externe (proxifiée par CadFileController)
+                }
+            } catch (\Exception $e) {
+                logger()->warning('[AICAD] Exception download JSON', ['url' => $resolvedJsonUrl, 'error' => $e->getMessage()]);
+                $asst->ai_json_edge_path = $resolvedJsonUrl; // Fallback URL externe (proxifiée par CadFileController)
+            }
         }
 
         // OBJ/STEP/PDF seront téléchargés en background par DownloadCadAssetsJob
@@ -569,16 +585,14 @@ class Chatbot extends Component
             $asst->save();
         }
 
-        $this->typewriteMessageId = $asst->id;
         $this->messages = $this->mapDbMessagesToArray();
         $this->contextualSuggestions = $this->getContextualSuggestions();
 
         $this->dispatch('tolery-chat-append');
 
-        // Dispatch immédiat vers Three.js avec l'URL JSON externe (pas d'attente Job)
-        if ($resolvedJsonUrl) {
-            $this->dispatch('jsonEdgesLoaded', jsonPath: $resolvedJsonUrl);
-        }
+        // Dispatch vers Three.js via la route proxy Laravel (même domaine, pas de CORS,
+        // pas de problème d'accessibilité du Storage)
+        $this->dispatch('jsonEdgesLoaded', jsonPath: route('ai-cad.file.json', ['messageId' => $asst->id]));
 
         // Export links initiaux (OBJ/STEP/PDF seront null jusqu'à la fin du Job)
         $this->dispatchExportLinks($asst);
@@ -618,36 +632,6 @@ class Chatbot extends Component
         $this->messages = $this->mapDbMessagesToArray();
     }
 
-    /**
-     * Télécharge un fichier depuis une URL externe et le stocke localement.
-     * Utilisé pour le JSON uniquement (CORS empêche le browser de le fetcher directement).
-     * Retourne le chemin local, ou l'URL externe en cas d'échec (fallback gracieux).
-     */
-    private function downloadFileSynchronously(string $url, string $extension): string
-    {
-        try {
-            $apiKey = config('ai-cad.api.key');
-            $response = Http::when($apiKey, fn ($req) => $req->withToken($apiKey))
-                ->timeout(30)
-                ->get($url);
-
-            if ($response->successful()) {
-                $folder = $this->chat->getStorageFolder();
-                $filename = uniqid("cad_{$extension}_").'.'.$extension;
-                $path = "{$folder}/{$filename}";
-                Storage::put($path, $response->body());
-                logger()->info("[AICAD] JSON téléchargé localement: {$url} → {$path}");
-
-                return $path;
-            }
-
-            logger()->warning("[AICAD] Échec download {$extension} (HTTP {$response->status()})", ['url' => $url]);
-        } catch (\Exception $e) {
-            logger()->warning("[AICAD] Exception download {$extension}", ['url' => $url, 'error' => $e->getMessage()]);
-        }
-
-        return $url; // Fallback sur l'URL externe
-    }
 
     /**
      * Récupère le dernier message assistant inséré (placeholder avec typing indicator).
@@ -1276,7 +1260,7 @@ class Chatbot extends Component
         // Utiliser try-catch au cas où le channel n'est pas configuré
         try {
             Log::channel('slack')->critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives', $errorDetails);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             // Fallback: log to default channel if slack is not configured
             Log::critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives (Slack unavailable)', $errorDetails);
         }
@@ -1290,7 +1274,6 @@ class Chatbot extends Component
         if ($asst && $asst->message === '[TYPING_INDICATOR]') {
             $asst->message = $failureMessage;
             $asst->save();
-            $this->typewriteMessageId = $asst->id;
         }
 
         // Refresh messages to update UI

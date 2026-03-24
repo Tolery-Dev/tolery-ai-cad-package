@@ -182,9 +182,10 @@
 <script>
     // Logging conditionnel : actif uniquement en mode debug (APP_DEBUG=true)
     // Évite d'exposer des chemins de fichiers sensibles (OBJ/STEP) en production
-    const aicadLog   = @js(config('app.debug')) ? console.log.bind(console)   : () => {};
-    const aicadWarn  = @js(config('app.debug')) ? console.warn.bind(console)  : () => {};
-    const aicadError = @js(config('app.debug')) ? console.error.bind(console) : () => {};
+    // Défini ici car tous les appels aicadLog sont dans des callbacks (jamais pendant init())
+    window.aicadLog   = @js(config('app.debug')) ? console.log.bind(console)   : () => {};
+    window.aicadWarn  = @js(config('app.debug')) ? console.warn.bind(console)  : () => {};
+    window.aicadError = @js(config('app.debug')) ? console.error.bind(console) : () => {};
 
     Alpine.data('cadStreamModal', () => {
         return {
@@ -515,12 +516,9 @@
                                     }
                                     aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-                                    // Wait for message to be saved before refreshing
+                                    // saveStreamFinal met déjà à jour $this->messages et dispatche les événements
                                     await $wire.saveStreamFinal(resp);
                                     this.markStep('complete', 'Completed', resp.chat_response || 'Completed', 100);
-
-                                    // Force Livewire component refresh to update UI
-                                    await $wire.$refresh();
 
                                     // Success! Reset retry state
                                     this.resetRetryState();

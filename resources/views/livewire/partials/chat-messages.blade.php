@@ -37,19 +37,15 @@
             </div>
             <div
                 class="{{ $msg['role'] === 'user' ? 'inline-block bg-violet-100 text-gray-900 text-left' : 'inline-block bg-gray-100 text-gray-900' }} rounded-xl px-3 py-2"
-                wire:key="msg-{{ $msg['id'] ?? $loop->index }}-{{ substr(md5($msg['content'] ?? ''), 0, 8) }}"
+                wire:key="msg-{{ $msg['id'] ?? $loop->index }}"
                 x-data="{
                     content: @js($msg['content'] ?? ''),
                     role: @js($msg['role']),
                     dfmErrorCodes: @js($dfmErrorCodes ?? []),
-                    shouldTypewrite: @js(($msg['id'] ?? null) === $typewriteMessageId),
                     isTyping: false,
                     isErrorCode: false,
                     errorMessage: '',
-                    parsedContent: '',
                     displayedContent: '',
-                    typewriterDone: true,
-                    typewriterTimer: null,
                     checkDfmErrorCode(text) {
                         if (this.role !== 'assistant' || !text) return false;
                         const trimmed = text.trim();
@@ -71,15 +67,10 @@
                     },
                     parseFaceContext(text) {
                         if (!text) return text;
-
-                        // Parse [FACE_CONTEXT: ...]] patterns
                         return text.replace(/\[FACE_CONTEXT:\s*(.+?)\]\]/g, (match, faceContext) => {
-                            // Extract face ID
                             const idMatch = faceContext.match(/ID\[([^\]]+)\]/);
                             const faceId = idMatch ? idMatch[1] : 'Unknown';
                             const label = 'Face ' + faceId;
-
-                            // Return chip HTML with single quotes
                             return `<span class='inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm font-medium'>` +
                                 `<svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>` +
                                 `<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'></path>` +
@@ -87,32 +78,6 @@
                                 `<span>${label}</span>` +
                                 `</span>`;
                         });
-                    },
-                    async typewrite(html) {
-                        this.typewriterDone = false;
-                        this.displayedContent = '';
-                        const plainText = html.replace(/<[^>]*>/g, '');
-                        const speed = 15;
-                        for (let i = 0; i < plainText.length; i++) {
-                            if (this.typewriterTimer === 'cancel') break;
-                            await new Promise(r => setTimeout(r, speed));
-                            this.displayedContent = html.slice(0, this._findHtmlIndex(html, i + 1));
-                        }
-                        this.displayedContent = html;
-                        this.typewriterDone = true;
-                    },
-                    _findHtmlIndex(html, charCount) {
-                        let chars = 0;
-                        let inTag = false;
-                        for (let i = 0; i < html.length; i++) {
-                            if (html[i] === '<') { inTag = true; continue; }
-                            if (html[i] === '>') { inTag = false; continue; }
-                            if (!inTag) {
-                                chars++;
-                                if (chars >= charCount) return i + 1;
-                            }
-                        }
-                        return html.length;
                     },
                     parseMarkdown(text) {
                         if (!text || typeof window.marked === 'undefined') {
@@ -123,37 +88,19 @@
                     parseContent() {
                         if (this.content === '[TYPING_INDICATOR]') {
                             this.isTyping = true;
-                            this.parsedContent = '';
                             this.displayedContent = '';
                         } else if (this.checkDfmErrorCode(this.content)) {
                             this.isTyping = false;
-                            this.typewriterDone = true;
                         } else {
                             this.isTyping = false;
                             let parsed = this.parseFaceContext(this.content);
-                            this.parsedContent = this.role === 'assistant'
+                            this.displayedContent = this.role === 'assistant'
                                 ? this.parseMarkdown(parsed)
                                 : this.parseUrls(parsed).replace(/\n/g, '<br>');
-                            this.displayedContent = this.parsedContent;
-                            this.typewriterDone = true;
                         }
                     }
                 }"
-                x-init="
-                    if (content === '[TYPING_INDICATOR]') {
-                        isTyping = true;
-                        parsedContent = '';
-                        displayedContent = '';
-                    } else if (checkDfmErrorCode(content)) {
-                        // DFM error code detected, display handled by template
-                    } else if (shouldTypewrite && role === 'assistant') {
-                        let parsed = parseFaceContext(content);
-                        parsedContent = parseMarkdown(parsed);
-                        typewrite(parsedContent);
-                    } else {
-                        parseContent();
-                    }
-                ">
+                x-init="parseContent()">
                 {{-- Typing indicator --}}
                 <div x-show="isTyping" class="typing-indicator">
                     <span></span>
@@ -176,9 +123,6 @@
                 <div x-show="!isTyping && !isErrorCode" x-html="displayedContent"
                      :class="role === 'assistant' ? 'prose prose-sm prose-gray max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-a:text-violet-600 hover:prose-a:text-violet-800' : ''"></div>
 
-                {{-- Typewriter cursor for assistant messages --}}
-                <span x-show="!isTyping && !isErrorCode && role === 'assistant' && !typewriterDone"
-                      class="inline-block w-0.5 h-4 bg-gray-500 align-middle animate-pulse"></span>
             </div>
 
             {{-- Suggestions contextuelles (dernier message assistant uniquement) --}}

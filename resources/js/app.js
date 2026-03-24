@@ -815,11 +815,16 @@ function ensureSelectionManager() {
     return FACE_SELECTION_MANAGER;
 }
 
-// Livewire entry point kept identical: expects { jsonPath }
-Livewire.on("jsonEdgesLoaded", ({ jsonPath }) => {
-    if (!jsonPath) return;
+// Livewire entry point: accepte { jsonData } (contenu inline, zéro fetch) ou { jsonPath } (URL locale)
+Livewire.on("jsonEdgesLoaded", ({ jsonPath, jsonData }) => {
     const v = ensureViewer();
-    v.loadFromPath(jsonPath);
+    if (jsonData) {
+        // Contenu JSON dispatché inline depuis le serveur → aucun fetch, pas de CORS
+        v.loadJsonData(jsonData);
+    } else if (jsonPath) {
+        // URL locale Laravel (rechargement) → fetch sans CORS
+        v.loadFromPath(jsonPath);
+    }
 });
 
 // Fit request from panel
