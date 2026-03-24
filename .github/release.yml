@@ -1,0 +1,25 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+  categories:
+    - title: "🚀 Nouveautés"
+      labels:
+        - feature
+        - enhancement
+    - title: "🐛 Corrections"
+      labels:
+        - bug
+        - fix
+    - title: "⚡ Performances"
+      labels:
+        - performance
+    - title: "🔧 Maintenance"
+      labels:
+        - chore
+        - refactor
+        - dependencies
+    - title: "📦 Autres changements"
+      labels: ["*"]
