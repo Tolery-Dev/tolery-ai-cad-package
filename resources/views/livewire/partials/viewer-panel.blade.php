@@ -129,7 +129,10 @@
         </div>
 
         @if(!$objExportUrl && !$stepExportUrl)
-            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-8">
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-8"
+                 x-data="{ visible: true }"
+                 x-show="visible"
+                 @cad-model-stats.window="visible = false">
                 <div class="w-80 h-auto flex items-center justify-center mb-8">
                     <img src="{{ asset('vendor/ai-cad/images/tolery-large-logo.svg') }}" alt="ToleryCAD" />
                 </div>
