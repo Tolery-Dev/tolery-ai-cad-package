@@ -374,7 +374,7 @@ class Chatbot extends Component
                 message: $userText,
                 sessionId: (string) $this->chat->session_id,
                 isEdit: $isEdit,
-                materialChoice: $this->chat->material_family?->value ?? 'STEEL',
+                materialChoice: $this->chat->material_family !== null ? $this->chat->material_family->value : 'STEEL',
             );
 
         } finally {
@@ -477,14 +477,19 @@ class Chatbot extends Component
      * @param array{
      *   chat_response?:string,
      *   session_id?:string,
-     *   obj_export?:?string,
-     *   step_export?:?string,
-     *   json_export?:?string,
-     *   technical_drawing_export?:?string,
-     *   screenshot_export?:?string,
-     *   tessellated_export?:?string,
+     *   obj_export?:string|null,
+     *   step_export?:string|null,
+     *   json_export?:string|null,
+     *   technical_drawing_export?:string|null,
+     *   screenshot_export?:string|null,
+     *   tessellated_export?:string|null,
+     *   obj_path?:string|null,
+     *   step_path?:string|null,
+     *   json_path?:string|null,
+     *   tessellated_path?:string|null,
+     *   technical_drawing_path?:string|null,
      *   attribute_and_transientid_map?:mixed,
-     *   manufacturing_errors?:array
+     *   manufacturing_errors?:array<mixed>
      * } $final
      */
     public function saveStreamFinal(array $final): void
@@ -501,8 +506,8 @@ class Chatbot extends Component
         $techDrawingUrl = $final['technical_drawing_export'] ?? $final['technical_drawing_path'] ?? null;
 
         // Résolution de l'URL JSON : préférence json_export, fallback tessellated
-        $resolvedJsonUrl = (is_string($jsonModelUrl) && $jsonModelUrl !== '') ? $jsonModelUrl
-            : ((is_string($tessUrl) && $tessUrl !== '') ? $tessUrl : null);
+        $resolvedJsonUrl = ($jsonModelUrl !== null && $jsonModelUrl !== '') ? $jsonModelUrl
+            : (($tessUrl !== null && $tessUrl !== '') ? $tessUrl : null);
 
         // Save session_id si changé
         if (isset($final['session_id']) && $this->chat->session_id !== $final['session_id']) {
@@ -570,9 +575,9 @@ class Chatbot extends Component
 
         // Dispatch du Job background pour OBJ, STEP, PDF uniquement
         $urlsForJob = array_filter([
-            'obj' => (is_string($objUrl) && $objUrl !== '') ? $objUrl : null,
-            'step' => (is_string($stepUrl) && $stepUrl !== '') ? $stepUrl : null,
-            'pdf' => (is_string($techDrawingUrl) && $techDrawingUrl !== '') ? $techDrawingUrl : null,
+            'obj' => ($objUrl !== null && $objUrl !== '') ? $objUrl : null,
+            'step' => ($stepUrl !== null && $stepUrl !== '') ? $stepUrl : null,
+            'pdf' => ($techDrawingUrl !== null && $techDrawingUrl !== '') ? $techDrawingUrl : null,
         ]);
 
         if (! empty($urlsForJob)) {
@@ -1214,6 +1219,30 @@ class Chatbot extends Component
             heading: 'Téléchargement lancé',
             text: "Version {$message->getVersionLabel()} en cours de téléchargement."
         );
+    }
+
+    /**
+     * Reporte une erreur de stream au backend pour logging/monitoring (Nightwatch).
+     * Appelé depuis le frontend à chaque erreur (avant retry).
+     */
+    public function reportStreamError(array $data): void
+    {
+        /** @var ChatUser $user */
+        $user = auth()->user();
+
+        Log::error('[AICAD] Stream error reported from frontend', [
+            'chat_id' => $this->chat->id,
+            'session_id' => $this->chat->session_id,
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'error_type' => $data['errorType'] ?? 'unknown',
+            'error_message' => $data['errorMessage'] ?? 'N/A',
+            'js_error_name' => $data['jsErrorName'] ?? 'N/A',
+            'js_error_message' => $data['jsErrorMessage'] ?? 'N/A',
+            'retry_count' => $data['retryCount'] ?? 0,
+            'max_retries' => $data['maxRetries'] ?? 3,
+            'environment' => app()->environment(),
+        ]);
     }
 
     /**

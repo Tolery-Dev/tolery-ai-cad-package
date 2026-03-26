@@ -42,7 +42,7 @@ class DownloadCadAssetsJob implements ShouldQueue
             return;
         }
 
-        $urlsToDownload = array_filter($this->urls, fn ($url) => is_string($url) && $url !== '');
+        $urlsToDownload = array_filter($this->urls, fn ($url) => $url !== '');
 
         if (empty($urlsToDownload)) {
             $message->cad_files_ready = true;

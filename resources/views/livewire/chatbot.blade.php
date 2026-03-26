@@ -266,6 +266,8 @@
             },
             classifyError(error) {
                 // Classify error type for better user feedback
+                const msg = error.message || '';
+
                 if (error.name === 'AbortError') {
                     return {
                         type: 'cancelled',
@@ -273,28 +275,62 @@
                         canRetry: false,
                     };
                 }
-                if (error instanceof TypeError || error.message?.includes('fetch') || error.message?.includes('network')) {
+
+                // Backend error forwarded via SSE (from StreamController/AICADClient)
+                if (error.isBackendError) {
+                    // Extract useful info from backend message
+                    if (msg.includes('timeout') || msg.includes('Timeout') || msg.includes('timed out')) {
+                        return {
+                            type: 'timeout',
+                            message: 'Le serveur de génération met trop de temps à répondre. Veuillez réessayer.',
+                            canRetry: true,
+                        };
+                    }
+                    if (msg.includes('status 5') || msg.includes('500') || msg.includes('502') || msg.includes('503')) {
+                        return {
+                            type: 'server',
+                            message: 'Le serveur de génération rencontre un problème temporaire.',
+                            canRetry: true,
+                        };
+                    }
                     return {
-                        type: 'network',
-                        message: 'Problème de connexion réseau. Vérifiez votre connexion internet.',
+                        type: 'server',
+                        message: 'Le serveur de génération a rencontré une erreur. Veuillez réessayer.',
                         canRetry: true,
                     };
                 }
-                if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
+
+                // Real network errors: only TypeError with network-specific messages
+                const isNetworkTypeError = error instanceof TypeError && (
+                    msg.includes('Failed to fetch') ||
+                    msg.includes('NetworkError') ||
+                    msg.includes('Load failed') ||
+                    msg.includes('network') ||
+                    msg === 'fetch failed'
+                );
+                if (isNetworkTypeError || msg.includes('ERR_NETWORK') || msg.includes('ERR_CONNECTION')) {
+                    return {
+                        type: 'network',
+                        message: 'Impossible de joindre le serveur. Vérifiez votre connexion internet.',
+                        canRetry: true,
+                    };
+                }
+
+                if (msg.includes('timeout') || msg.includes('Timeout')) {
                     return {
                         type: 'timeout',
                         message: 'Le serveur met trop de temps à répondre.',
                         canRetry: true,
                     };
                 }
-                if (error.message?.includes('500') || error.message?.includes('502') || error.message?.includes('503')) {
+                if (msg.includes('500') || msg.includes('502') || msg.includes('503')) {
                     return {
                         type: 'server',
                         message: 'Le serveur rencontre un problème temporaire.',
                         canRetry: true,
                     };
                 }
-                if (error.message?.includes('401') || error.message?.includes('403')) {
+                if (msg.includes('401') || msg.includes('403')) {
                     return {
                         type: 'auth',
                         message: 'Session expirée. Veuillez rafraîchir la page.',
@@ -303,7 +339,7 @@
                 }
                 return {
                     type: 'unknown',
-                    message: 'Une erreur inattendue s\'est produite.',
+                    message: 'Une erreur inattendue s\'est produite. Veuillez réessayer.',
                     canRetry: true,
                 };
             },
@@ -478,6 +514,14 @@
                                     continue;
                                 }
 
+                                // Handle backend error events (sent by StreamController on CURL/API failures)
+                                if (payload.error) {
+                                    aicadError('[AICAD] ❌ Backend error received via SSE:', payload.message || 'Unknown server error');
+                                    const serverError = new Error(payload.message || 'Server error');
+                                    serverError.isBackendError = true;
+                                    throw serverError;
+                                }
+
                                 if (payload.final_response) {
                                     const resp = payload.final_response || {};
 
@@ -566,6 +610,22 @@
                     aicadLog('[AICAD] 🏷️  Error classified as:', errorInfo.type);
                     aicadLog('[AICAD] 💬 User message:', errorInfo.message);
                     aicadLog('[AICAD] 🔁 Can retry:', errorInfo.canRetry);
+
+                    // Report error to backend for Nightwatch monitoring (fire-and-forget)
+                    if (errorInfo.type !== 'cancelled') {
+                        try {
+                            $wire.reportStreamError({
+                                errorType: errorInfo.type,
+                                errorMessage: errorInfo.message,
+                                jsErrorName: e.name || e.constructor?.name || 'Unknown',
+                                jsErrorMessage: e.message || 'N/A',
+                                retryCount: this.retryCount,
+                                maxRetries: this.maxRetries,
+                            });
+                        } catch (reportErr) {
+                            aicadError('[AICAD] Failed to report error to backend:', reportErr);
+                        }
+                    }
 
                     // Handle cancelled requests (user aborted)
                     if (errorInfo.type === 'cancelled') {
