@@ -611,6 +611,22 @@
                     aicadLog('[AICAD] 💬 User message:', errorInfo.message);
                     aicadLog('[AICAD] 🔁 Can retry:', errorInfo.canRetry);
 
+                    // Report error to backend for Nightwatch monitoring (fire-and-forget)
+                    if (errorInfo.type !== 'cancelled') {
+                        try {
+                            $wire.reportStreamError({
+                                errorType: errorInfo.type,
+                                errorMessage: errorInfo.message,
+                                jsErrorName: e.name || e.constructor?.name || 'Unknown',
+                                jsErrorMessage: e.message || 'N/A',
+                                retryCount: this.retryCount,
+                                maxRetries: this.maxRetries,
+                            });
+                        } catch (reportErr) {
+                            aicadError('[AICAD] Failed to report error to backend:', reportErr);
+                        }
+                    }
+
                     // Handle cancelled requests (user aborted)
                     if (errorInfo.type === 'cancelled') {
                         this.hasError = false;

@@ -1217,6 +1217,30 @@ class Chatbot extends Component
     }
 
     /**
+     * Reporte une erreur de stream au backend pour logging/monitoring (Nightwatch).
+     * Appelé depuis le frontend à chaque erreur (avant retry).
+     */
+    public function reportStreamError(array $data): void
+    {
+        /** @var ChatUser $user */
+        $user = auth()->user();
+
+        Log::error('[AICAD] Stream error reported from frontend', [
+            'chat_id' => $this->chat?->id,
+            'session_id' => $this->chat?->session_id,
+            'user_id' => $user?->id,
+            'user_email' => $user?->email,
+            'error_type' => $data['errorType'] ?? 'unknown',
+            'error_message' => $data['errorMessage'] ?? 'N/A',
+            'js_error_name' => $data['jsErrorName'] ?? 'N/A',
+            'js_error_message' => $data['jsErrorMessage'] ?? 'N/A',
+            'retry_count' => $data['retryCount'] ?? 0,
+            'max_retries' => $data['maxRetries'] ?? 3,
+            'environment' => app()->environment(),
+        ]);
+    }
+
+    /**
      * Notifie l'équipe Tolery d'un échec de génération après plusieurs tentatives.
      * Appelé depuis le frontend quand le retry max est atteint.
      */
