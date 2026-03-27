@@ -133,6 +133,14 @@
                  x-data="{ visible: true }"
                  x-show="visible"
                  @cad-model-stats.window="visible = false">
+
+                {{-- Cube d'orientation title + help text --}}
+                <div class="absolute top-4 right-4 flex flex-col items-center">
+                    <p class="text-sm font-semibold text-violet-600 mb-1">Cube d'orientation</p>
+                    <div class="w-[180px] h-[180px]"></div>
+                    <p class="text-xs text-violet-600 mt-1">Cliquer pour pivoter le cube</p>
+                </div>
+
                 <div class="w-80 h-auto flex items-center justify-center mb-8">
                     <img src="{{ asset('vendor/ai-cad/images/tolery-large-logo.svg') }}" alt="ToleryCAD" />
                 </div>
@@ -140,7 +148,7 @@
                     Votre pièce apparaîtra ici dès qu'elle sera générée.
                 </p>
                 <p class="text-sm font-bold text-violet-600 text-center max-w-[310px] mt-4">
-                    Décrivez bien votre pièce en fonction du cube d'orientation
+                    Décrivez bien votre pièce en fonction du cube d'orientation.
                 </p>
             </div>
         @endif
