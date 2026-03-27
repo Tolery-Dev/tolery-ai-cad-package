@@ -22,7 +22,7 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property int $files_allowed
  * @property string $stripe_id
  * @property string $stripe_price_id
- * @property ResetFrequency $frequency
+ * @property ResetFrequency|null $frequency
  * @property-read Collection<int, SubscriptionPrice> $prices
  * @property-read ?SubscriptionPrice $activeMonthlyPrice
  * @property-read ?SubscriptionPrice $activeYearlyPrice
@@ -104,7 +104,7 @@ class SubscriptionProduct extends Model
             'description' => $this->description,
             'metadata' => [
                 'files_allowed' => (string) $this->files_allowed,
-                'frequency' => $this->frequency->value,
+                'frequency' => $this->frequency !== null ? $this->frequency->value : '',
                 'laravel_product_id' => (string) $this->id,
             ],
             'tax_code' => 'txcd_10103101',
@@ -123,7 +123,7 @@ class SubscriptionProduct extends Model
             'transfer_lookup_key' => true,
             'lookup_key' => $this->getStripePriceKey(),
             'recurring' => [
-                'interval' => $this->frequency->stripInterval(),
+                'interval' => $this->frequency?->stripInterval() ?? 'month',
                 'interval_count' => 1,
             ],
         ];

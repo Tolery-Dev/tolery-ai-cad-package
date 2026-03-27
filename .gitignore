@@ -35,3 +35,4 @@ phpstan.neon
 /dist
 
 resources/dist/images/.DS_Store
+.grepai/
