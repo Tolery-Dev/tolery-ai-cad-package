@@ -13,7 +13,7 @@
                         <p>
                             Expliquer directement en langage naturel ce que vous souhaitez concevoir, notre intelligence artificielle transformera votre description en fichier CAO.
                         </p>
-                        <p>Testez avec ces exemples :</p>
+                        <p>Testez en cliquant sur un de ces exemples :</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @php
