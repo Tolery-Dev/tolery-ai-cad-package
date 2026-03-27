@@ -260,7 +260,7 @@ class Chatbot extends Component
     public function fillPredefinedPrompt(string $prompt): void
     {
         $this->message = $prompt;
-        $this->dispatch('focus-composer');
+        $this->send(app(RateLimiter::class));
     }
 
     #[On('open-file-upload')]
