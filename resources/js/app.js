@@ -127,15 +127,34 @@ class JsonModelViewer3D {
             this._down.y = e.clientY;
         });
 
-        // Navigation Cube - créer le canvas dynamiquement
+        // Navigation Cube - créer le wrapper avec titre, canvas et texte d'aide
         this.navigationCube = null;
+        const navCubeWrapper = document.createElement("div");
+        navCubeWrapper.style.cssText =
+            "position: absolute; top: 16px; right: 16px; z-index: 50; display: flex; flex-direction: column; align-items: center; pointer-events: none;";
+
+        const navCubeTitle = document.createElement("p");
+        navCubeTitle.textContent = "Cube d'orientation";
+        navCubeTitle.style.cssText =
+            "margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #7c3aed; text-align: center; pointer-events: none;";
+        navCubeWrapper.appendChild(navCubeTitle);
+
         const navCubeCanvas = document.createElement("canvas");
         navCubeCanvas.id = "navigation-cube";
         navCubeCanvas.width = 180;
         navCubeCanvas.height = 180;
         navCubeCanvas.style.cssText =
-            "position: absolute; top: 16px; right: 16px; width: 180px; height: 180px; pointer-events: auto; z-index: 50; cursor: pointer; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);";
-        this.container.appendChild(navCubeCanvas);
+            "width: 180px; height: 180px; pointer-events: auto; cursor: pointer; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);";
+        navCubeWrapper.appendChild(navCubeCanvas);
+
+        const navCubeHelp = document.createElement("p");
+        navCubeHelp.textContent = "Cliquer pour pivoter le cube";
+        navCubeHelp.style.cssText =
+            "margin: 4px 0 0 0; font-size: 12px; color: #7c3aed; text-align: center; pointer-events: none;";
+        navCubeWrapper.appendChild(navCubeHelp);
+
+        this.navCubeWrapper = navCubeWrapper;
+        this.container.appendChild(navCubeWrapper);
 
         try {
             this.navigationCube = new NavigationCube(
@@ -146,13 +165,13 @@ class JsonModelViewer3D {
 
             // Hide navigation cube during CAD generation
             window.addEventListener('cad-generation-started', () => {
-                if (this.navigationCube) {
-                    this.navigationCube.setVisible(false);
+                if (this.navCubeWrapper) {
+                    this.navCubeWrapper.style.display = 'none';
                 }
             });
             window.addEventListener('cad-generation-ended', () => {
-                if (this.navigationCube) {
-                    this.navigationCube.setVisible(true);
+                if (this.navCubeWrapper) {
+                    this.navCubeWrapper.style.display = 'flex';
                 }
             });
         } catch (error) {

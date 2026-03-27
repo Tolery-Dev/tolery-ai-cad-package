@@ -74,9 +74,9 @@
                             @include('ai-cad::livewire.partials.chat-messages')
                         @endif
                     </div>
-
-                    @include('ai-cad::livewire.partials.chat-composer')
                 </section>
+
+                @include('ai-cad::livewire.partials.chat-composer')
             </div>
         </div>
 

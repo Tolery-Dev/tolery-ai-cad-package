@@ -1,4 +1,5 @@
-<footer class="bg-white shrink-0" x-data="{ hasContent: false }">
+<footer class="bg-white shrink-0" x-data="{ hasContent: false }"
+    x-on:focus-composer.window="$nextTick(() => { hasContent = true; const ta = $el.querySelector('textarea'); if (ta) ta.focus(); })">
     <form wire:submit.prevent="send" class="px-6 pb-6 pt-4">
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}

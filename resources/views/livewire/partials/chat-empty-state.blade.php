@@ -13,7 +13,7 @@
                         <p>
                             Expliquer directement en langage naturel ce que vous souhaitez concevoir, notre intelligence artificielle transformera votre description en fichier CAO.
                         </p>
-                        <p>Testez avec ces exemples :</p>
+                        <p>Testez en cliquant sur un de ces exemples :</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @php
@@ -31,7 +31,7 @@
                                 $name = is_array($promptData) ? $promptData['name'] : array_keys($predefinedPrompts)[$loop->index];
                                 $prompt = is_array($promptData) ? $promptData['prompt'] : $promptData;
                             @endphp
-                            <button wire:click="sendPredefinedPrompt('{{ addslashes($prompt) }}')"
+                            <button wire:click="fillPredefinedPrompt('{{ addslashes($prompt) }}')"
                                     class="cursor-pointer px-3 py-1 rounded {{ $colorClass }} text-xs font-normal hover:opacity-80 transition-opacity">
                                 {{ $name }}
                             </button>

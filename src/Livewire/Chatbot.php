@@ -257,12 +257,10 @@ class Chatbot extends Component
         ];
     }
 
-    public function sendPredefinedPrompt(string $prompt): void
+    public function fillPredefinedPrompt(string $prompt): void
     {
-        // Remplit le champ message avec le prompt prédéfini
         $this->message = $prompt;
-        // Appelle la méthode send normale
-        $this->send(app(RateLimiter::class));
+        $this->dispatch('focus-composer');
     }
 
     #[On('open-file-upload')]
