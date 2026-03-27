@@ -139,6 +139,9 @@
                 <p class="text-sm font-medium text-black text-center max-w-[310px]">
                     Votre pièce apparaîtra ici dès qu'elle sera générée.
                 </p>
+                <p class="text-sm font-bold text-violet-600 text-center max-w-[310px] mt-4">
+                    Décrivez bien votre pièce en fonction du cube d'orientation
+                </p>
             </div>
         @endif
 
