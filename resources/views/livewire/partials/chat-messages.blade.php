@@ -125,17 +125,6 @@
 
             </div>
 
-            {{-- Suggestions contextuelles (dernier message assistant uniquement) --}}
-            @if($msg['role'] === 'assistant' && $loop->last && ($msg['content'] ?? '') !== '[TYPING_INDICATOR]' && !empty($contextualSuggestions))
-                <div class="flex flex-wrap gap-2 mt-3" x-data x-show="$el.closest('article').dataset.isLast === 'true'">
-                    @foreach($contextualSuggestions as $suggestion)
-                        <button wire:click="fillPredefinedPrompt('{{ addslashes($suggestion['prompt']) }}')"
-                                class="cursor-pointer px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-xs font-medium hover:bg-violet-100 hover:border-violet-300 transition-all duration-200">
-                            {{ $suggestion['label'] }}
-                        </button>
-                    @endforeach
-                </div>
-            @endif
         </div>
     </article>
 @empty
