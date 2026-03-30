@@ -72,9 +72,6 @@ class Chatbot extends Component
     /** Quota information */
     public ?array $quotaStatus = null;
 
-    /** Suggestions contextuelles affichées après la dernière réponse du bot */
-    public array $contextualSuggestions = [];
-
     /** Mapping code d'erreur DFM → message traduit (chargé au mount) */
     public array $dfmErrorCodes = [];
 
@@ -133,9 +130,6 @@ class Chatbot extends Component
         $user = auth()->user();
         $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
 
-        // Charger les suggestions contextuelles selon l'état du chat
-        $this->contextualSuggestions = $this->getContextualSuggestions();
-
         // Charger les codes d'erreur DFM pour le mapping côté frontend
         $this->dfmErrorCodes = $this->loadDfmErrorCodes();
     }
@@ -163,38 +157,6 @@ class Chatbot extends Component
             ? 'Décrivez ce que vous souhaitez modifier sur la face sélectionnée'
             : 'Décrivez le plus précisément votre pièce ou insérez un lien url ici';
 
-        // Met à jour les suggestions selon le contexte de sélection
-        $this->contextualSuggestions = $this->getContextualSuggestions($hasSelection ? 'face' : null);
-    }
-
-    /**
-     * Retourne les suggestions contextuelles selon l'état du chat.
-     *
-     * @param  ?string  $context  Forcer un contexte ('face') ou null pour auto-détection
-     * @return array<int, array{label: string, prompt: string}>
-     */
-    protected function getContextualSuggestions(?string $context = null): array
-    {
-        if ($context === 'face') {
-            return [
-                ['label' => 'Percer un trou', 'prompt' => 'Perce un trou de 10mm au centre de cette face'],
-                ['label' => 'Ajouter une découpe', 'prompt' => 'Ajoute une découpe rectangulaire sur cette face'],
-                ['label' => 'Chanfreiner les bords', 'prompt' => 'Chanfreine les bords de cette face'],
-                ['label' => 'Ajouter des perçages', 'prompt' => 'Ajoute des perçages réguliers sur cette face'],
-            ];
-        }
-
-        if ($this->chat->has_generated_piece) {
-            return [
-                ['label' => 'Modifier les dimensions', 'prompt' => 'Modifie les dimensions de la pièce'],
-                ['label' => 'Ajouter des perçages', 'prompt' => 'Ajoute des perçages sur la pièce'],
-                ['label' => 'Changer l\'épaisseur', 'prompt' => 'Change l\'épaisseur de la tôle'],
-                ['label' => 'Ajouter un pli', 'prompt' => 'Ajoute un pli supplémentaire'],
-            ];
-        }
-
-        // Chat vide : pas de suggestions (les predefined prompts dans l'empty state suffisent)
-        return [];
     }
 
     public function rendered(): void {}
@@ -260,7 +222,7 @@ class Chatbot extends Component
     public function fillPredefinedPrompt(string $prompt): void
     {
         $this->message = $prompt;
-        $this->send(app(RateLimiter::class));
+        $this->dispatch('tolery-chat-focus-input');
     }
 
     #[On('open-file-upload')]
@@ -587,7 +549,6 @@ class Chatbot extends Component
         }
 
         $this->messages = $this->mapDbMessagesToArray();
-        $this->contextualSuggestions = $this->getContextualSuggestions();
 
         $this->dispatch('tolery-chat-append');
 
