@@ -111,6 +111,13 @@ class AiCadStripe
             'mode' => 'subscription',
             'locale' => 'fr',
             'billing_address_collection' => 'required',
+            'custom_fields' => [
+                [
+                    'key' => 'company_name',
+                    'label' => ['type' => 'custom', 'custom' => 'Nom de la société'],
+                    'type' => 'text',
+                ],
+            ],
             'line_items' => [
                 [
                     'price' => $priceId,
