@@ -45,4 +45,13 @@ class ChatTeam extends Model
     {
         return $this->hasMany(FilePurchase::class);
     }
+
+    /**
+     * Vérifie si la team est un beta testeur avec accès libre aux fichiers.
+     * Peut être overridée par le modèle de l'application (config ai-cad.chat_team_model).
+     */
+    public function isBetaTester(): bool
+    {
+        return false;
+    }
 }

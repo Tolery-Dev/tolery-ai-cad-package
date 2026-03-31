@@ -33,7 +33,18 @@ class FileAccessService
      */
     public function canDownloadChat(ChatTeam $team, Chat $chat): array
     {
-        // 1. Déjà téléchargé ce chat ?
+        // 1. Beta testeur → accès libre
+        if ($team->isBetaTester()) {
+            return [
+                'can_download' => true,
+                'reason' => 'beta_tester',
+                'remaining_quota' => null,
+                'total_quota' => null,
+                'options' => [],
+            ];
+        }
+
+        // 2. Déjà téléchargé ce chat ?
         if (ChatDownload::isDownloaded($team, $chat)) {
             return [
                 'can_download' => true,
@@ -44,7 +55,7 @@ class FileAccessService
             ];
         }
 
-        // 2. A acheté ce chat spécifiquement ?
+        // 3. A acheté ce chat spécifiquement ?
         if (FilePurchase::hasPurchased($team, $chat)) {
             return [
                 'can_download' => true,
@@ -55,7 +66,7 @@ class FileAccessService
             ];
         }
 
-        // 3. Vérifie si abonné actif
+        // 4. Vérifie si abonné actif
         if (! $team->subscribed()) {
             return [
                 'can_download' => false,
@@ -162,7 +173,18 @@ class FileAccessService
      */
     public function canDownloadMessage(ChatTeam $team, Chat $chat, ChatMessage $message): array
     {
-        // 1. Déjà téléchargé cette version ?
+        // 1. Beta testeur → accès libre
+        if ($team->isBetaTester()) {
+            return [
+                'can_download' => true,
+                'reason' => 'beta_tester',
+                'remaining_quota' => null,
+                'total_quota' => null,
+                'options' => [],
+            ];
+        }
+
+        // 2. Déjà téléchargé cette version ?
         if (ChatDownload::isMessageDownloaded($team, $chat, $message)) {
             return [
                 'can_download' => true,
@@ -173,7 +195,7 @@ class FileAccessService
             ];
         }
 
-        // 2. A acheté ce chat spécifiquement ?
+        // 3. A acheté ce chat spécifiquement ?
         if (FilePurchase::hasPurchased($team, $chat)) {
             return [
                 'can_download' => true,
@@ -184,7 +206,7 @@ class FileAccessService
             ];
         }
 
-        // 3. Vérifie si abonné actif
+        // 4. Vérifie si abonné actif
         if (! $team->subscribed()) {
             return [
                 'can_download' => false,
