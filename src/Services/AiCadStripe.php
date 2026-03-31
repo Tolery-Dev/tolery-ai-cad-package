@@ -109,6 +109,8 @@ class AiCadStripe
     ): Session {
         $params = [
             'mode' => 'subscription',
+            'locale' => 'fr',
+            'billing_address_collection' => 'required',
             'line_items' => [
                 [
                     'price' => $priceId,
