@@ -54,9 +54,9 @@
 
                 @if($amount)
                     @php
-                        $ttc = $amount / 100;
-                        $ht = round($ttc / 1.20, 2);
-                        $tva = round($ttc - $ht, 2);
+                        $ht = $amount / 100;
+                        $tva = round($ht * 0.20, 2);
+                        $ttc = round($ht + $tva, 2);
                     @endphp
                     <div class="bg-violet-50 border border-violet-200 rounded-lg p-4 space-y-2">
                         <div class="flex justify-between items-center text-sm text-zinc-600">
