@@ -24,6 +24,10 @@ class SyncStripeProducts extends Command
             $this->info("✅ Synced {$result['products']} products");
             $this->info("✅ Synced {$result['prices']} prices");
 
+            if (! empty($result['deleted_products'])) {
+                $this->info("🗑️  Deleted {$result['deleted_products']} orphan products");
+            }
+
             if (! empty($result['errors'])) {
                 $this->newLine();
                 $this->warn('⚠️  Errors encountered:');
