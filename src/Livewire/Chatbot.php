@@ -222,7 +222,16 @@ class Chatbot extends Component
     public function fillPredefinedPrompt(string $prompt): void
     {
         $this->message = $prompt;
-        $this->dispatch('tolery-chat-focus-input');
+        $this->js("
+            \$nextTick(() => {
+                const ta = document.querySelector('[data-flux-composer] textarea');
+                if (ta) {
+                    ta.focus();
+                    ta.dispatchEvent(new Event('input', { bubbles: true }));
+                    ta.setSelectionRange(ta.value.length, ta.value.length);
+                }
+            });
+        ");
     }
 
     #[On('open-file-upload')]

@@ -234,18 +234,6 @@
                 Livewire.on('aicad:startStream', this._onLivewire);
                 Livewire.on('aicad-start-stream', this._onLivewire);
 
-                // Focus sur le textarea du composer Flux
-                Livewire.on('tolery-chat-focus-input', () => {
-                    const composer = document.querySelector('[data-flux-composer]');
-                    const textarea = composer?.querySelector('textarea');
-                    if (textarea) {
-                        textarea.focus();
-                        // setSelectionRange ne fonctionne que sur input/textarea standard
-                        if (typeof textarea.setSelectionRange === 'function') {
-                            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-                        }
-                    }
-                });
             },
             reset() {
                 this.overall = 0;
