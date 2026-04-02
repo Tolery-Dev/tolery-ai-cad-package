@@ -29,11 +29,22 @@
                 </div>
 
                 {{-- Meta Grid --}}
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-6">
                     {{-- Team --}}
                     <div class="space-y-1">
                         <p class="text-sm text-zinc-500 dark:text-zinc-400">Équipe</p>
                         <p class="font-medium text-zinc-900 dark:text-zinc-100">{{ $chat->team?->name ?? '-' }}</p>
+                    </div>
+
+                    {{-- User --}}
+                    <div class="space-y-1">
+                        <p class="text-sm text-zinc-500 dark:text-zinc-400">Utilisateur</p>
+                        @if($chat->user)
+                            <p class="font-medium text-zinc-900 dark:text-zinc-100">{{ $chat->user->full_name }}</p>
+                            <p class="text-sm text-zinc-500 dark:text-zinc-400 truncate">{{ $chat->user->email }}</p>
+                        @else
+                            <p class="font-medium text-zinc-900 dark:text-zinc-100">-</p>
+                        @endif
                     </div>
 
                     {{-- Material --}}
@@ -138,8 +149,11 @@
 
                             {{-- Message Text --}}
                             @if($message->message)
-                                <div class="prose prose-sm dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300">
-                                    {!! nl2br(e($message->message)) !!}
+                                <div class="prose prose-sm dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300 prose-p:my-1 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded dark:prose-code:bg-violet-500/10 dark:prose-code:text-violet-300">
+                                    {!! \Illuminate\Support\Str::markdown($message->message, [
+                                        'html_input' => 'strip',
+                                        'allow_unsafe_links' => false,
+                                    ]) !!}
                                 </div>
                             @endif
 
