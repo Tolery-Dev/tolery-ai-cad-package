@@ -1,5 +1,4 @@
-<footer class="bg-white shrink-0" x-data="{ hasContent: false }"
-    x-on:focus-composer.window="$nextTick(() => { hasContent = true; const ta = $el.querySelector('textarea'); if (ta) ta.focus(); })">
+<footer class="bg-white shrink-0" x-data="{ hasContent: false }">
     <form wire:submit.prevent="send" class="px-6 pb-6 pt-4">
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
@@ -19,9 +18,7 @@
                 wire:model="message"
                 submit="send"
                 placeholder="{{ $composerPlaceholder }}"
-                x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; } }"
-                x-init="resize()"
-                x-on:input="resize(); $dispatch('composer-input', { value: $event.target.value })"
+                x-on:input="$dispatch('composer-input', { value: $event.target.value })"
                 x-on:keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); $wire.send() }"
                 @composer-input.window="hasContent = $event.detail.value?.trim().length > 0">
             </flux:composer>
