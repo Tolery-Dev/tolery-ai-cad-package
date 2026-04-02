@@ -1241,14 +1241,14 @@ class Chatbot extends Component
         Log::error('[AICAD] Message Preview: '.($data['message'] ?? 'N/A'));
         Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-        // Log channel spécifique pour alerting (Slack, etc.)
-        // Utiliser try-catch au cas où le channel n'est pas configuré
-        try {
-            Log::channel('slack')->critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives', $errorDetails);
-        } catch (\Exception) {
-            // Fallback: log to default channel if slack is not configured
-            Log::critical('[AICAD] Échec de génération CAO après '.$errorDetails['retry_count'].' tentatives (Slack unavailable)', $errorDetails);
-        }
+        // Report exception to Nightwatch / error tracker
+        report(new \RuntimeException(
+            '[AICAD] Stream failure after '.$errorDetails['retry_count'].' retries — '
+            .'Type: '.($data['errorType'] ?? 'unknown').' — '
+            .'Message: '.($data['errorMessage'] ?? 'N/A').' — '
+            .'User: '.$user->email.' — '
+            .'Chat: '.$this->chat->id
+        ));
 
         // Store an assistant message indicating the failure
         $failureMessage = 'Une erreur technique est survenue lors de la génération de votre pièce. '
