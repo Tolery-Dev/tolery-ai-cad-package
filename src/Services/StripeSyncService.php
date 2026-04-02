@@ -36,9 +36,12 @@ class StripeSyncService
                 'limit' => 100,
             ]);
 
+            $stripeProductIds = [];
+
             foreach ($stripeProducts->data as $stripeProduct) {
                 try {
                     $this->syncProduct($stripeProduct);
+                    $stripeProductIds[] = $stripeProduct->id;
                     $synced['products']++;
 
                     $stripePrices = $this->stripe->prices->all([
@@ -54,6 +57,12 @@ class StripeSyncService
                 } catch (\Exception $e) {
                     $synced['errors'][] = "Product {$stripeProduct->id}: {$e->getMessage()}";
                 }
+            }
+
+            // Remove local products that no longer exist on Stripe
+            $deleted = SubscriptionProduct::whereNotIn('stripe_id', $stripeProductIds)->delete();
+            if ($deleted > 0) {
+                $synced['deleted_products'] = $deleted;
             }
         } catch (ApiErrorException $e) {
             $synced['errors'][] = "Stripe API Error: {$e->getMessage()}";
