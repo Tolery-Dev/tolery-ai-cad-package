@@ -42,5 +42,13 @@
                 </button>
             </div>
         @endif
+        @if($chat->user)
+            <div class="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 min-w-0">
+                <flux:icon.user class="size-3 shrink-0" />
+                <span class="truncate">{{ $chat->user->full_name }}</span>
+                <span class="text-zinc-300 dark:text-zinc-600 shrink-0">•</span>
+                <span class="truncate">{{ $chat->user->email }}</span>
+            </div>
+        @endif
     </div>
 </div>

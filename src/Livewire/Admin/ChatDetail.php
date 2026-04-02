@@ -15,7 +15,14 @@ class ChatDetail extends Component
 
     public function mount(Chat $chat): void
     {
-        $this->chat = $chat->load(['messages.user', 'team']);
+        $this->chat = $chat->load([
+            'team',
+            'user',
+            'messages' => fn ($query) => $query
+                ->with('user')
+                ->orderBy('created_at')
+                ->orderBy('id'),
+        ]);
     }
 
     public function downloadZip(): void
