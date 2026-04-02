@@ -168,34 +168,62 @@
                                 </div>
                             @endif
 
+                            {{-- 3D Viewer --}}
+                            @if($message->ai_json_edge_path)
+                                <div class="pt-3">
+                                    <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Visualisation 3D</p>
+                                    <div
+                                        x-data="adminViewer(@js($message->getJSONEdgeUrl()), @js($chat->material_family?->value ?? 'acier'))"
+                                        x-init="init()"
+                                        class="relative w-full rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden bg-zinc-50 dark:bg-zinc-900"
+                                        style="height: 400px;">
+                                        <div x-ref="container" class="w-full h-full"></div>
+                                        <div x-show="loading" class="absolute inset-0 flex items-center justify-center bg-zinc-50/80 dark:bg-zinc-900/80">
+                                            <flux:icon.arrow-path class="size-6 text-zinc-400 animate-spin" />
+                                        </div>
+                                        <div x-show="error" class="absolute inset-0 flex items-center justify-center">
+                                            <p class="text-sm text-red-500" x-text="error"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
                             {{-- Generated Files --}}
                             @if($message->ai_cad_path || $message->ai_step_path || $message->ai_technical_drawing_path || $message->ai_json_edge_path)
                                 <div class="pt-3 border-t border-zinc-100 dark:border-zinc-800">
                                     <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Fichiers générés</p>
                                     <div class="flex flex-wrap gap-2">
                                         @if($message->ai_step_path)
-                                            <flux:badge color="green" size="sm">
-                                                <flux:icon.document-arrow-down class="size-3.5" />
-                                                STEP
-                                            </flux:badge>
+                                            <a href="{{ $message->getStepUrl() }}" target="_blank" download>
+                                                <flux:badge color="green" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.document-arrow-down class="size-3.5" />
+                                                    STEP
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                         @if($message->ai_cad_path)
-                                            <flux:badge color="blue" size="sm">
-                                                <flux:icon.cube class="size-3.5" />
-                                                OBJ
-                                            </flux:badge>
+                                            <a href="{{ $message->getObjUrl() }}" target="_blank" download>
+                                                <flux:badge color="blue" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.cube class="size-3.5" />
+                                                    OBJ
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                         @if($message->ai_technical_drawing_path)
-                                            <flux:badge color="purple" size="sm">
-                                                <flux:icon.document class="size-3.5" />
-                                                PDF
-                                            </flux:badge>
+                                            <a href="{{ $message->getTechnicalDrawingUrl() }}" target="_blank" download>
+                                                <flux:badge color="purple" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.document class="size-3.5" />
+                                                    PDF
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                         @if($message->ai_json_edge_path)
-                                            <flux:badge color="zinc" size="sm">
-                                                <flux:icon.code-bracket class="size-3.5" />
-                                                JSON
-                                            </flux:badge>
+                                            <a href="{{ $message->getJSONEdgeUrl() }}" target="_blank" download>
+                                                <flux:badge color="zinc" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.code-bracket class="size-3.5" />
+                                                    JSON
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                     </div>
                                 </div>
@@ -214,3 +242,141 @@
         </div>
     </div>
 </div>
+
+@script
+<script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+
+    const MATERIAL_COLORS = {
+        acier: { color: 0x8a8a8a, metalness: 0.85, roughness: 0.35 },
+        inox: { color: 0xc0c0c0, metalness: 0.95, roughness: 0.15 },
+        aluminium: { color: 0xd4d4d8, metalness: 0.9, roughness: 0.2 },
+    };
+
+    function buildMesh(json, materialType) {
+        const bodies = json?.faces?.bodies;
+        if (!Array.isArray(bodies)) return null;
+
+        const positions = [];
+
+        for (const body of bodies) {
+            for (const face of (body?.faces || [])) {
+                for (const facet of (face?.facets || [])) {
+                    const vtx = facet?.vertices;
+                    if (!Array.isArray(vtx) || vtx.length < 3) continue;
+                    for (let i = 2; i < vtx.length; i++) {
+                        positions.push(
+                            vtx[0].x, vtx[0].y, vtx[0].z,
+                            vtx[i-1].x, vtx[i-1].y, vtx[i-1].z,
+                            vtx[i].x, vtx[i].y, vtx[i].z,
+                        );
+                    }
+                }
+            }
+        }
+
+        if (positions.length === 0) return null;
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.computeVertexNormals();
+
+        const matConfig = MATERIAL_COLORS[materialType] || MATERIAL_COLORS.acier;
+        const material = new THREE.MeshStandardMaterial({
+            color: matConfig.color,
+            metalness: matConfig.metalness,
+            roughness: matConfig.roughness,
+            side: THREE.DoubleSide,
+        });
+
+        return new THREE.Mesh(geometry, material);
+    }
+
+    Alpine.data('adminViewer', (jsonUrl, materialType) => ({
+        loading: true,
+        error: null,
+
+        init() {
+            const container = this.$refs.container;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xfafafb);
+
+            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            container.appendChild(renderer.domElement);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            fillLight.position.set(-5, 3, -5);
+            scene.add(fillLight);
+
+            fetch(jsonUrl)
+                .then(r => r.json())
+                .then(json => {
+                    const mesh = buildMesh(json, materialType);
+                    if (!mesh) {
+                        this.error = 'Format JSON non reconnu';
+                        this.loading = false;
+                        return;
+                    }
+
+                    scene.add(mesh);
+
+                    // Center and fit camera
+                    const box = new THREE.Box3().setFromObject(mesh);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const distance = maxDim * 2;
+
+                    mesh.position.sub(center);
+                    camera.position.set(distance * 0.7, distance * 0.5, distance * 0.7);
+                    controls.target.set(0, 0, 0);
+                    controls.update();
+
+                    this.loading = false;
+                })
+                .catch(err => {
+                    console.error('[AdminViewer] Error:', err);
+                    this.error = 'Erreur de chargement du modèle 3D';
+                    this.loading = false;
+                });
+
+            // Animation loop
+            const animate = () => {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            // Resize handling
+            const resizeObserver = new ResizeObserver(() => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+            resizeObserver.observe(container);
+        }
+    }));
+</script>
+@endscript
