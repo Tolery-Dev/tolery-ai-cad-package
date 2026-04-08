@@ -83,7 +83,17 @@
                         if (!text || typeof window.marked === 'undefined') {
                             return text ? text.replace(/\n/g, '<br>') : text;
                         }
-                        return marked.parse(text, { breaks: true });
+                        // Preserve <span style="color:..."> through marked parsing
+                        const spans = [];
+                        const preserved = text.replace(/<span\s+style="color:[^"]*">([\s\S]*?)<\/span>/gi, (match) => {
+                            spans.push(match);
+                            return `%%SPAN_${spans.length - 1}%%`;
+                        });
+                        let html = marked.parse(preserved, { breaks: true });
+                        spans.forEach((span, i) => {
+                            html = html.replace(`%%SPAN_${i}%%`, span);
+                        });
+                        return html;
                     },
                     parseContent() {
                         if (this.content === '[TYPING_INDICATOR]') {

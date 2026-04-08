@@ -371,6 +371,47 @@
                 geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geometry.computeVertexNormals();
 
+                // Studio environment map (matches frontend createEnvironmentMap)
+                const envSize = 1024;
+                const envCanvas = document.createElement('canvas');
+                envCanvas.width = envSize; envCanvas.height = envSize;
+                const envCtx = envCanvas.getContext('2d');
+                const bgGrad = envCtx.createLinearGradient(0, 0, 0, envSize);
+                bgGrad.addColorStop(0, '#ffffff');
+                bgGrad.addColorStop(0.3, '#f0f0f2');
+                bgGrad.addColorStop(0.6, '#d8d8dc');
+                bgGrad.addColorStop(1, '#c0c0c8');
+                envCtx.fillStyle = bgGrad;
+                envCtx.fillRect(0, 0, envSize, envSize);
+                envCtx.globalCompositeOperation = 'lighten';
+                const sb1 = envCtx.createRadialGradient(envSize*0.2, envSize*0.2, 0, envSize*0.2, envSize*0.2, envSize*0.4);
+                sb1.addColorStop(0, 'rgba(255,255,255,0.8)'); sb1.addColorStop(1, 'rgba(255,255,255,0)');
+                envCtx.fillStyle = sb1; envCtx.fillRect(0, 0, envSize, envSize);
+                const sb2 = envCtx.createRadialGradient(envSize*0.8, envSize*0.25, 0, envSize*0.8, envSize*0.25, envSize*0.35);
+                sb2.addColorStop(0, 'rgba(255,255,255,0.7)'); sb2.addColorStop(1, 'rgba(255,255,255,0)');
+                envCtx.fillStyle = sb2; envCtx.fillRect(0, 0, envSize, envSize);
+                const envMap = new THREE.CanvasTexture(envCanvas);
+                envMap.mapping = THREE.EquirectangularReflectionMapping;
+
+                // Normal map — steel grain (matches frontend createNormalMap('acier'))
+                const nmSize = 512;
+                const nmCanvas = document.createElement('canvas');
+                nmCanvas.width = nmSize; nmCanvas.height = nmSize;
+                const nmCtx = nmCanvas.getContext('2d');
+                const nmData = nmCtx.createImageData(nmSize, nmSize);
+                for (let i = 0; i < nmData.data.length; i += 4) {
+                    const noise = Math.random() * 20 - 10;
+                    nmData.data[i] = Math.max(0, Math.min(255, 128 + noise));
+                    nmData.data[i+1] = Math.max(0, Math.min(255, 128 + noise * 0.5));
+                    nmData.data[i+2] = 255;
+                    nmData.data[i+3] = 255;
+                }
+                nmCtx.putImageData(nmData, 0, 0);
+                const normalMap = new THREE.CanvasTexture(nmCanvas);
+                normalMap.wrapS = THREE.RepeatWrapping;
+                normalMap.wrapT = THREE.RepeatWrapping;
+                normalMap.repeat.set(4, 4);
+
                 const material = new THREE.MeshPhysicalMaterial({
                     color: '#4a4f54',
                     metalness: 1,
@@ -378,6 +419,10 @@
                     clearcoat: 0.05,
                     clearcoatRoughness: 0,
                     reflectivity: 0.7,
+                    normalMap: normalMap,
+                    normalScale: new THREE.Vector2(0.6, 0.6),
+                    envMap: envMap,
+                    envMapIntensity: 1.0,
                     side: THREE.DoubleSide,
                 });
                 scene.add(new THREE.Mesh(geometry, material));
