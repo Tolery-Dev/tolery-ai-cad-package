@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
+use Tolery\AiCad\Models\ChatMessage;
 
 class ChatDetail extends Component
 {
@@ -23,6 +24,24 @@ class ChatDetail extends Component
                 ->orderBy('created_at')
                 ->orderBy('id'),
         ]);
+    }
+
+    /**
+     * Get all assistant message versions that have 3D model data.
+     *
+     * @return array<int, array{label: string, jsonUrl: string, screenshotUrl: string|null}>
+     */
+    public function getViewerVersions(): array
+    {
+        return $this->chat->messages
+            ->filter(fn (ChatMessage $m) => $m->role === 'assistant' && $m->ai_json_edge_path)
+            ->values()
+            ->map(fn (ChatMessage $m, int $i) => [
+                'label' => 'v'.($i + 1),
+                'jsonUrl' => $m->getJSONEdgeUrl(),
+                'screenshotUrl' => $m->getScreenshotUrl(),
+            ])
+            ->all();
     }
 
     public function downloadZip(): void

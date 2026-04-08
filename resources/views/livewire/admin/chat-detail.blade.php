@@ -100,6 +100,241 @@
         </div>
     </flux:card>
 
+    {{-- 3D Viewer Section --}}
+    @php $versions = $this->getViewerVersions(); @endphp
+    @if(count($versions) > 0)
+        <flux:card
+            x-data="adminViewer(@js($versions))"
+            x-init="loadVersion(versions.length - 1)"
+            wire:ignore
+        >
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <flux:heading size="lg" level="2">Visualisation 3D</flux:heading>
+                    <flux:badge color="zinc" size="sm" x-text="versions[currentIndex]?.label ?? ''"></flux:badge>
+                </div>
+                <div class="flex items-center gap-2" x-show="versions.length > 1">
+                    <template x-for="(v, i) in versions" :key="i">
+                        <button
+                            type="button"
+                            @click="loadVersion(i)"
+                            :class="i === currentIndex
+                                ? 'bg-violet-600 text-white'
+                                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'"
+                            class="px-3 py-1 text-sm font-medium rounded-full transition-colors"
+                            x-text="v.label">
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700" style="height: 500px;">
+                {{-- Loading overlay --}}
+                <div x-show="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
+                    <div class="flex flex-col items-center gap-3">
+                        <flux:icon.arrow-path class="size-8 text-violet-600 animate-spin" />
+                        <span class="text-sm text-zinc-500">Chargement du modèle 3D...</span>
+                    </div>
+                </div>
+
+                {{-- Error overlay --}}
+                <div x-show="error" x-cloak class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
+                    <div class="flex flex-col items-center gap-3">
+                        <flux:icon.exclamation-triangle class="size-8 text-red-500" />
+                        <span class="text-sm text-red-600" x-text="error"></span>
+                    </div>
+                </div>
+
+                <div x-ref="viewer" class="w-full h-full"></div>
+            </div>
+        </flux:card>
+
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('adminViewer', (versions) => ({
+                    versions,
+                    currentIndex: 0,
+                    loading: false,
+                    error: null,
+                    renderer: null,
+                    scene: null,
+                    camera: null,
+                    controls: null,
+                    animationId: null,
+                    threeLoaded: false,
+                    THREE: null,
+                    OrbitControls: null,
+
+                    async ensureThreeLoaded() {
+                        if (this.threeLoaded) return;
+                        this.THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/+esm');
+                        const controlsModule = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js/+esm');
+                        this.OrbitControls = controlsModule.OrbitControls;
+                        this.threeLoaded = true;
+                    },
+
+                    async loadVersion(index) {
+                        this.currentIndex = index;
+                        this.loading = true;
+                        this.error = null;
+
+                        try {
+                            await this.ensureThreeLoaded();
+                            const THREE = this.THREE;
+
+                            const response = await fetch(this.versions[index].jsonUrl);
+                            if (!response.ok) throw new Error('Impossible de charger le fichier 3D');
+                            const jsonData = await response.json();
+
+                            // Cleanup previous scene
+                            if (this.animationId) cancelAnimationFrame(this.animationId);
+                            if (this.renderer) {
+                                this.renderer.dispose();
+                                this.renderer.domElement.remove();
+                            }
+
+                            const container = this.$refs.viewer;
+                            const width = container.clientWidth;
+                            const height = container.clientHeight;
+
+                            // Scene setup
+                            const scene = new THREE.Scene();
+                            scene.background = new THREE.Color(0xfafafb);
+
+                            const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+                            const renderer = new THREE.WebGLRenderer({ antialias: true });
+                            renderer.setSize(width, height);
+                            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                            renderer.toneMappingExposure = 1.2;
+                            container.appendChild(renderer.domElement);
+
+                            const controls = new this.OrbitControls(camera, renderer.domElement);
+                            controls.enableDamping = true;
+                            controls.dampingFactor = 0.08;
+
+                            // Lighting
+                            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+                            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+                            dirLight.position.set(5, 10, 7);
+                            scene.add(dirLight);
+                            const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+                            fillLight.position.set(-5, 3, -5);
+                            scene.add(fillLight);
+
+                            // Build mesh from JSON
+                            const geometry = this.buildGeometry(THREE, jsonData);
+                            const material = new THREE.MeshStandardMaterial({
+                                color: 0x8a8a8a,
+                                metalness: 0.85,
+                                roughness: 0.55,
+                                side: THREE.DoubleSide,
+                            });
+                            const mesh = new THREE.Mesh(geometry, material);
+                            scene.add(mesh);
+
+                            // Edges
+                            const edgesGeometry = new THREE.EdgesGeometry(geometry, 30);
+                            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 1 });
+                            scene.add(new THREE.LineSegments(edgesGeometry, edgesMaterial));
+
+                            // Fit camera
+                            const box = new THREE.Box3().setFromObject(mesh);
+                            const center = box.getCenter(new THREE.Vector3());
+                            const size = box.getSize(new THREE.Vector3());
+                            const maxDim = Math.max(size.x, size.y, size.z);
+                            const distance = maxDim * 2;
+
+                            camera.position.set(center.x + distance * 0.6, center.y + distance * 0.4, center.z + distance * 0.7);
+                            camera.lookAt(center);
+                            controls.target.copy(center);
+                            controls.update();
+
+                            this.scene = scene;
+                            this.camera = camera;
+                            this.renderer = renderer;
+                            this.controls = controls;
+
+                            // Animation loop
+                            const animate = () => {
+                                this.animationId = requestAnimationFrame(animate);
+                                controls.update();
+                                renderer.render(scene, camera);
+                            };
+                            animate();
+
+                            // Resize handler
+                            const resizeObserver = new ResizeObserver(() => {
+                                const w = container.clientWidth;
+                                const h = container.clientHeight;
+                                camera.aspect = w / h;
+                                camera.updateProjectionMatrix();
+                                renderer.setSize(w, h);
+                            });
+                            resizeObserver.observe(container);
+
+                            this.loading = false;
+                        } catch (e) {
+                            console.error('[AdminViewer]', e);
+                            this.error = e.message || 'Erreur lors du chargement';
+                            this.loading = false;
+                        }
+                    },
+
+                    buildGeometry(THREE, jsonData) {
+                        const positions = [];
+
+                        // Onshape format
+                        if (jsonData.faces?.bodies) {
+                            for (const body of jsonData.faces.bodies) {
+                                for (const face of (body.faces || [])) {
+                                    for (const facet of (face.facets || [])) {
+                                        const verts = facet.vertices;
+                                        if (verts && verts.length >= 9) {
+                                            for (let i = 0; i < verts.length - 8; i += 9) {
+                                                positions.push(
+                                                    verts[i], verts[i+1], verts[i+2],
+                                                    verts[i+3], verts[i+4], verts[i+5],
+                                                    verts[i+6], verts[i+7], verts[i+8]
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // FreeCad format
+                        else if (jsonData.objects) {
+                            for (const obj of jsonData.objects) {
+                                const verts = obj.vertices || [];
+                                const facets = obj.facets || [];
+                                for (const f of facets) {
+                                    const indices = f.vertices || f;
+                                    if (indices.length >= 3) {
+                                        for (let i = 0; i < 3; i++) {
+                                            const idx = indices[i] * 3;
+                                            positions.push(verts[idx], verts[idx+1], verts[idx+2]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        const geometry = new THREE.BufferGeometry();
+                        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                        geometry.computeVertexNormals();
+                        return geometry;
+                    },
+
+                    destroy() {
+                        if (this.animationId) cancelAnimationFrame(this.animationId);
+                        if (this.renderer) this.renderer.dispose();
+                    }
+                }));
+            });
+        </script>
+    @endif
+
     {{-- Messages Section --}}
     <div>
         <div class="flex items-center gap-3 mb-4">
