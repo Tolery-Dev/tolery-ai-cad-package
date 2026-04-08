@@ -219,28 +219,36 @@
                                     <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">Fichiers générés</p>
                                     <div class="flex flex-wrap gap-2">
                                         @if($message->ai_step_path)
-                                            <flux:badge color="green" size="sm">
-                                                <flux:icon.document-arrow-down class="size-3.5" />
-                                                STEP
-                                            </flux:badge>
+                                            <a href="{{ $message->getStepUrl() }}" target="_blank" download class="no-underline">
+                                                <flux:badge color="green" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.document-arrow-down class="size-3.5" />
+                                                    STEP
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                         @if($message->ai_cad_path)
-                                            <flux:badge color="blue" size="sm">
-                                                <flux:icon.cube class="size-3.5" />
-                                                OBJ
-                                            </flux:badge>
+                                            <a href="{{ $message->getObjUrl() }}" target="_blank" download class="no-underline">
+                                                <flux:badge color="blue" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.cube class="size-3.5" />
+                                                    OBJ
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                         @if($message->ai_technical_drawing_path)
-                                            <flux:badge color="purple" size="sm">
-                                                <flux:icon.document class="size-3.5" />
-                                                PDF
-                                            </flux:badge>
+                                            <a href="{{ $message->getTechnicalDrawingUrl() }}" target="_blank" class="no-underline">
+                                                <flux:badge color="purple" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.document class="size-3.5" />
+                                                    PDF
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                         @if($message->ai_json_edge_path)
-                                            <flux:badge color="zinc" size="sm">
-                                                <flux:icon.code-bracket class="size-3.5" />
-                                                JSON
-                                            </flux:badge>
+                                            <a href="{{ $message->getJSONEdgeUrl() }}" target="_blank" download class="no-underline">
+                                                <flux:badge color="zinc" size="sm" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                                    <flux:icon.code-bracket class="size-3.5" />
+                                                    JSON
+                                                </flux:badge>
+                                            </a>
                                         @endif
                                     </div>
                                 </div>
