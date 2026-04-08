@@ -100,199 +100,6 @@
         </div>
     </flux:card>
 
-    {{-- 3D Viewer Section --}}
-    @php $versions = $this->getViewerVersions(); @endphp
-    @if(count($versions) > 0)
-        <div
-            x-data="adminViewer({{ Js::from($versions) }})"
-            x-init="loadVersion(versions.length - 1)"
-            wire:ignore
-        >
-            <flux:card>
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <flux:heading size="lg" level="2">Visualisation 3D</flux:heading>
-                        <flux:badge color="zinc" size="sm" x-text="versions[currentIndex]?.label ?? ''"></flux:badge>
-                    </div>
-                    <div class="flex items-center gap-2" x-show="versions.length > 1">
-                        <template x-for="(v, i) in versions" :key="i">
-                            <button
-                                type="button"
-                                @click="loadVersion(i)"
-                                :class="i === currentIndex
-                                    ? 'bg-violet-600 text-white'
-                                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'"
-                                class="px-3 py-1 text-sm font-medium rounded-full transition-colors"
-                                x-text="v.label">
-                            </button>
-                        </template>
-                    </div>
-                </div>
-
-                <div class="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700" style="height: 500px;">
-                    {{-- Loading overlay --}}
-                    <div x-show="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
-                        <div class="flex flex-col items-center gap-3">
-                            <flux:icon.arrow-path class="size-8 text-violet-600 animate-spin" />
-                            <span class="text-sm text-zinc-500">Chargement du modèle 3D...</span>
-                        </div>
-                    </div>
-
-                    {{-- Error overlay --}}
-                    <div x-show="error" x-cloak class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
-                        <div class="flex flex-col items-center gap-3">
-                            <flux:icon.exclamation-triangle class="size-8 text-red-500" />
-                            <span class="text-sm text-red-600" x-text="error"></span>
-                        </div>
-                    </div>
-
-                    <div x-ref="viewer" class="w-full h-full"></div>
-                </div>
-            </flux:card>
-        </div>
-
-        @script
-        <script>
-            Alpine.data('adminViewer', (versions) => ({
-                versions,
-                currentIndex: 0,
-                loading: false,
-                error: null,
-                _renderer: null,
-                _animationId: null,
-                _threeCache: null,
-
-                async ensureThreeLoaded() {
-                    if (this._threeCache) return this._threeCache;
-                    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/+esm');
-                    const { OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js/+esm');
-                    this._threeCache = { THREE, OrbitControls };
-                    return this._threeCache;
-                },
-
-                async loadVersion(index) {
-                    this.currentIndex = index;
-                    this.loading = true;
-                    this.error = null;
-
-                    try {
-                        const { THREE, OrbitControls } = await this.ensureThreeLoaded();
-
-                        const response = await fetch(this.versions[index].jsonUrl);
-                        if (!response.ok) throw new Error('Impossible de charger le fichier 3D');
-                        const jsonData = await response.json();
-
-                        if (this._animationId) cancelAnimationFrame(this._animationId);
-                        if (this._renderer) {
-                            this._renderer.dispose();
-                            this._renderer.domElement.remove();
-                        }
-
-                        const container = this.$refs.viewer;
-                        const width = container.clientWidth;
-                        const height = container.clientHeight;
-
-                        const scene = new THREE.Scene();
-                        scene.background = new THREE.Color(0xfafafb);
-
-                        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
-                        const renderer = new THREE.WebGLRenderer({ antialias: true });
-                        renderer.setSize(width, height);
-                        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-                        renderer.toneMappingExposure = 1.2;
-                        container.appendChild(renderer.domElement);
-
-                        const controls = new OrbitControls(camera, renderer.domElement);
-                        controls.enableDamping = true;
-                        controls.dampingFactor = 0.08;
-
-                        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-                        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-                        dirLight.position.set(5, 10, 7);
-                        scene.add(dirLight);
-                        const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
-                        fillLight.position.set(-5, 3, -5);
-                        scene.add(fillLight);
-
-                        const positions = [];
-                        if (jsonData.faces && jsonData.faces.bodies) {
-                            for (const body of jsonData.faces.bodies) {
-                                for (const face of (body.faces || [])) {
-                                    for (const facet of (face.facets || [])) {
-                                        const vtx = facet.vertices;
-                                        if (!vtx || vtx.length < 3) continue;
-                                        if (vtx.length === 3) {
-                                            positions.push(vtx[0].x, vtx[0].y, vtx[0].z, vtx[1].x, vtx[1].y, vtx[1].z, vtx[2].x, vtx[2].y, vtx[2].z);
-                                        } else {
-                                            for (let i = 2; i < vtx.length; i++) {
-                                                positions.push(vtx[0].x, vtx[0].y, vtx[0].z, vtx[i-1].x, vtx[i-1].y, vtx[i-1].z, vtx[i].x, vtx[i].y, vtx[i].z);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else if (jsonData.objects) {
-                            for (const obj of jsonData.objects) {
-                                const verts = obj.vertices || [];
-                                for (const f of (obj.facets || [])) {
-                                    const idx = Array.isArray(f.vertices) ? f.vertices : f;
-                                    if (idx.length >= 3) {
-                                        positions.push(verts[idx[0]][0], verts[idx[0]][1], verts[idx[0]][2], verts[idx[1]][0], verts[idx[1]][1], verts[idx[1]][2], verts[idx[2]][0], verts[idx[2]][1], verts[idx[2]][2]);
-                                    }
-                                }
-                            }
-                        }
-
-                        const geometry = new THREE.BufferGeometry();
-                        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-                        geometry.computeVertexNormals();
-
-                        const material = new THREE.MeshStandardMaterial({
-                            color: 0x8a8a8a, metalness: 0.85, roughness: 0.55, side: THREE.DoubleSide,
-                        });
-                        scene.add(new THREE.Mesh(geometry, material));
-
-                        const edges = new THREE.EdgesGeometry(geometry, 30);
-                        scene.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x333333 })));
-
-                        const box = new THREE.Box3().setFromObject(scene);
-                        const center = box.getCenter(new THREE.Vector3());
-                        const size = box.getSize(new THREE.Vector3());
-                        const dist = Math.max(size.x, size.y, size.z) * 2;
-
-                        camera.position.set(center.x + dist * 0.6, center.y + dist * 0.4, center.z + dist * 0.7);
-                        camera.lookAt(center);
-                        controls.target.copy(center);
-                        controls.update();
-
-                        this._renderer = renderer;
-                        const animate = () => {
-                            this._animationId = requestAnimationFrame(animate);
-                            controls.update();
-                            renderer.render(scene, camera);
-                        };
-                        animate();
-
-                        new ResizeObserver(() => {
-                            const w = container.clientWidth, h = container.clientHeight;
-                            camera.aspect = w / h;
-                            camera.updateProjectionMatrix();
-                            renderer.setSize(w, h);
-                        }).observe(container);
-
-                        this.loading = false;
-                    } catch (e) {
-                        console.error('[AdminViewer]', e);
-                        this.error = e.message || 'Erreur lors du chargement';
-                        this.loading = false;
-                    }
-                }
-            }));
-        </script>
-        @endscript
-    @endif
-
     {{-- Messages Section --}}
     <div>
         <div class="flex items-center gap-3 mb-4">
@@ -361,6 +168,51 @@
                                 </div>
                             @endif
 
+                            {{-- 3D Viewer (click to open) --}}
+                            @if($message->ai_json_edge_path)
+                                <div
+                                    x-data="adminViewer({{ Js::from($message->getJSONEdgeUrl()) }})"
+                                    wire:ignore
+                                    class="pt-3"
+                                >
+                                    <button
+                                        type="button"
+                                        x-show="!open"
+                                        @click="toggle()"
+                                        class="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 dark:text-violet-300 dark:bg-violet-900/30 dark:hover:bg-violet-900/50 rounded-lg transition-colors"
+                                    >
+                                        <flux:icon.cube-transparent class="size-4" />
+                                        Voir en 3D
+                                    </button>
+
+                                    <div x-show="open" x-cloak x-collapse>
+                                        <div class="flex items-center justify-between mb-2 mt-2">
+                                            <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">Visualisation 3D</p>
+                                            <button
+                                                type="button"
+                                                @click="toggle()"
+                                                class="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+                                            >Fermer</button>
+                                        </div>
+                                        <div class="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700" style="height: 450px;">
+                                            <div x-show="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
+                                                <div class="flex flex-col items-center gap-3">
+                                                    <flux:icon.arrow-path class="size-8 text-violet-600 animate-spin" />
+                                                    <span class="text-sm text-zinc-500">Chargement du modèle 3D...</span>
+                                                </div>
+                                            </div>
+                                            <div x-show="error" x-cloak class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
+                                                <div class="flex flex-col items-center gap-3">
+                                                    <flux:icon.exclamation-triangle class="size-8 text-red-500" />
+                                                    <span class="text-sm text-red-600" x-text="error"></span>
+                                                </div>
+                                            </div>
+                                            <div x-ref="viewer" class="w-full h-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
                             {{-- Generated Files --}}
                             @if($message->ai_cad_path || $message->ai_step_path || $message->ai_technical_drawing_path || $message->ai_json_edge_path)
                                 <div class="pt-3 border-t border-zinc-100 dark:border-zinc-800">
@@ -407,3 +259,146 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+    Alpine.data('adminViewer', (jsonUrl) => ({
+        jsonUrl,
+        open: false,
+        loading: false,
+        error: null,
+        _renderer: null,
+        _animationId: null,
+        _loaded: false,
+
+        toggle() {
+            this.open = !this.open;
+            if (this.open && !this._loaded) {
+                this.$nextTick(() => this.loadModel());
+            }
+        },
+
+        async loadModel() {
+            this.loading = true;
+            this.error = null;
+
+            try {
+                // Use shared cache on window to avoid re-importing Three.js per viewer
+                if (!window._adminViewerThree) {
+                    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/+esm');
+                    const { OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js/+esm');
+                    window._adminViewerThree = { THREE, OrbitControls };
+                }
+                const { THREE, OrbitControls } = window._adminViewerThree;
+
+                const response = await fetch(this.jsonUrl);
+                if (!response.ok) throw new Error('Impossible de charger le fichier 3D');
+                const jsonData = await response.json();
+
+                const container = this.$refs.viewer;
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xfafafb);
+
+                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+                const renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(width, height);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.2;
+                container.appendChild(renderer.domElement);
+
+                const controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.08;
+                controls.enableZoom = false; // Prevent scroll hijacking
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+                dirLight.position.set(5, 10, 7);
+                scene.add(dirLight);
+                const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+                fillLight.position.set(-5, 3, -5);
+                scene.add(fillLight);
+
+                const positions = [];
+                if (jsonData.faces && jsonData.faces.bodies) {
+                    for (const body of jsonData.faces.bodies) {
+                        for (const face of (body.faces || [])) {
+                            for (const facet of (face.facets || [])) {
+                                const vtx = facet.vertices;
+                                if (!vtx || vtx.length < 3) continue;
+                                if (vtx.length === 3) {
+                                    positions.push(vtx[0].x, vtx[0].y, vtx[0].z, vtx[1].x, vtx[1].y, vtx[1].z, vtx[2].x, vtx[2].y, vtx[2].z);
+                                } else {
+                                    for (let i = 2; i < vtx.length; i++) {
+                                        positions.push(vtx[0].x, vtx[0].y, vtx[0].z, vtx[i-1].x, vtx[i-1].y, vtx[i-1].z, vtx[i].x, vtx[i].y, vtx[i].z);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (jsonData.objects) {
+                    for (const obj of jsonData.objects) {
+                        const verts = obj.vertices || [];
+                        for (const f of (obj.facets || [])) {
+                            const idx = Array.isArray(f.vertices) ? f.vertices : f;
+                            if (idx.length >= 3) {
+                                positions.push(verts[idx[0]][0], verts[idx[0]][1], verts[idx[0]][2], verts[idx[1]][0], verts[idx[1]][1], verts[idx[1]][2], verts[idx[2]][0], verts[idx[2]][1], verts[idx[2]][2]);
+                            }
+                        }
+                    }
+                }
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                geometry.computeVertexNormals();
+
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x8a8a8a, metalness: 0.85, roughness: 0.55, side: THREE.DoubleSide,
+                });
+                scene.add(new THREE.Mesh(geometry, material));
+
+                const edges = new THREE.EdgesGeometry(geometry, 30);
+                scene.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x333333 })));
+
+                const box = new THREE.Box3().setFromObject(scene);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const dist = Math.max(size.x, size.y, size.z) * 2;
+
+                camera.position.set(center.x + dist * 0.6, center.y + dist * 0.4, center.z + dist * 0.7);
+                camera.lookAt(center);
+                controls.target.copy(center);
+                controls.update();
+
+                this._renderer = renderer;
+                const animate = () => {
+                    this._animationId = requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                };
+                animate();
+
+                new ResizeObserver(() => {
+                    const w = container.clientWidth, h = container.clientHeight;
+                    if (w && h) {
+                        camera.aspect = w / h;
+                        camera.updateProjectionMatrix();
+                        renderer.setSize(w, h);
+                    }
+                }).observe(container);
+
+                this._loaded = true;
+                this.loading = false;
+            } catch (e) {
+                console.error('[AdminViewer]', e);
+                this.error = e.message || 'Erreur lors du chargement';
+                this.loading = false;
+            }
+        }
+    }));
+</script>
+@endscript
