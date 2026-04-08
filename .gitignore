@@ -36,3 +36,6 @@ phpstan.neon
 
 resources/dist/images/.DS_Store
 .grepai/
+
+.omc/
+.claude/
