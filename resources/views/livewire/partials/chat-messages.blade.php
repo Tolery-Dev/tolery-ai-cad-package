@@ -83,7 +83,19 @@
                         if (!text || typeof window.marked === 'undefined') {
                             return text ? text.replace(/\n/g, '<br>') : text;
                         }
-                        return marked.parse(text, { breaks: true, gfm: true });
+                        var html = marked.parse(text, { breaks: true, gfm: true });
+                        // Propagate span color to child strong/em so prose classes do not override
+                        var div = document.createElement('div');
+                        div.innerHTML = html;
+                        div.querySelectorAll('span[style]').forEach(function(span) {
+                            var color = span.style.color;
+                            if (color) {
+                                span.querySelectorAll('strong, em, b, i').forEach(function(child) {
+                                    child.style.color = color;
+                                });
+                            }
+                        });
+                        return div.innerHTML;
                     },
                     highlightCode() {
                         if (typeof window.hljs !== 'undefined') {
@@ -128,7 +140,8 @@
 
                 {{-- Normal message content with typewriter effect for assistant --}}
                 <div x-show="!isTyping && !isErrorCode" x-html="displayedContent"
-                     :class="role === 'assistant' ? 'prose prose-sm prose-gray max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-a:text-violet-600 hover:prose-a:text-violet-800' : ''"></div>
+                     :class="role === 'assistant' ? 'prose prose-sm prose-gray max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-a:text-violet-600 hover:prose-a:text-violet-800' : ''">
+                </div>
 
             </div>
 
