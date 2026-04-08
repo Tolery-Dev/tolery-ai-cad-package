@@ -28,19 +28,7 @@
                 @composer-input.window="hasContent = $event.detail.value?.trim().length > 0">
             </flux:composer>
 
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    @if(config('app.debug'))
-                        <button
-                            type="button"
-                            wire:click="simulateBotResponse"
-                            class="cursor-pointer px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
-                            title="Simuler une réponse du bot (debug)">
-                            Test typewriter
-                        </button>
-                    @endif
-                </div>
-
+            <div class="flex items-center justify-end">
                 <button
                     type="submit"
                     :disabled="busy"
