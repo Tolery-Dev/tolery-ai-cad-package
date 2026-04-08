@@ -308,7 +308,7 @@
                 const height = container.clientHeight;
 
                 const scene = new THREE.Scene();
-                scene.background = new THREE.Color(0xfafafb);
+                scene.background = new THREE.Color(0xfcfcfc);
 
                 const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
                 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -321,15 +321,22 @@
                 const controls = new OrbitControls(camera, renderer.domElement);
                 controls.enableDamping = true;
                 controls.dampingFactor = 0.08;
-                controls.enableZoom = false; // Prevent scroll hijacking
 
-                scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-                const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-                dirLight.position.set(5, 10, 7);
-                scene.add(dirLight);
-                const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
-                fillLight.position.set(-5, 3, -5);
-                scene.add(fillLight);
+                // Studio lighting (matches frontend chatbot viewer)
+                scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+                scene.add(new THREE.HemisphereLight(0xffffff, 0xe0e0e0, 0.5));
+                const key = new THREE.DirectionalLight(0xffffff, 1.8);
+                key.position.set(4, 5, 3);
+                scene.add(key);
+                const fill = new THREE.DirectionalLight(0xffffff, 0.6);
+                fill.position.set(-4, 3, 2);
+                scene.add(fill);
+                const rim = new THREE.DirectionalLight(0xffffff, 0.8);
+                rim.position.set(-3, 4, -3);
+                scene.add(rim);
+                const top = new THREE.DirectionalLight(0xffffff, 0.5);
+                top.position.set(0, 5, 0);
+                scene.add(top);
 
                 const positions = [];
                 if (jsonData.faces && jsonData.faces.bodies) {
@@ -364,8 +371,14 @@
                 geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geometry.computeVertexNormals();
 
-                const material = new THREE.MeshStandardMaterial({
-                    color: 0x8a8a8a, metalness: 0.85, roughness: 0.55, side: THREE.DoubleSide,
+                const material = new THREE.MeshPhysicalMaterial({
+                    color: '#4a4f54',
+                    metalness: 1,
+                    roughness: 0.55,
+                    clearcoat: 0.05,
+                    clearcoatRoughness: 0,
+                    reflectivity: 0.7,
+                    side: THREE.DoubleSide,
                 });
                 scene.add(new THREE.Mesh(geometry, material));
 
