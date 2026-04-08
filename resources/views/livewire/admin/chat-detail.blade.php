@@ -220,10 +220,13 @@
                             for (const body of jsonData.faces.bodies) {
                                 for (const face of (body.faces || [])) {
                                     for (const facet of (face.facets || [])) {
-                                        const v = facet.vertices;
-                                        if (v && v.length >= 9) {
-                                            for (let i = 0; i <= v.length - 9; i += 9) {
-                                                positions.push(v[i], v[i+1], v[i+2], v[i+3], v[i+4], v[i+5], v[i+6], v[i+7], v[i+8]);
+                                        const vtx = facet.vertices;
+                                        if (!vtx || vtx.length < 3) continue;
+                                        if (vtx.length === 3) {
+                                            positions.push(vtx[0].x, vtx[0].y, vtx[0].z, vtx[1].x, vtx[1].y, vtx[1].z, vtx[2].x, vtx[2].y, vtx[2].z);
+                                        } else {
+                                            for (let i = 2; i < vtx.length; i++) {
+                                                positions.push(vtx[0].x, vtx[0].y, vtx[0].z, vtx[i-1].x, vtx[i-1].y, vtx[i-1].z, vtx[i].x, vtx[i].y, vtx[i].z);
                                             }
                                         }
                                     }
@@ -233,12 +236,9 @@
                             for (const obj of jsonData.objects) {
                                 const verts = obj.vertices || [];
                                 for (const f of (obj.facets || [])) {
-                                    const idx = f.vertices || f;
+                                    const idx = Array.isArray(f.vertices) ? f.vertices : f;
                                     if (idx.length >= 3) {
-                                        for (let i = 0; i < 3; i++) {
-                                            const p = idx[i] * 3;
-                                            positions.push(verts[p], verts[p+1], verts[p+2]);
-                                        }
+                                        positions.push(verts[idx[0]][0], verts[idx[0]][1], verts[idx[0]][2], verts[idx[1]][0], verts[idx[1]][1], verts[idx[1]][2], verts[idx[2]][0], verts[idx[2]][1], verts[idx[2]][2]);
                                     }
                                 }
                             }
