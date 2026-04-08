@@ -83,17 +83,7 @@
                         if (!text || typeof window.marked === 'undefined') {
                             return text ? text.replace(/\n/g, '<br>') : text;
                         }
-                        // Preserve <span style=...> tags through marked parsing
-                        var spans = [];
-                        var preserved = text.replace(/<span[^>]+style=[^>]*>[^<]*<\/span>/gi, function(match) {
-                            spans.push(match);
-                            return '%%SPAN_' + (spans.length - 1) + '%%';
-                        });
-                        var html = marked.parse(preserved, { breaks: true });
-                        for (var i = 0; i < spans.length; i++) {
-                            html = html.replace('%%SPAN_' + i + '%%', spans[i]);
-                        }
-                        return html;
+                        return marked.parse(text, { breaks: true });
                     },
                     parseContent() {
                         if (this.content === '[TYPING_INDICATOR]') {
