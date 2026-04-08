@@ -83,9 +83,9 @@
                         if (!text || typeof window.marked === 'undefined') {
                             return text ? text.replace(/\n/g, '<br>') : text;
                         }
-                        // Preserve <span style="color:..."> through marked parsing
+                        // Preserve <span style=...> tags through marked parsing
                         var spans = [];
-                        var preserved = text.replace(/<span\s+style="color:[^"]*">([\s\S]*?)<\/span>/gi, function(match) {
+                        var preserved = text.replace(/<span[^>]+style=[^>]*>[^<]*<\/span>/gi, function(match) {
                             spans.push(match);
                             return '%%SPAN_' + (spans.length - 1) + '%%';
                         });
