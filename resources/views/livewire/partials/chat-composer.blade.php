@@ -24,7 +24,7 @@
                 placeholder="{{ $composerPlaceholder }}"
                 x-on:input="$dispatch('composer-input', { value: $event.target.value })"
                 x-on:keydown.enter="if (!$event.shiftKey && !busy) { $event.preventDefault(); $wire.send() }"
-                :disabled="$wire.isProcessing"
+                x-bind:disabled="busy"
                 @composer-input.window="hasContent = $event.detail.value?.trim().length > 0">
             </flux:composer>
 

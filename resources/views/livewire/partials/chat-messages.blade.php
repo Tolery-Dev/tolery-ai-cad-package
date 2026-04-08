@@ -84,15 +84,15 @@
                             return text ? text.replace(/\n/g, '<br>') : text;
                         }
                         // Preserve <span style="color:..."> through marked parsing
-                        const spans = [];
-                        const preserved = text.replace(/<span\s+style="color:[^"]*">([\s\S]*?)<\/span>/gi, (match) => {
+                        var spans = [];
+                        var preserved = text.replace(/<span\s+style="color:[^"]*">([\s\S]*?)<\/span>/gi, function(match) {
                             spans.push(match);
-                            return `%%SPAN_${spans.length - 1}%%`;
+                            return '%%SPAN_' + (spans.length - 1) + '%%';
                         });
-                        let html = marked.parse(preserved, { breaks: true });
-                        spans.forEach((span, i) => {
-                            html = html.replace(`%%SPAN_${i}%%`, span);
-                        });
+                        var html = marked.parse(preserved, { breaks: true });
+                        for (var i = 0; i < spans.length; i++) {
+                            html = html.replace('%%SPAN_' + i + '%%', spans[i]);
+                        }
                         return html;
                     },
                     parseContent() {
