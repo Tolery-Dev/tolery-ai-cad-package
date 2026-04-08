@@ -624,42 +624,18 @@
                         return;
                     }
 
-                    // Check if we can and should retry
-                    if (errorInfo.canRetry && this.retryCount < this.maxRetries) {
-                        this.retryCount++;
-                        const delay = this.retryDelays[this.retryCount - 1] || 8000;
+                    // Retry disabled — go straight to error state
+                    // Logs and Nightwatch reporting are still active via reportStreamError above
+                    aicadError('[AICAD] ❌ Error — retry disabled, showing error to user');
 
-                        aicadLog(`[AICAD] 🔄 Scheduling retry #${this.retryCount} in ${delay}ms...`);
+                    this.hasError = true;
+                    this.cancelable = true;
+                    this.statusText = errorInfo.message;
 
-                        this.hasError = false;
-                        this.statusText = this.getRetryMessage();
-                        this.cancelable = true;
+                    // Notify team via Nightwatch (without storing failure message in chat)
+                    await this.notifyTeamOfFailure();
 
-                        // Schedule retry with exponential backoff
-                        this.isRetrying = true;
-                        setTimeout(() => {
-                            if (this.open && this.isRetrying) {
-                                aicadLog(`[AICAD] 🔄 Executing retry #${this.retryCount}...`);
-                                this.retryStream();
-                            }
-                        }, delay);
-                    } else {
-                        // Max retries reached or error not retryable
-                        aicadError('[AICAD] ❌ Max retries reached or error not retryable');
-
-                        this.hasError = true;
-                        this.cancelable = true;
-
-                        if (this.retryCount >= this.maxRetries) {
-                            // Notify team of persistent failure
-                            this.statusText = 'La génération a échoué après plusieurs tentatives.';
-                            await this.notifyTeamOfFailure();
-                        } else {
-                            this.statusText = errorInfo.message;
-                        }
-
-                        window.dispatchEvent(new CustomEvent('cad-generation-ended'));
-                    }
+                    window.dispatchEvent(new CustomEvent('cad-generation-ended'));
                 }
             },
             close() {
