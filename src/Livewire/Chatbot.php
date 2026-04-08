@@ -1259,15 +1259,10 @@ class Chatbot extends Component
             .'Chat: '.$this->chat->id
         ));
 
-        // Store an assistant message indicating the failure
-        $failureMessage = 'Une erreur technique est survenue lors de la génération de votre pièce. '
-            .'L\'équipe Tolery a été automatiquement notifiée et travaille à résoudre ce problème. '
-            .'Nous vous tiendrons informé dès que possible.';
-
+        // Remove typing indicator without storing a failure message in the chat
         $asst = $this->findLatestAssistantMessage();
         if ($asst && $asst->message === '[TYPING_INDICATOR]') {
-            $asst->message = $failureMessage;
-            $asst->save();
+            $asst->delete();
         }
 
         // Refresh messages to update UI

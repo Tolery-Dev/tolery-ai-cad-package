@@ -179,7 +179,7 @@
                                         type="button"
                                         x-show="!open"
                                         @click="toggle()"
-                                        class="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 dark:text-violet-300 dark:bg-violet-900/30 dark:hover:bg-violet-900/50 rounded-lg transition-colors"
+                                        class="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 dark:text-violet-300 dark:bg-violet-900/30 dark:hover:bg-violet-900/50 rounded-lg transition-colors cursor-pointer"
                                     >
                                         <flux:icon.cube-transparent class="size-4" />
                                         Voir en 3D
