@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"git add src/Livewire/Chatbot.php && git commit -m \\\"$(cat <<'EOF'\\nfix: ordre des messages dans le chatbot (même created_at)\\n\\nQuand user et assistant ont le même timestamp (même seconde)...",
+  "error": "Exit code 1\n[main 0b4ffd2] fix: ordre des messages dans le chatbot (même created_at)\n 1 file changed, 1 insertion(+), 1 deletion(-)\nTo https://github.com/Tolery-Dev/tolery-ai-cad-package.git\n ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs to 'https://github.com/Tolery-Dev/tolery-ai-cad-package.git'\nhint: Updates were rejected because the remote contains work that you do not\nhint: have locally. This is usually caused by another repository pushing to\nhint: the same ...",
+  "timestamp": "2026-03-24T14:48:55.679Z",
+  "retry_count": 1
+}

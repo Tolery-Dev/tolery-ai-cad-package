@@ -1,0 +1,204 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1774617299498,
+  "projectRoot": "/Users/croustibat/Projects/TOLERY/repositories/tolery-ai-cad-package",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "PHP",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "composer.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "vite",
+        "version": "6.0.2",
+        "category": "build"
+      }
+    ],
+    "packageManager": "yarn",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "yarn build",
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "yarn dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "src",
+      "tests"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "build": {
+      "path": "build",
+      "purpose": "Build output",
+      "fileCount": 1,
+      "lastAccessed": 1774617299410,
+      "keyFiles": [
+        "report.junit.xml"
+      ]
+    },
+    "config": {
+      "path": "config",
+      "purpose": "Configuration files",
+      "fileCount": 1,
+      "lastAccessed": 1774617299421,
+      "keyFiles": [
+        "ai-cad.php"
+      ]
+    },
+    "database": {
+      "path": "database",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1774617299422,
+      "keyFiles": []
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 2,
+      "lastAccessed": 1774617299423,
+      "keyFiles": [
+        "PRICING-SYSTEM.md",
+        "predefined-prompts-cache.md"
+      ]
+    },
+    "resources": {
+      "path": "resources",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1774617299439,
+      "keyFiles": []
+    },
+    "routes": {
+      "path": "routes",
+      "purpose": "Route handlers",
+      "fileCount": 2,
+      "lastAccessed": 1774617299471,
+      "keyFiles": [
+        "admin.php",
+        "web.php"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1774617299472,
+      "keyFiles": [
+        "AiCadServiceProvider.php"
+      ]
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 3,
+      "lastAccessed": 1774617299473,
+      "keyFiles": [
+        "ArchTest.php",
+        "Pest.php",
+        "TestCase.php"
+      ]
+    },
+    "vendor": {
+      "path": "vendor",
+      "purpose": "Third-party code",
+      "fileCount": 3,
+      "lastAccessed": 1774617299473,
+      "keyFiles": [
+        "autoload.php",
+        "pest-plugins.json"
+      ]
+    },
+    "workbench": {
+      "path": "workbench",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1774617299473,
+      "keyFiles": []
+    },
+    "database/migrations": {
+      "path": "database/migrations",
+      "purpose": "Database migrations",
+      "fileCount": 28,
+      "lastAccessed": 1774617299476,
+      "keyFiles": [
+        "2020_05_21_100001_create_users_table.php",
+        "2020_05_21_100002__create_customer_columns.php",
+        "2020_05_21_100003_create_subscriptions_table.php"
+      ]
+    },
+    "resources/dist": {
+      "path": "resources/dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 0,
+      "lastAccessed": 1774617299477,
+      "keyFiles": []
+    },
+    "resources/views": {
+      "path": "resources/views",
+      "purpose": "View templates",
+      "fileCount": 1,
+      "lastAccessed": 1774617299477,
+      "keyFiles": []
+    },
+    "src/Models": {
+      "path": "src/Models",
+      "purpose": "Data models",
+      "fileCount": 12,
+      "lastAccessed": 1774617299482,
+      "keyFiles": [
+        "Chat.php",
+        "ChatDownload.php",
+        "ChatMessage.php"
+      ]
+    },
+    "vendor/bin": {
+      "path": "vendor/bin",
+      "purpose": "Executable scripts",
+      "fileCount": 15,
+      "lastAccessed": 1774617299497,
+      "keyFiles": [
+        "canvas",
+        "carbon",
+        "paratest"
+      ]
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}

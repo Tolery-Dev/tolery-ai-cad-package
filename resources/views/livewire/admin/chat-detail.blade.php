@@ -103,10 +103,58 @@
     {{-- 3D Viewer Section --}}
     @php $versions = $this->getViewerVersions(); @endphp
     @if(count($versions) > 0)
-        <flux:card
+        <div
+            x-data="adminViewer({{ Js::from($versions) }})"
+            x-init="loadVersion(versions.length - 1)"
             wire:ignore
-            x-data="{
-                versions: @js($versions),
+        >
+            <flux:card>
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <flux:heading size="lg" level="2">Visualisation 3D</flux:heading>
+                        <flux:badge color="zinc" size="sm" x-text="versions[currentIndex]?.label ?? ''"></flux:badge>
+                    </div>
+                    <div class="flex items-center gap-2" x-show="versions.length > 1">
+                        <template x-for="(v, i) in versions" :key="i">
+                            <button
+                                type="button"
+                                @click="loadVersion(i)"
+                                :class="i === currentIndex
+                                    ? 'bg-violet-600 text-white'
+                                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'"
+                                class="px-3 py-1 text-sm font-medium rounded-full transition-colors"
+                                x-text="v.label">
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700" style="height: 500px;">
+                    {{-- Loading overlay --}}
+                    <div x-show="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
+                        <div class="flex flex-col items-center gap-3">
+                            <flux:icon.arrow-path class="size-8 text-violet-600 animate-spin" />
+                            <span class="text-sm text-zinc-500">Chargement du modèle 3D...</span>
+                        </div>
+                    </div>
+
+                    {{-- Error overlay --}}
+                    <div x-show="error" x-cloak class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
+                        <div class="flex flex-col items-center gap-3">
+                            <flux:icon.exclamation-triangle class="size-8 text-red-500" />
+                            <span class="text-sm text-red-600" x-text="error"></span>
+                        </div>
+                    </div>
+
+                    <div x-ref="viewer" class="w-full h-full"></div>
+                </div>
+            </flux:card>
+        </div>
+
+        @script
+        <script>
+            Alpine.data('adminViewer', (versions) => ({
+                versions,
                 currentIndex: 0,
                 loading: false,
                 error: null,
@@ -240,49 +288,9 @@
                         this.loading = false;
                     }
                 }
-            }"
-            x-init="loadVersion(versions.length - 1)"
-        >
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <flux:heading size="lg" level="2">Visualisation 3D</flux:heading>
-                    <flux:badge color="zinc" size="sm" x-text="versions[currentIndex]?.label ?? ''"></flux:badge>
-                </div>
-                <div class="flex items-center gap-2" x-show="versions.length > 1">
-                    <template x-for="(v, i) in versions" :key="i">
-                        <button
-                            type="button"
-                            @click="loadVersion(i)"
-                            :class="i === currentIndex
-                                ? 'bg-violet-600 text-white'
-                                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'"
-                            class="px-3 py-1 text-sm font-medium rounded-full transition-colors"
-                            x-text="v.label">
-                        </button>
-                    </template>
-                </div>
-            </div>
-
-            <div class="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700" style="height: 500px;">
-                {{-- Loading overlay --}}
-                <div x-show="loading" class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
-                    <div class="flex flex-col items-center gap-3">
-                        <flux:icon.arrow-path class="size-8 text-violet-600 animate-spin" />
-                        <span class="text-sm text-zinc-500">Chargement du modèle 3D...</span>
-                    </div>
-                </div>
-
-                {{-- Error overlay --}}
-                <div x-show="error" x-cloak class="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80">
-                    <div class="flex flex-col items-center gap-3">
-                        <flux:icon.exclamation-triangle class="size-8 text-red-500" />
-                        <span class="text-sm text-red-600" x-text="error"></span>
-                    </div>
-                </div>
-
-                <div x-ref="viewer" class="w-full h-full"></div>
-            </div>
-        </flux:card>
+            }));
+        </script>
+        @endscript
     @endif
 
     {{-- Messages Section --}}
