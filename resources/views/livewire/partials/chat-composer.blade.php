@@ -1,8 +1,6 @@
 <footer class="bg-white shrink-0"
     x-data="{ hasContent: false, busy: false }"
-    @cad-generation-started.window="busy = true"
-    @cad-generation-ended.window="busy = false"
-    @tolery-chat-append.window="busy = false">
+    @cad-generation-ended.window="busy = false">
     <form wire:submit.prevent="send" class="px-6 pb-6 pt-4"
         @submit="if (busy) { $event.preventDefault(); return; } busy = true;">
         <div class="flex flex-col gap-2">
