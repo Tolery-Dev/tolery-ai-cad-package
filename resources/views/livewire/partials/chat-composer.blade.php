@@ -3,7 +3,8 @@
     @cad-generation-started.window="busy = true"
     @cad-generation-ended.window="busy = false"
     @tolery-chat-append.window="busy = false">
-    <form wire:submit.prevent="send" class="px-6 pb-6 pt-4" @submit="if (busy) $event.preventDefault()">
+    <form wire:submit.prevent="send" class="px-6 pb-6 pt-4"
+        @submit="if (busy) { $event.preventDefault(); return; } busy = true;">
         <div class="flex flex-col gap-2">
             {{-- Container pour les chips de sélection de faces --}}
             <div
@@ -17,16 +18,17 @@
                 ">
             </div>
 
-            <flux:composer
-                wire:key="{{ $composerPlaceholder }}"
-                wire:model="message"
-                submit="send"
-                placeholder="{{ $composerPlaceholder }}"
-                x-on:input="$dispatch('composer-input', { value: $event.target.value })"
-                x-on:keydown.enter="if (!$event.shiftKey && !busy) { $event.preventDefault(); $wire.send() }"
-                x-bind:disabled="busy"
-                @composer-input.window="hasContent = $event.detail.value?.trim().length > 0">
-            </flux:composer>
+            <div :class="busy ? 'opacity-50 pointer-events-none' : ''">
+                <flux:composer
+                    wire:key="{{ $composerPlaceholder }}"
+                    wire:model="message"
+                    submit="send"
+                    :placeholder="$composerPlaceholder"
+                    x-on:input="$dispatch('composer-input', { value: $event.target.value })"
+                    x-on:keydown.enter="if (!$event.shiftKey && !busy) { $event.preventDefault(); $wire.send() }"
+                    @composer-input.window="hasContent = $event.detail.value?.trim().length > 0">
+                </flux:composer>
+            </div>
 
             <div class="flex items-center justify-end">
                 <button
