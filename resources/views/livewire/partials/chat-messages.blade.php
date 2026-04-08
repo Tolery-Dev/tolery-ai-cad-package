@@ -83,7 +83,14 @@
                         if (!text || typeof window.marked === 'undefined') {
                             return text ? text.replace(/\n/g, '<br>') : text;
                         }
-                        return marked.parse(text, { breaks: true });
+                        return marked.parse(text, { breaks: true, gfm: true });
+                    },
+                    highlightCode() {
+                        if (typeof window.hljs !== 'undefined') {
+                            this.$el.querySelectorAll('pre code').forEach(function(block) {
+                                hljs.highlightElement(block);
+                            });
+                        }
                     },
                     parseContent() {
                         if (this.content === '[TYPING_INDICATOR]') {
@@ -100,7 +107,7 @@
                         }
                     }
                 }"
-                x-init="parseContent()">
+                x-init="parseContent(); $nextTick(() => highlightCode())">
                 {{-- Typing indicator --}}
                 <div x-show="isTyping" class="typing-indicator">
                     <span></span>
