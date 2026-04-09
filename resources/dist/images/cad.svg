@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cadFileGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7b46e4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Document outline -->
+  <path d="M38 4H14C12.8954 4 12 4.89543 12 6V58C12 59.1046 12.8954 60 14 60H50C51.1046 60 52 59.1046 52 58V18L38 4Z"
+        fill="url(#cadFileGradient)" fill-opacity="0.1"/>
+  <path d="M38 4H14C12.8954 4 12 4.89543 12 6V58C12 59.1046 12.8954 60 14 60H50C51.1046 60 52 59.1046 52 58V18L38 4Z"
+        stroke="url(#cadFileGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Document fold -->
+  <path d="M38 4V18H52" stroke="url(#cadFileGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- CAD text -->
+  <text x="32" y="38" font-family="Arial, sans-serif" font-size="12" font-weight="bold"
+        fill="url(#cadFileGradient)" text-anchor="middle">CAD</text>
+
+  <!-- Technical drawing lines -->
+  <path d="M20 45H44M20 49H36" stroke="url(#cadFileGradient)" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
