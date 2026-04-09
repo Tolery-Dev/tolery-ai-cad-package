@@ -36,9 +36,6 @@ export class FaceContextParser {
         var faceType = typeMatch ? typeMatch[1] : null;
 
         var label = "Face " + faceId;
-        if (faceType && faceType !== "unknown") {
-            label += " (" + faceType + ")";
-        }
 
         return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm font-medium">' +
             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +

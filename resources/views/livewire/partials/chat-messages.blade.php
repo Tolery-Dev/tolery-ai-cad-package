@@ -105,17 +105,15 @@
 
         parseFaceContext(text) {
             if (!text) return text;
-            // Parse face contexts
+            // Parse face contexts — chip shows only Face ID, full context goes to AI
             var result = text.replace(/\[FACE_CONTEXT:\s*(.+?)\]\]/g, function(match, ctx) {
                 var idMatch = ctx.match(/ID\[([^\]]+)\]/);
                 var faceId = idMatch ? idMatch[1] : 'Unknown';
-                var typeMatch = ctx.match(/Type\[([^\]]+)\]/);
-                var typeStr = typeMatch ? ' (' + typeMatch[1] + ')' : '';
                 return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm font-medium">' +
                     '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>' +
                     '</svg>' +
-                    '<span>Face ' + faceId + typeStr + '</span>' +
+                    '<span>Face ' + faceId + '</span>' +
                     '</span>';
             });
             // Parse edge contexts
