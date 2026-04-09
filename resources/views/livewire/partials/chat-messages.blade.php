@@ -67,17 +67,33 @@
                     },
                     parseFaceContext(text) {
                         if (!text) return text;
-                        return text.replace(/\[FACE_CONTEXT:\s*(.+?)\]\]/g, (match, faceContext) => {
-                            const idMatch = faceContext.match(/ID\[([^\]]+)\]/);
-                            const faceId = idMatch ? idMatch[1] : 'Unknown';
-                            const label = 'Face ' + faceId;
-                            return `<span class='inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm font-medium'>` +
-                                `<svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>` +
-                                `<path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'></path>` +
-                                `</svg>` +
-                                `<span>${label}</span>` +
-                                `</span>`;
+                        // Parse face contexts
+                        var result = text.replace(/\[FACE_CONTEXT:\s*(.+?)\]\]/g, function(match, ctx) {
+                            var idMatch = ctx.match(/ID\[([^\]]+)\]/);
+                            var faceId = idMatch ? idMatch[1] : 'Unknown';
+                            var typeMatch = ctx.match(/Type\[([^\]]+)\]/);
+                            var typeStr = typeMatch ? ' (' + typeMatch[1] + ')' : '';
+                            return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-sm font-medium">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>' +
+                                '</svg>' +
+                                '<span>Face ' + faceId + typeStr + '</span>' +
+                                '</span>';
                         });
+                        // Parse edge contexts
+                        result = result.replace(/\[EDGE_CONTEXT:\s*(.+?)\]\]/g, function(match, ctx) {
+                            var idMatch = ctx.match(/ID\[([^\]]+)\]/);
+                            var edgeId = idMatch ? idMatch[1] : 'Unknown';
+                            var lenMatch = ctx.match(/Length\[([^\]]+)\]/);
+                            var lenStr = lenMatch ? ' (' + lenMatch[1] + ' mm)' : '';
+                            return '<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-50 text-green-700 text-sm font-medium">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16"></path>' +
+                                '</svg>' +
+                                '<span>Edge ' + edgeId + lenStr + '</span>' +
+                                '</span>';
+                        });
+                        return result;
                     },
                     parseMarkdown(text) {
                         if (!text || typeof window.marked === 'undefined') {

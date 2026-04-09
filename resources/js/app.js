@@ -742,8 +742,8 @@ class JsonModelViewer3D {
         const detail = {
             id: faceId,
             realFaceId: realId,
-            faceType: faceType, // NOUVEAU
-            metrics: metrics, // NOUVEAU
+            faceType: faceType,
+            metrics: metrics,
             centroid,
             triangles: Math.floor(fg.count / 3),
             unit: "mm",
@@ -752,6 +752,8 @@ class JsonModelViewer3D {
                 y: maxY - minY,
                 z: maxZ - minZ,
             },
+            bboxMin: { x: minX, y: minY, z: minZ },
+            bboxMax: { x: maxX, y: maxY, z: maxZ },
             area: +areaMm2.toFixed(2), // mm²
             feature: featureData, // Semantic feature data from FreeCad (type, subtype, diameter, thread, etc.)
         };
