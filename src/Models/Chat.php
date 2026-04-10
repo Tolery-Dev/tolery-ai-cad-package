@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tolery\AiCad\Database\Factories\ChatFactory;
 use Tolery\AiCad\Enum\MaterialFamily;
@@ -75,6 +76,32 @@ class Chat extends Model
     public function getStorageFolder(): string
     {
         return 'ai-chat/'.$this->created_at->format('Y-m').'/chat-'.$this->id;
+    }
+
+    /**
+     * @return HasMany<ChatDownload, $this>
+     */
+    public function downloads(): HasMany
+    {
+        return $this->hasMany(ChatDownload::class);
+    }
+
+    /**
+     * @return HasMany<FilePurchase, $this>
+     */
+    public function filePurchases(): HasMany
+    {
+        return $this->hasMany(FilePurchase::class);
+    }
+
+    /**
+     * @return HasOne<ChatMessage, $this>
+     */
+    public function latestAssistantMessage(): HasOne
+    {
+        return $this->hasOne(ChatMessage::class)
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->latest();
     }
 
     /**
