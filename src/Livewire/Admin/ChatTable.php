@@ -24,8 +24,29 @@ class ChatTable extends FluxDataTable
             ->latest();
     }
 
+    /**
+     * Charge les codes d'erreur DFM depuis la base de données.
+     *
+     * @return array<string, string>
+     */
+    protected function loadDfmErrorCodes(): array
+    {
+        $modelClass = config('ai-cad.dfm_error_code_model');
+
+        if (! $modelClass || ! class_exists($modelClass)) {
+            return [];
+        }
+
+        return $modelClass::query()
+            ->pluck('code', 'code')
+            ->filter()
+            ->all();
+    }
+
     public function columns(): array
     {
+        $dfmErrorCodes = $this->loadDfmErrorCodes();
+
         return [
             [
                 'label' => 'Conversation',
@@ -69,7 +90,7 @@ class ChatTable extends FluxDataTable
             [
                 'label' => 'Statut',
                 'field' => 'has_generated_piece',
-                'render' => function ($row) {
+                'render' => function ($row) use ($dfmErrorCodes) {
                     $badges = '';
 
                     // Générée
@@ -103,7 +124,12 @@ class ChatTable extends FluxDataTable
                     }
 
                     // Bug — dernier message assistant = TYPING_INDICATOR (stream jamais terminé)
-                    if ($row->latestAssistantMessage?->message === '[TYPING_INDICATOR]') {
+                    // ou code d'erreur DFM (erreur de fabrication retournée par le bot)
+                    $latestMsg = $row->latestAssistantMessage?->message;
+                    $isBug = $latestMsg === '[TYPING_INDICATOR]'
+                        || ($latestMsg !== null && isset($dfmErrorCodes[trim($latestMsg)]));
+
+                    if ($isBug) {
                         $badges .= ' <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">'
                             .'<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
                             .'Bug</span>';
