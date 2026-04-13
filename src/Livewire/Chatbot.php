@@ -78,6 +78,9 @@ class Chatbot extends Component
     /** true si le Job DownloadCadAssetsJob est en cours (polling actif) */
     public bool $pendingFilesDownload = false;
 
+    /** true si le dernier message est un message user sans réponse assistant (génération orpheline) */
+    public bool $hasPendingGeneration = false;
+
     /** Si true: l'API garde le contexte -> on n'envoie que le dernier message user + éventuelle action */
     protected bool $serverKeepsContext = true;
 
@@ -132,6 +135,16 @@ class Chatbot extends Component
 
         // Charger les codes d'erreur DFM pour le mapping côté frontend
         $this->dfmErrorCodes = $this->loadDfmErrorCodes();
+
+        // Détecter une génération orpheline : dernier message = user sans réponse assistant
+        $lastMsg = $this->chat->messages()
+            ->whereNotIn('message', ['[TYPING_INDICATOR]'])
+            ->latest('id')
+            ->first();
+
+        if ($lastMsg && $lastMsg->role === ChatMessage::ROLE_USER) {
+            $this->hasPendingGeneration = true;
+        }
     }
 
     public function updatedPartName($value): void
@@ -243,6 +256,44 @@ class Chatbot extends Component
             variant: 'info',
             heading: 'Bientôt disponible',
             text: 'L\'import de fichiers '.strtoupper($type).' sera disponible prochainement.'
+        );
+    }
+
+    /**
+     * Relance la génération pour le dernier message user resté sans réponse.
+     * Appelé quand l'utilisateur clique "Relancer" après une coupure réseau.
+     */
+    public function retryPendingGeneration(): void
+    {
+        $lastUserMsg = $this->chat->messages()
+            ->where('role', ChatMessage::ROLE_USER)
+            ->latest('id')
+            ->first();
+
+        if (! $lastUserMsg) {
+            $this->hasPendingGeneration = false;
+
+            return;
+        }
+
+        $mAsst = $this->storeMessage(ChatMessage::ROLE_ASSISTANT, '[TYPING_INDICATOR]');
+        $mAsst->load('user');
+        $this->messages[] = [
+            'role' => 'assistant',
+            'content' => '[TYPING_INDICATOR]',
+            'created_at' => Carbon::parse($mAsst->created_at)->toIso8601String(),
+            'screenshot_url' => null,
+            'user' => $mAsst->user,
+        ];
+        $this->streamingIndex = array_key_last($this->messages);
+        $this->hasPendingGeneration = false;
+
+        $this->dispatch('tolery-chat-append');
+        $this->dispatch('aicad-start-stream',
+            message: $lastUserMsg->message,
+            sessionId: (string) $this->chat->session_id,
+            isEdit: $this->shouldUseEditMode(),
+            materialChoice: $this->chat->material_family !== null ? $this->chat->material_family->value : 'STEEL',
         );
     }
 
