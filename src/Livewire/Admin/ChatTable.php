@@ -24,29 +24,8 @@ class ChatTable extends FluxDataTable
             ->latest();
     }
 
-    /**
-     * Charge les codes d'erreur DFM depuis la base de données.
-     *
-     * @return array<string, string>
-     */
-    protected function loadDfmErrorCodes(): array
-    {
-        $modelClass = config('ai-cad.dfm_error_code_model');
-
-        if (! $modelClass || ! class_exists($modelClass)) {
-            return [];
-        }
-
-        return $modelClass::query()
-            ->pluck('code', 'code')
-            ->filter()
-            ->all();
-    }
-
     public function columns(): array
     {
-        $dfmErrorCodes = $this->loadDfmErrorCodes();
-
         return [
             [
                 'label' => 'Conversation',
@@ -90,7 +69,7 @@ class ChatTable extends FluxDataTable
             [
                 'label' => 'Statut',
                 'field' => 'has_generated_piece',
-                'render' => function ($row) use ($dfmErrorCodes) {
+                'render' => function ($row) {
                     $badges = '';
 
                     // Générée
@@ -123,11 +102,9 @@ class ChatTable extends FluxDataTable
                         $badges .= ' <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">Supprimée</span>';
                     }
 
-                    // Bug — dernier message assistant = TYPING_INDICATOR (stream jamais terminé)
-                    // ou code d'erreur DFM (erreur de fabrication retournée par le bot)
-                    $latestMsg = $row->latestAssistantMessage?->message;
-                    $isBug = $latestMsg === '[TYPING_INDICATOR]'
-                        || ($latestMsg !== null && isset($dfmErrorCodes[trim($latestMsg)]));
+                    // Bug — stream jamais terminé (TYPING_INDICATOR) ou erreur DFM dans la conversation
+                    $isBug = $row->latestAssistantMessage?->message === '[TYPING_INDICATOR]'
+                        || $row->has_dfm_error;
 
                     if ($isBug) {
                         $badges .= ' <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">'

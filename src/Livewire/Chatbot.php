@@ -542,6 +542,17 @@ class Chatbot extends Component
             Log::info('[AICAD] Première pièce générée avec succès', ['chat_id' => $this->chat->id]);
         }
 
+        // Marquer la conversation si le message est un code d'erreur DFM
+        if (! $this->chat->has_dfm_error) {
+            $dfmCodes = $this->loadDfmErrorCodes();
+            if (isset($dfmCodes[trim($messageText)])) {
+                $this->chat->has_dfm_error = true;
+                $this->chat->save();
+
+                Log::info('[AICAD] Erreur DFM détectée', ['chat_id' => $this->chat->id, 'code' => trim($messageText)]);
+            }
+        }
+
         // Dispatch du Job background pour OBJ, STEP, PDF uniquement
         $urlsForJob = array_filter([
             'obj' => ($objUrl !== null && $objUrl !== '') ? $objUrl : null,
