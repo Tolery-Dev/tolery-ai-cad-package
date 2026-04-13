@@ -21,6 +21,7 @@ use Tolery\AiCad\Enum\MaterialFamily;
  * @property string|null $name
  * @property MaterialFamily|null $material_family
  * @property bool $has_generated_piece
+ * @property bool $has_dfm_error
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -42,6 +43,7 @@ class Chat extends Model
     protected $casts = [
         'material_family' => MaterialFamily::class,
         'has_generated_piece' => 'boolean',
+        'has_dfm_error' => 'boolean',
     ];
 
     /**

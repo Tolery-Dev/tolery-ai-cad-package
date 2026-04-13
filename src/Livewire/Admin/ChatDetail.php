@@ -79,8 +79,33 @@ class ChatDetail extends Component
         $this->js("window.open('{$downloadUrl}', '_blank');");
     }
 
+    /**
+     * Charge les codes d'erreur DFM depuis la base de données.
+     * Retourne un mapping {code: message} selon la locale courante.
+     *
+     * @return array<string, string>
+     */
+    protected function loadDfmErrorCodes(): array
+    {
+        $modelClass = config('ai-cad.dfm_error_code_model');
+
+        if (! $modelClass || ! class_exists($modelClass)) {
+            return [];
+        }
+
+        $locale = app()->getLocale();
+        $messageColumn = $locale === 'fr' ? 'message_fr' : 'message_en';
+
+        return $modelClass::query()
+            ->pluck($messageColumn, 'code')
+            ->filter()
+            ->all();
+    }
+
     public function render(): View
     {
-        return view('ai-cad::livewire.admin.chat-detail');
+        return view('ai-cad::livewire.admin.chat-detail', [
+            'dfmErrorCodes' => $this->loadDfmErrorCodes(),
+        ]);
     }
 }

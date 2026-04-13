@@ -102,8 +102,11 @@ class ChatTable extends FluxDataTable
                         $badges .= ' <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">Supprimée</span>';
                     }
 
-                    // Bug — dernier message assistant = TYPING_INDICATOR (stream jamais terminé)
-                    if ($row->latestAssistantMessage?->message === '[TYPING_INDICATOR]') {
+                    // Bug — stream jamais terminé (TYPING_INDICATOR) ou erreur DFM dans la conversation
+                    $isBug = $row->latestAssistantMessage?->message === '[TYPING_INDICATOR]'
+                        || $row->has_dfm_error;
+
+                    if ($isBug) {
                         $badges .= ' <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">'
                             .'<svg class="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
                             .'Bug</span>';
