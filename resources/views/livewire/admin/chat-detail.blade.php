@@ -149,12 +149,26 @@
 
                             {{-- Message Text --}}
                             @if($message->message)
-                                <div class="prose prose-sm dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300 prose-p:my-1 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded dark:prose-code:bg-violet-500/10 dark:prose-code:text-violet-300">
-                                    {!! \Illuminate\Support\Str::markdown($message->message, [
-                                        'html_input' => 'strip',
-                                        'allow_unsafe_links' => false,
-                                    ]) !!}
-                                </div>
+                                @php
+                                    $trimmed = trim($message->message);
+                                    $isDfmError = $message->role === 'assistant' && isset($dfmErrorCodes[$trimmed]);
+                                @endphp
+                                @if($isDfmError)
+                                    <div class="flex items-start gap-2 text-amber-800 dark:text-amber-200">
+                                        <flux:icon.exclamation-triangle class="size-5 shrink-0 text-amber-500 mt-0.5" />
+                                        <div>
+                                            <span class="text-xs font-mono text-amber-500">Code {{ $trimmed }}</span>
+                                            <p class="text-sm mt-0.5">{{ $dfmErrorCodes[$trimmed] }}</p>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="prose prose-sm dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300 prose-p:my-1 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-pre:my-2 prose-code:text-violet-700 prose-code:bg-violet-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded dark:prose-code:bg-violet-500/10 dark:prose-code:text-violet-300">
+                                        {!! \Illuminate\Support\Str::markdown($message->message, [
+                                            'html_input' => 'strip',
+                                            'allow_unsafe_links' => false,
+                                        ]) !!}
+                                    </div>
+                                @endif
                             @endif
 
                             {{-- Screenshot --}}
