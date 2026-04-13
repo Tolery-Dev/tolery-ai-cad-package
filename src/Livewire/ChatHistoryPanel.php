@@ -68,7 +68,6 @@ class ChatHistoryPanel extends Component
 
         $filtered = $history->filter(fn ($item) => $item['chat'] !== null);
 
-        // @phpstan-ignore-next-line
         $unique = $filtered->unique(fn ($item) => $item['chat']->id);
 
         return $unique->sortByDesc('date')->values()->take(20);
