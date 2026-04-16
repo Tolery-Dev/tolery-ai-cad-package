@@ -2,6 +2,12 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.9.0 - 2026-04-16
+
+### Fixes
+
+- **fix: cube d'orientation** — transformation des vertices Onshape de CAD Z-up vers Three.js Y-up `(x,y,z)→(x,z,-y)` pour aligner le mesh avec le cube de navigation. Cliquer une face du cube place désormais la caméra face à la bonne face de la pièce.
+
 ## v1.3.4 - 2026-03-24
 
 ### What's Changed
