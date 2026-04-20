@@ -2,6 +2,12 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.9.2 - 2026-04-20
+
+### Fixes
+
+- **fix: filtre "Tout le temps" cassé sur le dashboard admin (#1858)** — quand Flux `DateRange` retourne `start()/end() = null` (allTime), le fallback `?? now()->startOfMonth()` forçait un filtre sur le mois courant. `whereBetween()` est désormais conditionnel via `$hasDateFilter`.
+
 ## v1.9.1 - 2026-04-20
 
 ### Fixes
