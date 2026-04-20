@@ -37,19 +37,34 @@ class Dashboard extends Component
      */
     public function getKpis(): array
     {
-        $startDate = $this->range?->start() ?? now()->startOfMonth();
-        $endDate = $this->range?->end() ?? now();
+        $startDate = $this->range?->start();
+        $endDate = $this->range?->end();
+
+        // When no range is set, default to current month
+        if ($startDate === null && $endDate === null && $this->range === null) {
+            $startDate = now()->startOfMonth();
+            $endDate = now();
+        }
+
+        // "Tout le temps" : start()/end() both return null — no date filter applied
+        $hasDateFilter = $startDate !== null && $endDate !== null;
 
         // Achats unitaires
-        $purchaseAmount = FilePurchase::whereBetween('purchased_at', [$startDate, $endDate])->sum('amount');
-        $purchaseCount = FilePurchase::whereBetween('purchased_at', [$startDate, $endDate])->count();
+        $purchaseQuery = FilePurchase::query();
+        if ($hasDateFilter) {
+            $purchaseQuery->whereBetween('purchased_at', [$startDate, $endDate]);
+        }
+        $purchaseAmount = (clone $purchaseQuery)->sum('amount');
+        $purchaseCount = (clone $purchaseQuery)->count();
 
         // Abonnements créés sur la période
-        $subscriptionsOnPeriod = Subscription::query()
+        $subscriptionsQuery = Subscription::query()
             ->where('type', 'default')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereIn('stripe_status', ['active', 'trialing'])
-            ->get();
+            ->whereIn('stripe_status', ['active', 'trialing']);
+        if ($hasDateFilter) {
+            $subscriptionsQuery->whereBetween('created_at', [$startDate, $endDate]);
+        }
+        $subscriptionsOnPeriod = $subscriptionsQuery->get();
 
         // Calculer le revenu des abonnements
         $subscriptionRevenue = 0;
@@ -82,13 +97,20 @@ class Dashboard extends Component
             }
         }
 
+        $chatQuery = Chat::query();
+        $downloadQuery = ChatDownload::query();
+        if ($hasDateFilter) {
+            $chatQuery->whereBetween('created_at', [$startDate, $endDate]);
+            $downloadQuery->whereBetween('downloaded_at', [$startDate, $endDate]);
+        }
+
         return [
             'purchase_revenue' => $purchaseAmount / 100,
             'subscription_revenue' => $subscriptionRevenue / 100,
             'total_revenue' => ($purchaseAmount + $subscriptionRevenue) / 100,
             'purchase_count' => $purchaseCount,
-            'conversation_count' => Chat::whereBetween('created_at', [$startDate, $endDate])->count(),
-            'download_count' => ChatDownload::whereBetween('downloaded_at', [$startDate, $endDate])->count(),
+            'conversation_count' => $chatQuery->count(),
+            'download_count' => $downloadQuery->count(),
             'subscription_count' => $activeSubscriptions->count(),
             'subscriptions_by_product' => $subscriptionsByProduct,
         ];
