@@ -23,7 +23,7 @@ import {
     buildMeshFromFreecadJson,
 } from "./viewer/mesh-builders.js";
 import { calculateMeshVolume } from "./viewer/geometry-utils.js";
-import { captureAndSendScreenshot } from "./viewer/screenshot.js";
+import { captureAndSendScreenshotWithRetry } from "./viewer/screenshot.js";
 import { NavigationCube } from "./viewer/navigation-cube.js";
 
 // --- Minimal viewer class ---
@@ -314,19 +314,20 @@ class JsonModelViewer3D {
         // Ensure canvas is properly sized after model load
         this.onResize();
 
-        // Capture et envoie automatiquement un screenshot après chargement si il n'existe pas déjà
-        // Délai de 500ms pour s'assurer que le rendu est stable
+        // Capture et envoie automatiquement un screenshot après chargement si il n'existe pas déjà.
+        // Délai initial de 1200ms pour laisser le GPU stabiliser le rendu WebGL.
+        // Retry automatique jusqu'à 3 fois (délais : 1500ms, 3000ms) si toBlob() échoue.
         const screenshotExists =
             this.container.getAttribute("data-screenshot-exists") === "true";
         if (!screenshotExists) {
             setTimeout(() => {
-                captureAndSendScreenshot(
+                captureAndSendScreenshotWithRetry(
                     this.renderer,
                     this.scene,
                     this.camera,
                     this.container,
                 );
-            }, 500);
+            }, 1200);
         } else {
             console.log(
                 "[JsonModelViewer3D] Screenshot already exists, skipping capture",

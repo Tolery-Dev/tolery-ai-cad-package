@@ -131,3 +131,74 @@ export async function captureAndSendScreenshot(
         console.error("[screenshot] Failed to capture and send:", error);
     }
 }
+
+/**
+ * Capture and send screenshot with automatic retry on WebGL/canvas failures.
+ *
+ * The WebGL renderer may not be stable immediately after model load (GPU not ready,
+ * canvas context lost, async texture streaming). This function retries with
+ * increasing delays to handle these transient failures.
+ *
+ * @param {THREE.WebGLRenderer} renderer - The Three.js renderer
+ * @param {THREE.Scene} scene - The Three.js scene
+ * @param {THREE.Camera} camera - The Three.js camera
+ * @param {HTMLElement} container - The container element
+ * @param {number} width - Screenshot width (default: 800)
+ * @param {number} height - Screenshot height (default: 800)
+ * @param {number} maxAttempts - Maximum number of attempts (default: 3)
+ * @param {number} baseDelayMs - Base delay between retries in ms (default: 1500)
+ */
+export async function captureAndSendScreenshotWithRetry(
+    renderer,
+    scene,
+    camera,
+    container,
+    width = 800,
+    height = 800,
+    maxAttempts = 3,
+    baseDelayMs = 1500,
+) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            console.log(`[screenshot] Attempt ${attempt}/${maxAttempts}...`);
+
+            const blob = await captureScreenshot(
+                renderer,
+                scene,
+                camera,
+                container,
+                width,
+                height,
+            );
+
+            if (!blob || blob.size === 0) {
+                throw new Error("Empty blob returned from canvas");
+            }
+
+            console.log(
+                `[screenshot] Captured on attempt ${attempt}, size:`,
+                blob.size,
+                "bytes",
+            );
+
+            const base64 = await blobToBase64(blob);
+            sendScreenshotToLivewire(base64);
+            return;
+        } catch (error) {
+            console.warn(
+                `[screenshot] Attempt ${attempt}/${maxAttempts} failed:`,
+                error.message,
+            );
+
+            if (attempt < maxAttempts) {
+                const delay = baseDelayMs * attempt;
+                console.log(`[screenshot] Retrying in ${delay}ms...`);
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            } else {
+                console.error(
+                    `[screenshot] All ${maxAttempts} attempts failed. Preview unavailable.`,
+                );
+            }
+        }
+    }
+}
