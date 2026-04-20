@@ -2,11 +2,12 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
-## v1.9.0 - 2026-04-16
+## v1.9.1 - 2026-04-20
 
 ### Fixes
 
 - **fix: cube d'orientation** — transformation des vertices Onshape de CAD Z-up vers Three.js Y-up `(x,y,z)→(x,z,-y)` pour aligner le mesh avec le cube de navigation. Cliquer une face du cube place désormais la caméra face à la bonne face de la pièce.
+- **fix: retry automatique screenshot preview (#1922)** — délai initial 500ms → 1200ms + jusqu'à 3 tentatives avec délais croissants (1.5s, 3s) si `toBlob()` échoue silencieusement (GPU WebGL pas encore stable).
 
 ## v1.3.4 - 2026-03-24
 
