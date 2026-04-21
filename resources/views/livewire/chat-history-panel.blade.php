@@ -22,10 +22,7 @@
                 @forelse ($this->history as $item)
                     @php
                         $chat = $item['chat'];
-                        $latestMessage = $chat->messages()
-                            ->whereNotNull('ai_cad_path')
-                            ->orderByDesc('created_at')
-                            ->first();
+                        $latestMessage = $chat->messages->first();
                         $screenshotUrl = $latestMessage?->getScreenshotUrl();
                         $versionLabel = $latestMessage?->getVersionLabel();
                     @endphp
