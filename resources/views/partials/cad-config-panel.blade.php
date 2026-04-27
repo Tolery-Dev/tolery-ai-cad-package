@@ -69,11 +69,19 @@
                         Modifier
                     </button>
                     <div x-show="editMode" class="flex gap-2">
-                        <button @click.stop="cancelEdit()" class="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        <button @click.stop="cancelEdit()"
+                                :disabled="submitting"
+                                class="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                             Annuler
                         </button>
-                        <button @click.stop="saveEdits()" class="px-2.5 py-1 text-xs font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors">
-                            Valider
+                        <button @click.stop="saveEdits()"
+                                :disabled="submitting"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                            <svg x-show="submitting" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                            <span x-text="submitting ? 'Envoi…' : 'Valider'"></span>
                         </button>
                     </div>
                 </div>
@@ -107,8 +115,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.length)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.length"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.length"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -117,8 +127,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.width)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.width"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.width"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -127,8 +139,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.thickness)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.thickness"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.thickness"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -149,8 +163,10 @@
                                             <span class="font-medium" x-text="fmt(selection.metrics.radius)"></span>
                                         </template>
                                         <template x-if="editMode">
-                                            <input type="number" step="0.01" x-model="edits.radius"
-                                                   class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                            <input type="number" step="0.01" x-model.number="edits.radius"
+                                                   @keydown.enter.prevent="saveEdits()"
+                                                   :disabled="submitting"
+                                                   class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                         </template>
                                     </div>
                                 </template>
@@ -162,8 +178,10 @@
                                             <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
                                         </template>
                                         <template x-if="editMode">
-                                            <input type="number" step="0.01" x-model="edits.diameter"
-                                                   class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                            <input type="number" step="0.01" x-model.number="edits.diameter"
+                                                   @keydown.enter.prevent="saveEdits()"
+                                                   :disabled="submitting"
+                                                   class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                         </template>
                                     </div>
                                 </template>
@@ -174,8 +192,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.depth"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.depth"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -194,8 +214,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.diameter"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.diameter"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -204,8 +226,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.depth"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.depth"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="text-xs text-gray-500">
@@ -223,7 +247,10 @@
                                         <span class="font-medium" x-text="selection.metrics.thread || getThreadFromDiameter(selection.metrics.diameter)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <select x-model="edits.thread" class="w-24 px-2 py-0.5 text-sm border rounded bg-white">
+                                        <select x-model="edits.thread"
+                                                @keydown.enter.prevent="saveEdits()"
+                                                :disabled="submitting"
+                                                class="w-24 px-2 py-0.5 text-sm border rounded bg-white disabled:opacity-50">
                                             <option value="M1">M1</option>
                                             <option value="M1.2">M1.2</option>
                                             <option value="M1.4">M1.4</option>
@@ -255,12 +282,17 @@
                                     </template>
                                     <template x-if="editMode">
                                         <div class="flex items-center gap-2">
-                                            <select x-model="edits.depthType" class="w-28 px-2 py-0.5 text-sm border rounded bg-white">
+                                            <select x-model="edits.depthType"
+                                                    @keydown.enter.prevent="saveEdits()"
+                                                    :disabled="submitting"
+                                                    class="w-28 px-2 py-0.5 text-sm border rounded bg-white disabled:opacity-50">
                                                 <option value="through">Traversant</option>
                                                 <option value="blind">Borgne</option>
                                             </select>
-                                            <input x-show="edits.depthType === 'blind'" type="number" step="0.1" x-model="edits.depth"
-                                                   class="w-16 px-2 py-0.5 text-sm border rounded" placeholder="mm" />
+                                            <input x-show="edits.depthType === 'blind'" type="number" step="0.1" x-model.number="edits.depth"
+                                                   @keydown.enter.prevent="saveEdits()"
+                                                   :disabled="submitting"
+                                                   class="w-16 px-2 py-0.5 text-sm border rounded disabled:opacity-50" placeholder="mm" />
                                         </div>
                                     </template>
                                 </div>
@@ -279,8 +311,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.diameter)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.diameter"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.diameter"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between" x-show="selection.metrics.angle">
@@ -293,8 +327,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.depth"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.depth"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="text-xs text-gray-500">
@@ -312,8 +348,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.radius)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.radius"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.radius"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -332,8 +370,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.inner?.radius || selection.metrics.radius)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.1" x-model="edits.innerRadius"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.1" x-model.number="edits.innerRadius"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between items-center" x-show="selection.metrics.outer?.radius">
@@ -347,8 +387,10 @@
                                     </template>
                                     <template x-if="editMode">
                                         <div class="flex items-center gap-1">
-                                            <input type="number" step="1" x-model="edits.angle"
-                                                   class="w-16 px-2 py-0.5 text-sm border rounded" />
+                                            <input type="number" step="1" x-model.number="edits.angle"
+                                                   @keydown.enter.prevent="saveEdits()"
+                                                   :disabled="submitting"
+                                                   class="w-16 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                             <span class="text-gray-500 text-sm">°</span>
                                         </div>
                                     </template>
@@ -369,8 +411,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.length)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.length"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.length"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -379,8 +423,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.width)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.width"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.width"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -389,8 +435,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.thickness)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.thickness"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.thickness"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -409,8 +457,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.straight_length || selection.metrics.length)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.length"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.length"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -419,8 +469,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.width)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.width"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.width"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="flex justify-between">
@@ -429,8 +481,10 @@
                                         <span class="font-medium" x-text="fmt(selection.metrics.depth)"></span>
                                     </template>
                                     <template x-if="editMode">
-                                        <input type="number" step="0.01" x-model="edits.depth"
-                                               class="w-20 px-2 py-0.5 text-sm border rounded" />
+                                        <input type="number" step="0.01" x-model.number="edits.depth"
+                                               @keydown.enter.prevent="saveEdits()"
+                                               :disabled="submitting"
+                                               class="w-20 px-2 py-0.5 text-sm border rounded disabled:opacity-50" />
                                     </template>
                                 </div>
                                 <div class="text-xs text-gray-500" x-show="selection.metrics.position">
@@ -641,6 +695,8 @@
 
                 // Edit mode
                 editMode: false,
+                submitting: false, // true entre Valider et l'arrivée d'une nouvelle sélection (regen confirmée)
+                submittingTimer: null,
                 edits: {
                     length: null,
                     width: null,
@@ -710,9 +766,13 @@
                             this.stats = { ...detail, weight };
                         }
                     })
-                    // Sélection
+                    // Sélection — utilisée aussi comme signal de fin de regen
+                    // (le viewer ré-émet une selection après reload du JSON régénéré)
                     window.addEventListener('cad-selection', ({detail}) => {
                         this.selection = detail
+                        if (this.submitting) {
+                            this.finishSubmitting()
+                        }
                     })
                     // Écoute les événements d'export depuis Livewire
                     Livewire.on('cad-exports-updated', ({step, obj, technical_drawing, screenshot}) => {
@@ -1016,14 +1076,37 @@
                         return;
                     }
 
+                    if (this.submitting) {
+                        return;
+                    }
+
                     // Build simplified message: "Changer X à Y [Face ID: Z]"
+                    // Le suffixe [Face ID: ...] est strippé/chip-ifié à l'affichage côté chat
+                    // (cf. parseFaceContext dans chat-messages.blade.php) mais reste en DB
+                    // pour donner du contexte au LLM lors de la regénération.
                     const message = `Changer ${changes.join(', ')} [Face ID: ${faceId}]`;
 
-                    // Send to Livewire
-                    Livewire.dispatch('sendRegenerationRequest', { message });
+                    // Passe en état "envoi en cours" : on garde les valeurs saisies visibles
+                    // et on désactive les inputs jusqu'à l'arrivée d'une nouvelle cad-selection
+                    // (= regen terminée) ou un timeout de sécurité.
+                    this.submitting = true;
+                    if (this.submittingTimer) clearTimeout(this.submittingTimer);
+                    this.submittingTimer = setTimeout(() => this.finishSubmitting(), 60000);
 
-                    // Reset edit mode
-                    this.cancelEdit();
+                    Livewire.dispatch('sendRegenerationRequest', { message });
+                },
+                finishSubmitting() {
+                    if (this.submittingTimer) {
+                        clearTimeout(this.submittingTimer);
+                        this.submittingTimer = null;
+                    }
+                    this.submitting = false;
+                    this.editMode = false;
+                    this.edits = {
+                        length: null, width: null, thickness: null,
+                        radius: null, diameter: null, depth: null, pitch: null,
+                        thread: null, depthType: null, innerRadius: null, angle: null
+                    };
                 },
             }
         }
