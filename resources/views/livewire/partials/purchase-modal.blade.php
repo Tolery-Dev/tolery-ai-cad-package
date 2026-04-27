@@ -67,9 +67,24 @@
                                 Paiement unique pour ce fichier uniquement
                             </flux:subheading>
                             @if(isset($downloadStatus['options']['purchase_price']))
-                                <div class="text-3xl font-bold text-zinc-900 mb-2">
-                                    {{ number_format($downloadStatus['options']['purchase_price'] / 100, 2) }}€
-                                    <span class="text-base font-normal text-zinc-600">HT</span>
+                                @php
+                                    $ht = $downloadStatus['options']['purchase_price'];
+                                    $tva = round($ht * 0.20);
+                                    $ttc = $ht + $tva;
+                                @endphp
+                                <div class="mb-4 space-y-1">
+                                    <div class="flex justify-between text-sm text-zinc-700">
+                                        <span>Montant fichier CAO</span>
+                                        <span>{{ number_format($ht / 100, 2, ',', ' ') }} € HT</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm text-zinc-500">
+                                        <span>TVA 20%</span>
+                                        <span>{{ number_format($tva / 100, 2, ',', ' ') }} €</span>
+                                    </div>
+                                    <div class="flex justify-between text-base font-bold text-violettes pt-1 border-t border-zinc-200">
+                                        <span>Total TTC</span>
+                                        <span>{{ number_format($ttc / 100, 2, ',', ' ') }} €</span>
+                                    </div>
                                 </div>
                             @endif
                             <ul class="space-y-2 text-sm text-zinc-600">
