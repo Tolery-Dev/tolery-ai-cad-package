@@ -250,9 +250,7 @@ class JsonModelViewer3D {
         this.mesh = mesh;
         this.modelGroup.add(mesh);
 
-        // Update navigation cube orientations and labels from JSON data
         if (this.navigationCube) {
-            this.navigationCube.updateOrientationsFromJson(json);
             this.navigationCube.updateFaceLabels({
                 front: 'Avant',
                 rear: 'Arrière',
