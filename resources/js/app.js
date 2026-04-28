@@ -250,6 +250,15 @@ class JsonModelViewer3D {
         this.mesh = mesh;
         this.modelGroup.add(mesh);
 
+        // Notifier les listeners (panel CAD config, chips de sélection) qu'un
+        // nouveau modèle est en place et qu'aucune face n'est plus sélectionnée.
+        // Sans ce signal, le panel resterait figé sur l'ancienne sélection après
+        // une regen, donnant l'illusion que la modification n'a pas été prise.
+        window.Alpine?.dispatchEvent?.("cad-selection", null) ||
+            window.dispatchEvent(
+                new CustomEvent("cad-selection", { detail: null }),
+            );
+
         if (this.navigationCube) {
             this.navigationCube.updateFaceLabels({
                 front: 'Avant',
