@@ -273,7 +273,7 @@
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">Ø perçage</span>
-                                    <span class="font-medium text-gray-600" x-text="fmtDiameter(getDiameterFromThread(selection.metrics.thread || getThreadFromDiameter(selection.metrics.diameter)) || selection.metrics.diameter)"></span>
+                                    <span class="font-medium text-gray-600" x-text="fmt(getDiameterFromThread(selection.metrics.thread || getThreadFromDiameter(selection.metrics.diameter)) || selection.metrics.diameter)"></span>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-500">Profondeur</span>
@@ -833,13 +833,12 @@
                     this.x = Math.min(Math.max(this.x, 12), Math.max(maxX, 12))
                     this.y = Math.min(Math.max(this.y, 12), Math.max(maxY, 12))
                 },
-                // Helpers d'affichage
+                // Helpers d'affichage. Précision adaptative : entier si entier
+                // (ex. 100 → "100 mm"), sinon 1 décimale (ex. 2.5 → "2.5 mm").
+                // Garantit la cohérence entre lecture et édition (les inputs
+                // x-model.number affichent les valeurs brutes sans arrondi).
                 fmt(v) {
-                    return (v == null) ? '—' : `${(+v).toFixed(0)} mm`
-                },
-                fmtDiameter(v) {
                     if (v == null) return '—';
-                    // Afficher 1 décimale si nécessaire (2.5 mm), sinon entier (3 mm)
                     const num = +v;
                     return num % 1 === 0 ? `${num.toFixed(0)} mm` : `${num.toFixed(1)} mm`;
                 },
