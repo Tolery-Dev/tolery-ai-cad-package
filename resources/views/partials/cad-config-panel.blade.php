@@ -15,7 +15,7 @@
     {{-- Header (handle drag + clickable to toggle) --}}
     <div
         x-show="hasGeneratedInSession"
-        @click="open = !open"
+        @click="if (didDrag) { didDrag = false; return; } open = !open"
         @mousedown="startDrag($event)"
         @touchstart.passive="startDrag($event)"
         class="flex items-center justify-between px-4 py-3 bg-violet-50/60 cursor-pointer hover:bg-violet-100/60 transition-colors"
@@ -712,6 +712,7 @@
                 startX: 0, startY: 0,   // position souris au début du drag
                 baseX: 0, baseY: 0,     // position du panneau au début du drag
                 dragging: false,
+                didDrag: false,         // true si le pointeur s'est réellement déplacé pendant le drag — évite que le mouseup post-drag soit interprété comme un click qui toggle open
 
                 // Flag pour savoir si une pièce a été générée dans cette session
                 hasGeneratedInSession: Boolean(
@@ -792,6 +793,7 @@
                 // ---- Drag & drop ----
                 startDrag(e) {
                     this.dragging = true
+                    this.didDrag = false
                     const isTouch = e.type === 'touchstart'
                     const p = isTouch ? e.touches[0] : e
                     this.startX = p.clientX
@@ -804,6 +806,11 @@
                         const pp = ev.type.startsWith('touch') ? ev.touches[0] : ev
                         const dx = pp.clientX - this.startX
                         const dy = pp.clientY - this.startY
+                        // Au-delà de 3px de déplacement, on considère que c'est un drag
+                        // et plus un click — empêche le toggle open/close à la fin du drag.
+                        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                            this.didDrag = true
+                        }
                         this.x = this.baseX + dx
                         this.y = this.baseY + dy
                         this.clampToViewport()
