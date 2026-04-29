@@ -57,9 +57,12 @@ export class NavigationCube {
         // Setup scene
         this.scene = new THREE.Scene();
 
-        // Setup camera
+        // Setup camera — vue iso depuis le coin RIGHT/FRONT/TOP du cube
+        // pour qu'au repos on voie TOP, FRONT et RIGHT (convention CAO Z-up).
+        // L'orientation up est explicitement Z-up, cohérente avec la scène principale.
         this.camera = new THREE.OrthographicCamera(-1.6, 1.6, 1.6, -1.6, 0.1, 20);
-        this.camera.position.set(0, 0, 5);
+        this.camera.up.set(0, 0, 1);
+        this.camera.position.set(3, -3, 3);
         this.camera.lookAt(0, 0, 0);
 
         // Lighting
@@ -97,13 +100,16 @@ export class NavigationCube {
         const size = 1.3;
         const halfSize = size / 2;
 
+        // Convention CAO Z-up (cohérente avec mesh-builders + DEFAULT_UP).
+        // PlaneGeometry a sa face naturelle en +Z, donc TOP n'a pas besoin
+        // de rotation et les autres faces sont tournées en conséquence.
         this.faceDefinitions = [
-            { key: 'front', pos: [0, 0, halfSize], rot: [0, 0, 0], normal: [0, 0, 1] },
-            { key: 'rear', pos: [0, 0, -halfSize], rot: [0, Math.PI, 0], normal: [0, 0, -1] },
-            { key: 'right', pos: [halfSize, 0, 0], rot: [0, Math.PI / 2, 0], normal: [1, 0, 0] },
-            { key: 'left', pos: [-halfSize, 0, 0], rot: [0, -Math.PI / 2, 0], normal: [-1, 0, 0] },
-            { key: 'top', pos: [0, halfSize, 0], rot: [-Math.PI / 2, 0, 0], normal: [0, 1, 0] },
-            { key: 'bottom', pos: [0, -halfSize, 0], rot: [Math.PI / 2, 0, 0], normal: [0, -1, 0] }
+            { key: 'top',    pos: [0, 0, halfSize],   rot: [0, 0, 0],            normal: [0, 0, 1] },
+            { key: 'bottom', pos: [0, 0, -halfSize],  rot: [Math.PI, 0, 0],      normal: [0, 0, -1] },
+            { key: 'front',  pos: [0, -halfSize, 0],  rot: [Math.PI / 2, 0, 0],  normal: [0, -1, 0] },
+            { key: 'rear',   pos: [0, halfSize, 0],   rot: [-Math.PI / 2, 0, Math.PI], normal: [0, 1, 0] },
+            { key: 'right',  pos: [halfSize, 0, 0],   rot: [0, Math.PI / 2, Math.PI / 2], normal: [1, 0, 0] },
+            { key: 'left',   pos: [-halfSize, 0, 0],  rot: [0, -Math.PI / 2, -Math.PI / 2], normal: [-1, 0, 0] },
         ];
 
         this.faceDefinitions.forEach(face => {
@@ -191,8 +197,8 @@ export class NavigationCube {
         const length = 0.7;
         const radius = 0.02;
 
-        // Position axes at bottom-left corner of cube
-        this.axesGroup.position.set(-0.85, -0.85, 0);
+        // Position axes at bottom-left-front corner of cube (Z-up convention)
+        this.axesGroup.position.set(-0.85, -0.85, -0.85);
 
         this.createAxis('X', this.colors.axisX, new THREE.Vector3(1, 0, 0), length, radius);
         this.createAxis('Y', this.colors.axisY, new THREE.Vector3(0, 1, 0), length, radius);
@@ -378,23 +384,38 @@ export class NavigationCube {
 
     /**
      * Rotate the main camera around its orbit target by pixel delta.
-     * Mimics OrbitControls rotation so dragging the cube rotates the 3D scene.
+     * Implémentation par quaternions pour fonctionner correctement quel que
+     * soit le up de la caméra (Z-up dans notre cas). Le drag horizontal
+     * tourne autour de l'axe up mondial, le drag vertical autour de l'axe
+     * "right" local de la caméra. Le sens correspond à celui qu'on observe
+     * dans le viewer (drag right = la pièce tourne vers la droite).
      */
     rotateCameraByDelta(dx, dy) {
         const sensitivity = 0.008;
-        const spherical = new THREE.Spherical();
-        const offset = this.mainCamera.position.clone().sub(this.mainControls.target);
+        const cam = this.mainCamera;
+        const target = this.mainControls.target;
+        const offset = cam.position.clone().sub(target);
 
-        spherical.setFromVector3(offset);
-        spherical.theta -= dx * sensitivity;
-        spherical.phi -= dy * sensitivity;
+        // Axe up mondial pour la rotation horizontale (yaw)
+        const up = cam.up.clone().normalize();
+        // Axe right local de la caméra pour la rotation verticale (pitch)
+        const forward = target.clone().sub(cam.position).normalize();
+        const right = new THREE.Vector3().crossVectors(forward, up).normalize();
 
-        // Clamp phi to avoid flipping
-        spherical.phi = Math.max(0.05, Math.min(Math.PI - 0.05, spherical.phi));
+        const yaw = new THREE.Quaternion().setFromAxisAngle(up, -dx * sensitivity);
+        const pitch = new THREE.Quaternion().setFromAxisAngle(right, -dy * sensitivity);
 
-        offset.setFromSpherical(spherical);
-        this.mainCamera.position.copy(this.mainControls.target).add(offset);
-        this.mainCamera.lookAt(this.mainControls.target);
+        offset.applyQuaternion(yaw).applyQuaternion(pitch);
+
+        // Clamp pour éviter de passer la pièce à l'envers : on contraint
+        // l'angle entre l'offset et l'axe up à rester entre ~5° et ~175°.
+        const cosAngle = offset.clone().normalize().dot(up);
+        if (cosAngle > 0.997 || cosAngle < -0.997) {
+            return; // refuse la rotation qui collerait au pôle
+        }
+
+        cam.position.copy(target).add(offset);
+        cam.lookAt(target);
         this.mainControls.update();
     }
 

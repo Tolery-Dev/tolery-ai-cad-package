@@ -702,6 +702,14 @@ class Chatbot extends Component
         ];
 
         $this->dispatch('cad-exports-updated', ...$exports);
+
+        // Pousse aussi la liste des versions disponibles vers le panel CAD config
+        // pour alimenter le stepper « v1 v2 v3 » dans son header.
+        $this->dispatch(
+            'cad-versions-updated',
+            versions: $this->getAvailableVersions(),
+            currentVersionId: $asst->id,
+        );
     }
 
     /* ----------------- Helpers ----------------- */
@@ -1118,6 +1126,42 @@ class Chatbot extends Component
                 'date' => $msg->created_at->format('d/m/Y H:i'),
             ])
             ->toArray();
+    }
+
+    /**
+     * Charge la version d'un message précis dans le viewer 3D sans déclencher
+     * de téléchargement (pas de consommation de quota). Utilisé par le stepper
+     * de versions du panel CAD config pour basculer entre les versions de la session.
+     */
+    #[On('loadVersionInViewer')]
+    public function loadVersionInViewer(int $messageId): void
+    {
+        $message = ChatMessage::where('chat_id', $this->chat->id)
+            ->where('id', $messageId)
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->whereNotNull('ai_cad_path')
+            ->first();
+
+        if (! $message) {
+            return;
+        }
+
+        $this->updateExportUrls($message);
+        $this->dispatch('jsonEdgesLoaded', jsonPath: route('ai-cad.file.json', ['messageId' => $message->id]));
+
+        $exports = [
+            'step' => $this->stepExportUrl,
+            'obj' => $this->objExportUrl,
+            'technical_drawing' => $this->technicalDrawingUrl,
+            'screenshot' => $this->screenshotUrl,
+        ];
+        $this->dispatch('cad-exports-updated', ...$exports);
+
+        $this->dispatch(
+            'cad-versions-updated',
+            versions: $this->getAvailableVersions(),
+            currentVersionId: $message->id,
+        );
     }
 
     /**
