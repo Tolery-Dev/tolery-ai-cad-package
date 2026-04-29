@@ -48,12 +48,82 @@
         x-bind:style="open ? 'max-height: calc(100vh - 140px)' : 'max-height: 0px; overflow: hidden;'"
     >
         <div class="p-4 space-y-4 select-text">
-            {{-- Instructions (NEW - Priority) --}}
-            <flux:callout icon="information-circle" size="sm" color="violet" class="text-violet-900">
-                <flux:callout.text>
-                    Cliquez sur une face, un perçage, un pliage... l'élément de votre pièce que vous souhaitez pour le modifier directement.
-                </flux:callout.text>
-            </flux:callout>
+            {{-- Stepper de versions — bascule entre les versions générées dans la session --}}
+            <template x-if="versions.length > 1">
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-gray-500">Version</span>
+                    <div class="flex flex-wrap gap-1">
+                        <template x-for="v in versions" :key="v.id">
+                            <button type="button"
+                                    @click="loadVersion(v.id)"
+                                    :title="`${v.label} — ${v.date}`"
+                                    class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-semibold border transition-all"
+                                    :class="v.id === currentVersionId
+                                        ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                                        : 'bg-white text-violet-700 border-violet-200 hover:bg-violet-50 cursor-pointer'"
+                                    :disabled="v.id === currentVersionId"
+                                    x-text="v.label">
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Astuces — bouton compact qui toggle un panneau avec quelques tips --}}
+            <div>
+                <button type="button"
+                        @click="tipsOpen = !tipsOpen"
+                        class="inline-flex items-center gap-1.5 text-xs font-medium text-violet-700 hover:text-violet-900 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <span>Astuces</span>
+                    <svg class="w-3 h-3 transition-transform" :class="tipsOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="tipsOpen" x-cloak
+                     x-transition:enter="transition ease-out duration-150"
+                     x-transition:enter-start="opacity-0 -translate-y-1"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 -translate-y-1"
+                     class="mt-2 rounded-lg bg-violet-50/60 border border-violet-100 p-3 text-xs text-violet-900 space-y-1.5">
+                    <div class="flex items-start gap-2">
+                        <span class="text-violet-500">→</span>
+                        <span>Cliquez sur une face, un perçage ou un pliage de la pièce pour le sélectionner et le modifier.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-violet-500">→</span>
+                        <span>Cliquez sur un badge (Perçage, Pliage, Congé…) pour parcourir les éléments d'un même type.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-violet-500">→</span>
+                        <span>Clic-gauche pour faire pivoter la pièce, clic-droit pour la déplacer, molette pour zoomer.</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-violet-500">→</span>
+                        <span>Glissez l'entête de cette fenêtre pour la repositionner.</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Index des features détectées sur la pièce — clic pour cycler --}}
+            <template x-if="featuresIndex">
+                <div class="flex flex-wrap gap-1.5">
+                    <template x-for="(bucket, type) in featuresIndex" :key="type">
+                        <button type="button"
+                                @click="selectByFeatureType(type)"
+                                :title="`Cliquer pour parcourir les ${bucket.count} ${featureTypeLabel(type).toLowerCase()}${bucket.count > 1 ? 's' : ''}`"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer hover:scale-105 hover:shadow-sm transition-all"
+                                :class="featureTypeStyle(type)">
+                            <span x-text="featureTypeLabel(type)"></span>
+                            <span class="font-bold" x-text="bucket.count"></span>
+                        </button>
+                    </template>
+                </div>
+            </template>
 
             {{-- Sélection avec types de faces --}}
             <div class="space-y-2">
@@ -104,6 +174,10 @@
                             </span>
                             <span class="text-gray-500 text-xs">ID: </span>
                             <span class="font-medium text-xs" x-text="selection.realFaceId || selection.id"></span>
+                            <template x-if="selection.orientation">
+                                <span class="ml-auto text-xs px-2 py-0.5 rounded-md font-bold tracking-wide bg-blue-100 text-blue-700"
+                                      x-text="orientationLabel(selection.orientation)"></span>
+                            </template>
                         </div>
 
                         {{-- Face PLANE --}}
@@ -692,6 +766,11 @@
                 // State alimenté par app.js (events window)
                 stats: {sizeX: 0, sizeY: 0, sizeZ: 0, unit: 'mm', volume: 0, thickness: 0, weight: 0},
                 selection: null,
+                featuresIndex: null, // { hole: { count, features }, fillet: {...}, ... } — null si pièce sans données sémantiques
+                featuresCycleIndex: {}, // { hole: 2, fillet: 0 } — index courant par type pour cycler entre les features du même type
+                tipsOpen: false, // toggle du panneau d'astuces
+                versions: [], // [{id, label, date}, ...] — versions disponibles dans le chat
+                currentVersionId: null, // id du message dont la version est active dans le viewer
 
                 // Edit mode
                 editMode: false,
@@ -774,6 +853,16 @@
                         if (this.submitting) {
                             this.finishSubmitting()
                         }
+                    })
+                    // Index des features détectées (perçages, pliages, congés, etc.)
+                    window.addEventListener('cad-features-index', ({detail}) => {
+                        this.featuresIndex = detail
+                        this.featuresCycleIndex = {} // reset les cycles à chaque nouveau modèle
+                    })
+                    // Liste des versions disponibles + version active dans le viewer
+                    Livewire.on('cad-versions-updated', ({versions, currentVersionId}) => {
+                        this.versions = Array.isArray(versions) ? versions : []
+                        this.currentVersionId = currentVersionId ?? null
                     })
                     // Écoute les événements d'export depuis Livewire
                     Livewire.on('cad-exports-updated', ({step, obj, technical_drawing, screenshot}) => {
@@ -866,6 +955,83 @@
                     if (!c) return '—';
                     const u = this.stats.unit || 'mm';
                     return `(${(c.x || 0).toFixed(1)}, ${(c.y || 0).toFixed(1)}, ${(c.z || 0).toFixed(1)}) ${u}`
+                },
+
+                // Traduction des orientations Onshape/FreeCad vers le français
+                // utilisé partout dans l'interface (Avant/Arrière/Dessus/etc.)
+                orientationLabel(o) {
+                    if (!o) return '';
+                    const labels = {
+                        TOP: 'Dessus',
+                        BOTTOM: 'Dessous',
+                        FRONT: 'Avant',
+                        REAR: 'Arrière',
+                        BACK: 'Arrière',
+                        LEFT: 'Gauche',
+                        RIGHT: 'Droite',
+                    };
+                    return labels[o.toUpperCase().trim()] || o;
+                },
+
+                // Mapping des types de features (cohérent avec les badges
+                // "Sélection" plus bas qui utilisent les mêmes familles de couleurs)
+                featureTypeLabel(type) {
+                    const labels = {
+                        hole: 'Perçage',
+                        thread: 'Taraudage',
+                        fillet: 'Congé',
+                        chamfer: 'Chanfrein',
+                        countersink: 'Fraisurage',
+                        bending: 'Pliage',
+                        slot: 'Oblong',
+                        oblong: 'Oblong',
+                        cylindrical: 'Cylindre',
+                        planar: 'Face plane',
+                        box: 'Face',
+                    };
+                    return labels[type] || type;
+                },
+                // Bascule la version active du viewer vers le messageId donné.
+                // Le composant Chatbot écoute cet event Livewire et émet
+                // jsonEdgesLoaded + cad-versions-updated en retour.
+                loadVersion(messageId) {
+                    if (!messageId || messageId === this.currentVersionId) return;
+                    Livewire.dispatch('loadVersionInViewer', { messageId });
+                },
+
+                // Au clic sur un badge d'index, on cycle entre les features
+                // de ce type. Pour une feature multi-face (fillet, bending, etc.),
+                // on n'envoie qu'un seul faceId — le viewer sélectionnera
+                // automatiquement toutes les faces du feature via getGroupIndicesForFeature.
+                selectByFeatureType(type) {
+                    const bucket = this.featuresIndex?.[type];
+                    if (!bucket || !bucket.features.length) return;
+                    const currentIdx = this.featuresCycleIndex[type] ?? -1;
+                    const nextIdx = (currentIdx + 1) % bucket.features.length;
+                    this.featuresCycleIndex = { ...this.featuresCycleIndex, [type]: nextIdx };
+                    const feature = bucket.features[nextIdx];
+                    const faceId = feature.face_ids?.[0]
+                        || feature.inner?.face_ids?.[0]
+                        || feature.outer?.face_ids?.[0]
+                        || feature.edge_ids?.[0];
+                    if (!faceId) return;
+                    window.dispatchEvent(new CustomEvent('cad-select-face', { detail: { faceId } }));
+                },
+                featureTypeStyle(type) {
+                    const styles = {
+                        hole: 'bg-orange-50 text-orange-700 border-orange-200',
+                        thread: 'bg-red-50 text-red-700 border-red-200',
+                        fillet: 'bg-green-50 text-green-700 border-green-200',
+                        chamfer: 'bg-green-50 text-green-700 border-green-200',
+                        countersink: 'bg-purple-50 text-purple-700 border-purple-200',
+                        bending: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                        slot: 'bg-amber-50 text-amber-700 border-amber-200',
+                        oblong: 'bg-amber-50 text-amber-700 border-amber-200',
+                        cylindrical: 'bg-green-50 text-green-700 border-green-200',
+                        planar: 'bg-blue-50 text-blue-700 border-blue-200',
+                        box: 'bg-blue-50 text-blue-700 border-blue-200',
+                    };
+                    return styles[type] || 'bg-gray-50 text-gray-700 border-gray-200';
                 },
 
                 // Mapping diamètre de perçage → taille de taraudage ISO métrique

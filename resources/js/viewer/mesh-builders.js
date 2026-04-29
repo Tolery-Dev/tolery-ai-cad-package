@@ -3,10 +3,11 @@
  * Handles building Three.js meshes from different CAD JSON formats
  *
  * Coordinate system note:
- * Onshape JSON uses a CAD Z-up coordinate system (X=right, Y=depth, Z=up).
- * Three.js uses a Y-up system (X=right, Y=up, Z=forward).
- * All Onshape vertices are transformed via (x, y, z) → (x, z, -y) so that the
- * mesh orientation matches the navigation cube normals (which apply the same transform).
+ * Both Onshape and FreeCad JSON use the CAD convention Z-up
+ * (X=right, Y=depth, Z=up). The application overrides Three.js's default Y-up
+ * with `THREE.Object3D.DEFAULT_UP.set(0, 0, 1)` (cf. app.js), so vertices are
+ * pushed AS-IS without any axis swap. Top face of the part remains TOP in the
+ * viewer and matches the orientation seen in DFM / FreeCad.
  */
 import * as THREE from "three";
 
@@ -39,22 +40,22 @@ export function buildMeshFromOnshapeJson(json, materials) {
                 const vtx = facets[k]?.vertices;
                 if (!Array.isArray(vtx) || vtx.length < 3) continue;
                 if (vtx.length === 3) {
-                    // already a triangle — transform CAD Z-up → Three.js Y-up: (x,y,z)→(x,z,-y)
+                    // Triangle — vertices CAD Z-up bruts (la scène est en Z-up)
                     pos.push(
-                        vtx[0].x,  vtx[0].z, -vtx[0].y,
-                        vtx[1].x,  vtx[1].z, -vtx[1].y,
-                        vtx[2].x,  vtx[2].z, -vtx[2].y,
+                        vtx[0].x, vtx[0].y, vtx[0].z,
+                        vtx[1].x, vtx[1].y, vtx[1].z,
+                        vtx[2].x, vtx[2].y, vtx[2].z,
                     );
                 } else {
-                    // fan triangulation — transform CAD Z-up → Three.js Y-up: (x,y,z)→(x,z,-y)
+                    // Fan triangulation — vertices CAD Z-up bruts
                     for (let i = 2; i < vtx.length; i++) {
                         const a = vtx[0],
                             bv = vtx[i - 1],
                             c = vtx[i];
                         pos.push(
-                            a.x,   a.z,  -a.y,
-                            bv.x, bv.z, -bv.y,
-                            c.x,   c.z,  -c.y,
+                            a.x, a.y, a.z,
+                            bv.x, bv.y, bv.z,
+                            c.x, c.y, c.z,
                         );
                     }
                 }
@@ -69,6 +70,7 @@ export function buildMeshFromOnshapeJson(json, materials) {
                     start: startIndex,
                     count: countIndex,
                     id: faceId,
+                    orientation: face.orientation ?? null, // TOP/BOTTOM/FRONT/REAR/LEFT/RIGHT depuis Onshape
                 });
                 realFaceIds.push(faceId);
             }

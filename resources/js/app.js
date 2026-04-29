@@ -26,6 +26,11 @@ import { calculateMeshVolume } from "./viewer/geometry-utils.js";
 import { captureAndSendScreenshotWithRetry } from "./viewer/screenshot.js";
 import { NavigationCube } from "./viewer/navigation-cube.js";
 
+// Convention CAO : Z = vertical (Z-up), comme FreeCad / DFM. Cette ligne
+// applique Z-up à toutes les caméras et OrbitControls créés ensuite. Sans
+// ça, Three.js utiliserait Y-up et la pièce apparaîtrait couchée.
+THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+
 // --- Minimal viewer class ---
 class JsonModelViewer3D {
     constructor(containerId = "viewer") {
@@ -259,6 +264,10 @@ class JsonModelViewer3D {
                 new CustomEvent("cad-selection", { detail: null }),
             );
 
+        // Construire et émettre l'index des features détectées (perçages,
+        // pliages, congés, etc.) pour alimenter le strip d'index dans le panel.
+        this._emitFeaturesIndex();
+
         if (this.navigationCube) {
             this.navigationCube.updateFaceLabels({
                 front: 'Avant',
@@ -340,6 +349,42 @@ class JsonModelViewer3D {
                 "[JsonModelViewer3D] Screenshot already exists, skipping capture",
             );
         }
+    }
+
+    // --- Features index ---
+    // Construit un récap des features sémantiques (FreeCad) groupées par type
+    // pour alimenter le strip d'index dans le panel CAD config.
+    // Pour les pièces sans features sémantique (Onshape), on émet null —
+    // le panel masque alors le strip plutôt que d'afficher un comptage géométrique
+    // imprécis (une feature multi-face donnerait plusieurs entrées).
+    _buildFeaturesIndex() {
+        if (!Array.isArray(this.features) || this.features.length === 0) {
+            return null;
+        }
+        const buckets = {};
+        for (const feature of this.features) {
+            let type = feature.type;
+            // Aligné avec la logique du clic : un perçage taraudé devient "thread"
+            if (type === "hole") {
+                const isThreaded =
+                    feature.subtype === "threaded" ||
+                    feature.subtype === "tapped" ||
+                    (feature.thread != null && feature.thread !== "");
+                if (isThreaded) type = "thread";
+            }
+            if (!buckets[type]) buckets[type] = { count: 0, features: [] };
+            buckets[type].count++;
+            buckets[type].features.push(feature);
+        }
+        return buckets;
+    }
+
+    _emitFeaturesIndex() {
+        const index = this._buildFeaturesIndex();
+        window.Alpine?.dispatchEvent?.("cad-features-index", index) ||
+            window.dispatchEvent(
+                new CustomEvent("cad-features-index", { detail: index }),
+            );
     }
 
     // --- Edges / Contours ---
@@ -491,8 +536,10 @@ class JsonModelViewer3D {
         // marge contrôlée par 'fill' (0.92 ≈ occuper 92% du viewport)
         const targetDist = dist / Math.max(0.05, Math.min(0.98, fill));
 
-        // point de vue isométrique propre
-        const dir = new THREE.Vector3(1, 1, 1).normalize();
+        // Vue iso par défaut depuis le coin RIGHT/FRONT/TOP (X+, Y-, Z+) —
+        // convention CAO Z-up, alignée avec ce que DFM affiche pour qu'on voie
+        // les faces TOP, FRONT et RIGHT au démarrage.
+        const dir = new THREE.Vector3(1, -1, 1).normalize();
         this.camera.position.copy(center).add(dir.multiplyScalar(targetDist));
         this.camera.lookAt(center);
 
@@ -602,6 +649,27 @@ class JsonModelViewer3D {
             }
         }
 
+        this._dispatchSelectionFromGroupIdx(groupIdx);
+    }
+
+    /**
+     * Sélection programmatique par faceId (utilisée par l'index de features
+     * du panel CAD config quand on clique sur un badge "Perçage 5").
+     * Émet un cad-selection identique à un clic souris sur la face.
+     */
+    selectFaceById(faceId) {
+        if (!this.mesh) return;
+        const realIds = this.mesh.userData?.realFaceIdsByGroup;
+        if (!Array.isArray(realIds)) return;
+        const groupIdx = realIds.indexOf(faceId);
+        if (groupIdx < 0) {
+            console.warn("[JsonModelViewer3D] selectFaceById: face not found", faceId);
+            return;
+        }
+        this._dispatchSelectionFromGroupIdx(groupIdx);
+    }
+
+    _dispatchSelectionFromGroupIdx(groupIdx) {
         const fg = this.mesh.userData?.faceGroups?.[groupIdx];
         const faceId = fg?.id ?? groupIdx;
         const realId =
@@ -609,11 +677,6 @@ class JsonModelViewer3D {
 
         // Try to find semantic feature data from FreeCad JSON first
         const featureData = getFeatureForFaceId(this.features, realId);
-        console.log("🔎 Feature lookup:", {
-            realId,
-            featureData,
-            featuresCount: this.features?.length,
-        });
 
         // For multi-face features (oblongs, fillets, chamfers, bending, etc.), select ALL faces of the feature
         // Count all face/edge IDs including nested structures for bending
@@ -747,11 +810,16 @@ class JsonModelViewer3D {
             metrics = computeFaceMetrics(faceType, vertices, bbox, areaMm2);
         }
 
+        // Orientation TOP/BOTTOM/FRONT/REAR/LEFT/RIGHT — provient soit du JSON
+        // Onshape (stockée dans le faceGroup au build), soit des features FreeCad.
+        const orientation = fg?.orientation ?? featureData?.orientation ?? null;
+
         const detail = {
             id: faceId,
             realFaceId: realId,
             faceType: faceType,
             metrics: metrics,
+            orientation,
             centroid,
             triangles: Math.floor(fg.count / 3),
             unit: "mm",
@@ -860,6 +928,14 @@ Livewire.on("jsonEdgesLoaded", ({ jsonPath, jsonData }) => {
 // Fonctionne avec $dispatch d'Alpine et window.dispatchEvent natif
 window.addEventListener("viewer-fit", () => {
     ensureViewer().resetView();
+});
+
+// Sélection programmatique d'une face par faceId — déclenchée par les badges
+// d'index de features du panel CAD config.
+window.addEventListener("cad-select-face", (e) => {
+    const faceId = e?.detail?.faceId;
+    if (!faceId) return;
+    ensureViewer().selectFaceById(faceId);
 });
 Livewire.on("updatedMaterialPreset", () => {
     // Matériau figé sur le rendu métallique par défaut, aucun changement nécessaire.
