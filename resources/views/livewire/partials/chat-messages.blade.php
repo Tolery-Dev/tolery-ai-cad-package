@@ -53,7 +53,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                     </svg>
                     <div>
-                        <span class="text-xs font-mono text-amber-500" x-text="'Code ' + content.trim()"></span>
+                        <span class="text-xs font-mono text-amber-500" x-text="'Code ' + (matchedErrorCode || content.trim())"></span>
                         <p class="text-sm mt-0.5" x-text="errorMessage"></p>
                     </div>
                 </div>
@@ -80,15 +80,31 @@
         isTyping: false,
         isErrorCode: false,
         errorMessage: '',
+        matchedErrorCode: '',
         displayedContent: '',
 
         checkDfmErrorCode(text) {
             if (this.role !== 'assistant' || !text) return false;
             var trimmed = text.trim();
+            // Cas 1 : le bot renvoie uniquement le code (ex: "104.1")
             if (this.dfmErrorCodes[trimmed]) {
                 this.isErrorCode = true;
                 this.errorMessage = this.dfmErrorCodes[trimmed];
+                this.matchedErrorCode = trimmed;
                 return true;
+            }
+            // Cas 2 : le code est noyé dans un texte (ex: "Erreur lors de la
+            // génération : 104.1 — veuillez réessayer"). On parcourt les codes
+            // connus et on cherche le premier qui apparaît dans le message.
+            for (var code in this.dfmErrorCodes) {
+                if (!Object.prototype.hasOwnProperty.call(this.dfmErrorCodes, code)) continue;
+                var pattern = new RegExp('(^|[^\\d.])' + code.replace(/\./g, '\\.') + '($|[^\\d.])');
+                if (pattern.test(text)) {
+                    this.isErrorCode = true;
+                    this.errorMessage = this.dfmErrorCodes[code];
+                    this.matchedErrorCode = code;
+                    return true;
+                }
             }
             return false;
         },
