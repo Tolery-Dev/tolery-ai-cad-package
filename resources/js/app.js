@@ -57,7 +57,11 @@ class JsonModelViewer3D {
         const w = this.container.clientWidth || 800;
         const h = this.container.clientHeight || 600;
         this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 5000);
-        this.camera.position.set(0.8, 0.8, 1.6);
+        // Vue iso par défaut depuis le coin RIGHT/FRONT/TOP (X+, Y-, Z+) —
+        // convention CAO Z-up, identique à fitCameraToObject. Cela garantit
+        // que le cube d'orientation montre TOP/FRONT/RIGHT correctement même
+        // quand aucune pièce n'est encore chargée (chatbot vide).
+        this.camera.position.set(1.6, -1.6, 1.6);
 
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         // --- renderer plus clair ---
@@ -911,6 +915,23 @@ function ensureSelectionManager() {
     }
     return FACE_SELECTION_MANAGER;
 }
+
+// Initialise le viewer dès qu'un container `#viewer` est présent dans le DOM
+// (chatbot vide ou avec pièce). Sans ça, le cube d'orientation n'apparaît
+// qu'une fois la pièce chargée, et le placeholder Blade doit dupliquer les
+// labels — ce qui produit un rendu en doublon.
+function initViewerIfPresent() {
+    if (document.getElementById("viewer")) {
+        ensureViewer();
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initViewerIfPresent);
+} else {
+    initViewerIfPresent();
+}
+document.addEventListener("livewire:navigated", initViewerIfPresent);
 
 // Livewire entry point: accepte { jsonData } (contenu inline, zéro fetch) ou { jsonPath } (URL locale)
 Livewire.on("jsonEdgesLoaded", ({ jsonPath, jsonData }) => {

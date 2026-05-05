@@ -454,10 +454,23 @@ export class NavigationCube {
     }
 
     update() {
-        const quaternion = this.mainCamera.quaternion.clone().invert();
+        // Le cube et les axes restent fixes dans le repère monde — leurs faces
+        // (TOP/+Z, FRONT/-Y, RIGHT/+X, …) sont alignées avec la convention Z-up
+        // de la scène. On déplace la nav-caméra pour qu'elle regarde le cube
+        // depuis la même direction que la main-caméra regarde la scène : la vue
+        // du widget reste ainsi toujours synchronisée avec la vue principale,
+        // sans introduire d'inversion de quaternion entre deux caméras qui
+        // n'ont pas la même orientation par défaut.
+        const target = this.mainControls?.target ?? new THREE.Vector3();
+        const direction = this.mainCamera.position.clone().sub(target);
+        const distance = direction.length();
 
-        if (this.cubeGroup) this.cubeGroup.quaternion.copy(quaternion);
-        if (this.axesGroup) this.axesGroup.quaternion.copy(quaternion);
+        if (distance < 1e-6) return;
+
+        const navDistance = 4;
+        this.camera.position.copy(direction.multiplyScalar(navDistance / distance));
+        this.camera.up.copy(this.mainCamera.up);
+        this.camera.lookAt(0, 0, 0);
 
         this.render();
     }

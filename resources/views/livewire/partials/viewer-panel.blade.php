@@ -134,13 +134,6 @@
                  x-show="visible"
                  @cad-model-stats.window="visible = false">
 
-                {{-- Cube d'orientation title + help text --}}
-                <div class="absolute top-4 right-4 flex flex-col items-center">
-                    <p class="text-sm font-semibold text-violet-600 mb-1">Cube d'orientation</p>
-                    <div class="w-[180px] h-[180px]"></div>
-                    <p class="text-xs text-violet-600 mt-1">Cliquer pour pivoter le cube</p>
-                </div>
-
                 <div class="w-80 h-auto flex items-center justify-center mb-8">
                     <img src="{{ asset('vendor/ai-cad/images/tolery-large-logo.svg') }}" alt="ToleryCAD" />
                 </div>
