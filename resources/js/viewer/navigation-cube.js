@@ -97,7 +97,7 @@ export class NavigationCube {
         this.cubeGroup = new THREE.Group();
         this.cubeFaces = [];
 
-        const size = 1.3;
+        const size = 0.9;
         const halfSize = size / 2;
 
         // Convention CAO Z-up (cohérente avec mesh-builders + DEFAULT_UP).
@@ -194,11 +194,13 @@ export class NavigationCube {
         this.axesGroup = new THREE.Group();
         this.axesGroup.userData.nonInteractive = true;
 
-        const length = 0.7;
+        const length = 1.05;
         const radius = 0.02;
 
-        // Position axes at bottom-left-front corner of cube (Z-up convention)
-        this.axesGroup.position.set(-0.85, -0.85, -0.85);
+        // Position axes at bottom-left-front corner of cube (Z-up convention),
+        // just outside the cube so the X/Y/Z labels emerge clearly past the
+        // cube edges (similar to the DFM viewer orientation widget).
+        this.axesGroup.position.set(-0.55, -0.55, -0.55);
 
         this.createAxis('X', this.colors.axisX, new THREE.Vector3(1, 0, 0), length, radius);
         this.createAxis('Y', this.colors.axisY, new THREE.Vector3(0, 1, 0), length, radius);
