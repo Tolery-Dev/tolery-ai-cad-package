@@ -110,9 +110,9 @@
             </div>
 
             {{-- Index des features détectées sur la pièce — clic pour cycler --}}
-            <template x-if="featuresIndex">
+            <template x-if="visibleFeaturesIndex">
                 <div class="flex flex-wrap gap-1.5">
-                    <template x-for="(bucket, type) in featuresIndex" :key="type">
+                    <template x-for="(bucket, type) in visibleFeaturesIndex" :key="type">
                         <button type="button"
                                 @click="selectByFeatureType(type)"
                                 :title="`Cliquer pour parcourir les ${bucket.count} ${featureTypeLabel(type).toLowerCase()}${bucket.count > 1 ? 's' : ''}`"
@@ -990,6 +990,19 @@
                         box: 'Face',
                     };
                     return labels[type] || type;
+                },
+                // Whitelist des types de features à afficher dans les pills d'index.
+                // On masque les types de faces "géométriques" (rectangular, square,
+                // cylindrical, planar, box, …) au profit des features fonctionnelles
+                // (perçages, taraudages, fraisurages, pliages, congés, chanfreins, oblongs).
+                get visibleFeaturesIndex() {
+                    if (!this.featuresIndex) return null;
+                    const allowed = ['hole', 'countersink', 'thread', 'bending', 'fillet', 'chamfer', 'slot', 'oblong'];
+                    const filtered = {};
+                    for (const [type, bucket] of Object.entries(this.featuresIndex)) {
+                        if (allowed.includes(type)) filtered[type] = bucket;
+                    }
+                    return Object.keys(filtered).length ? filtered : null;
                 },
                 // Bascule la version active du viewer vers le messageId donné.
                 // Le composant Chatbot écoute cet event Livewire et émet
