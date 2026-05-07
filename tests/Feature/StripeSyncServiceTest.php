@@ -1,6 +1,7 @@
 <?php
 
 use Stripe\Product;
+use Stripe\StripeClient;
 use Tolery\AiCad\Enum\ResetFrequency;
 use Tolery\AiCad\Models\SubscriptionProduct;
 use Tolery\AiCad\Services\AiCadStripe;
@@ -30,7 +31,7 @@ function makeStripeProduct(array $overrides = []): Product
 }
 
 beforeEach(function () {
-    $this->stripeMock = Mockery::mock(\Stripe\StripeClient::class);
+    $this->stripeMock = Mockery::mock(StripeClient::class);
     $this->aiCadStripe = Mockery::mock(AiCadStripe::class);
     $this->aiCadStripe->shouldReceive('client')->andReturn($this->stripeMock);
 });
