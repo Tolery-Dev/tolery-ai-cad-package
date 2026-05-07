@@ -6,6 +6,7 @@ use Stripe\Exception\ApiErrorException;
 use Stripe\Price;
 use Stripe\Product;
 use Stripe\StripeClient;
+use Tolery\AiCad\Enum\ResetFrequency;
 use Tolery\AiCad\Models\SubscriptionPrice;
 use Tolery\AiCad\Models\SubscriptionProduct;
 
@@ -76,15 +77,26 @@ class StripeSyncService
     {
         $filesAllowed = $stripeProduct->metadata->files_allowed ?? null;
 
-        return SubscriptionProduct::updateOrCreate(
-            ['stripe_id' => $stripeProduct->id],
-            [
-                'name' => $stripeProduct->name,
-                'description' => $stripeProduct->description ?? '',
-                'active' => $stripeProduct->active,
-                'files_allowed' => $filesAllowed ? (int) $filesAllowed : null,
-            ]
-        );
+        $product = SubscriptionProduct::firstOrNew(['stripe_id' => $stripeProduct->id]);
+
+        $product->name = $stripeProduct->name;
+        $product->description = $stripeProduct->description ?? '';
+        $product->active = $stripeProduct->active;
+        $product->files_allowed = $filesAllowed ? (int) $filesAllowed : null;
+
+        // Frequency drives the quota reset cadence used by LimitRenew.
+        // Stripe products do not carry this notion, so we default to MONTHLY
+        // on create and self-heal any pre-existing NULL row from earlier syncs.
+        // Stripe metadata `frequency=monthly|yearly` overrides the default.
+        if (! $product->exists || $product->frequency === null) {
+            $metadataFrequency = $stripeProduct->metadata->frequency ?? null;
+            $product->frequency = ResetFrequency::tryFrom((string) $metadataFrequency)
+                ?? ResetFrequency::MONTHLY;
+        }
+
+        $product->save();
+
+        return $product;
     }
 
     protected function syncPrice(Price $stripePrice, string $stripeProductId): ?SubscriptionPrice

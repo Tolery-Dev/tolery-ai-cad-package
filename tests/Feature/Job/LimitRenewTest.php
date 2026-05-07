@@ -4,6 +4,7 @@ use Laravel\Cashier\Subscription;
 use Tolery\AiCad\Jobs\LimitRenew;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\Limit;
+use Tolery\AiCad\Models\SubscriptionProduct;
 
 use function Pest\Laravel\assertDatabaseCount;
 
@@ -48,5 +49,26 @@ test('dont renew limit for unsubscribe team', function () {
 
     $limitRenewJob->handle();
 
+    assertDatabaseCount('subscription_has_limits', 1);
+});
+
+test('skip renewal without crashing when product frequency is null', function () {
+
+    $product = SubscriptionProduct::factory()->create(['frequency' => null]);
+
+    $limit = Limit::factory()
+        ->for($product, 'product')
+        ->past()
+        ->create();
+
+    $team = Mockery::mock(ChatTeam::class);
+    $team->shouldReceive('subscribed')->andReturn(true);
+    $limit->setRelation('team', $team);
+
+    $limitRenewJob = new LimitRenew($limit);
+
+    $limitRenewJob->handle();
+
+    // No new limit created — the job should log and return, not throw.
     assertDatabaseCount('subscription_has_limits', 1);
 });
