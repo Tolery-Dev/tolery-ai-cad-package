@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Subscription;
+use Tolery\AiCad\Events\TrialWillEnd;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
 use Tolery\AiCad\Models\ChatTeam;
@@ -326,6 +327,57 @@ class StripeWebhookController extends Controller
         ]);
 
         return response()->json(['success' => true], 200);
+    }
+
+    /**
+     * Handle customer.subscription.trial_will_end webhook.
+     *
+     * Stripe fires this event 3 days before the trial ends. We surface it as
+     * a `TrialWillEnd` Laravel event so consuming apps can react (e.g. send
+     * an email reminder).
+     */
+    protected function handleCustomerSubscriptionTrialWillEnd(array $payload): JsonResponse
+    {
+        try {
+            $subscription = $payload['object'];
+            $customerId = $subscription['customer'] ?? null;
+            $trialEnd = $subscription['trial_end'] ?? null;
+
+            if (! $customerId || ! $trialEnd) {
+                Log::warning('[AICAD Webhook] trial_will_end missing customer or trial_end', [
+                    'subscription_id' => $subscription['id'] ?? null,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            $teamModel = config('ai-cad.chat_team_model', ChatTeam::class);
+            $team = $teamModel::where('tolerycad_stripe_id', $customerId)->first();
+
+            if (! $team) {
+                Log::warning('[AICAD Webhook] Team not found for trial_will_end', [
+                    'customer_id' => $customerId,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            TrialWillEnd::dispatch($team, Carbon::createFromTimestamp($trialEnd));
+
+            Log::info('[AICAD Webhook] TrialWillEnd event dispatched', [
+                'team_id' => $team->id,
+                'trial_end' => $trialEnd,
+            ]);
+
+            return response()->json(['success' => true], 200);
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle customer.subscription.trial_will_end', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['success' => true], 200);
+        }
     }
 
     /**
