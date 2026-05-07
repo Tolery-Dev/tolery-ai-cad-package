@@ -89,6 +89,12 @@ class Chatbot extends Component
 
     public function mount(): void
     {
+        // Load quota status before any early return so the chat header
+        // displays the progress bar even on a ghost chat (landing page).
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
+
         // Si le chat n'existe pas encore (ghost chat), ne rien faire
         // Il sera créé au premier message envoyé
         if (! $this->chat->exists) {
@@ -127,11 +133,6 @@ class Chatbot extends Component
             // 4. Initialize download status
             $this->updateDownloadStatus();
         }
-
-        // Load quota status
-        /** @var ChatUser $user */
-        $user = auth()->user();
-        $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
 
         // Charger les codes d'erreur DFM pour le mapping côté frontend
         $this->dfmErrorCodes = $this->loadDfmErrorCodes();
