@@ -2,6 +2,7 @@
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Testing\TestResponse;
 use Stripe\Event as StripeEvent;
 use Tolery\AiCad\Events\TrialWillEnd;
 use Tolery\AiCad\Models\ChatTeam;
@@ -12,7 +13,7 @@ beforeEach(function () {
     config(['ai-cad.chat_team_model' => ChatTeam::class]);
 });
 
-function dispatchTrialWillEndWebhook(array $subscription): \Illuminate\Testing\TestResponse
+function dispatchTrialWillEndWebhook(array $subscription): TestResponse
 {
     $stripeEvent = StripeEvent::constructFrom([
         'id' => 'evt_trial_will_end_'.bin2hex(random_bytes(4)),
