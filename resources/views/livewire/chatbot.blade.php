@@ -689,6 +689,47 @@
         }
     });
 
+    // Auto-download après retour de Stripe Checkout (ticket #1895).
+    // Quand l'URL contient ?auto_download=1, on poll attemptAutoDownload() jusqu'à ce que
+    // le webhook Stripe ait synchronisé l'abonnement (max ~9s), puis on déclenche le DL.
+    (function autoDownloadAfterSubscription() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('auto_download') !== '1') return;
+
+        // On retire le flag de l'URL pour éviter un re-trigger sur reload
+        params.delete('auto_download');
+        const cleanQuery = params.toString();
+        const cleanUrl = window.location.pathname + (cleanQuery ? '?' + cleanQuery : '');
+        window.history.replaceState({}, '', cleanUrl);
+
+        const MAX_ATTEMPTS = 6;     // 6 * 1500ms = 9s
+        const RETRY_DELAY_MS = 1500;
+        let attempts = 0;
+
+        const tryDownload = async () => {
+            attempts++;
+            aicadLog(`[AICAD] 🔁 Auto-download attempt ${attempts}/${MAX_ATTEMPTS}`);
+            try {
+                const ready = await $wire.attemptAutoDownload();
+                if (ready) {
+                    aicadLog('[AICAD] ✅ Auto-download triggered');
+                    return;
+                }
+            } catch (e) {
+                aicadError('[AICAD] Auto-download attempt failed:', e);
+            }
+
+            if (attempts < MAX_ATTEMPTS) {
+                setTimeout(tryDownload, RETRY_DELAY_MS);
+            } else {
+                aicadWarn('[AICAD] ⚠️ Auto-download gave up after max attempts (subscription webhook delay?)');
+            }
+        };
+
+        // Petit délai pour laisser Livewire finir son mount initial
+        setTimeout(tryDownload, 500);
+    })();
+
     // Listen for chat creation to update URL without redirecting
     Livewire.on('chat-created', ({chatId}) => {
         const newUrl = @js(route('client.tolerycad.show-chatbot', ['chat' => '__CHAT_ID__'])).replace('__CHAT_ID__', chatId);
