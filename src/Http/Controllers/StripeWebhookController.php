@@ -319,14 +319,78 @@ class StripeWebhookController extends Controller
 
     /**
      * Handle customer.subscription.deleted webhook.
+     *
+     * Stripe fires this when a subscription is fully removed — either an immediate
+     * cancellation or the natural expiry of a sub that had `cancel_at_period_end=true`.
+     * Either way, we close the DB record so `Subscription::canceled()` returns true
+     * and `Subscription::active()` returns false. Ticket #1889.
      */
     protected function handleCustomerSubscriptionDeleted(array $payload): JsonResponse
     {
-        Log::info('[AICAD Webhook] Subscription deleted', [
-            'subscription_id' => $payload['object']['id'] ?? null,
-        ]);
+        try {
+            $stripeId = $payload['object']['id'] ?? null;
+
+            Log::info('[AICAD Webhook] Subscription deleted event', [
+                'subscription_id' => $stripeId,
+            ]);
+
+            if (! $stripeId) {
+                return response()->json(['success' => true], 200);
+            }
+
+            $subscription = \Laravel\Cashier\Subscription::where('stripe_id', $stripeId)->first();
+
+            if (! $subscription) {
+                Log::warning('[AICAD Webhook] Deleted subscription not found in DB', [
+                    'stripe_id' => $stripeId,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            // If ends_at was already set in the future (grace period), keep it — Stripe is just
+            // confirming the natural expiry we'd already recorded. Otherwise, set it to now.
+            $subscription->update([
+                'stripe_status' => 'canceled',
+                'ends_at' => $subscription->ends_at && $subscription->ends_at->isPast() === false
+                    ? $subscription->ends_at
+                    : now(),
+            ]);
+
+            Log::info('[AICAD Webhook] Subscription marked as ended', [
+                'subscription_id' => $subscription->id,
+                'stripe_id' => $stripeId,
+                'ends_at' => $subscription->ends_at?->toIso8601String(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle customer.subscription.deleted', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
 
         return response()->json(['success' => true], 200);
+    }
+
+    /**
+     * Compute the ends_at timestamp from a Stripe subscription object.
+     *
+     * Returns:
+     * - current_period_end if cancel_at_period_end is true (grace period)
+     * - canceled_at if the sub was canceled immediately
+     * - null otherwise (active or reactivated subscription)
+     */
+    protected function resolveEndsAt(Subscription $stripeSubscription): ?Carbon
+    {
+        if (! empty($stripeSubscription->cancel_at_period_end) && ! empty($stripeSubscription->current_period_end)) {
+            return Carbon::createFromTimestamp($stripeSubscription->current_period_end);
+        }
+
+        if (! empty($stripeSubscription->canceled_at)) {
+            return Carbon::createFromTimestamp($stripeSubscription->canceled_at);
+        }
+
+        return null;
     }
 
     /**
@@ -570,6 +634,13 @@ class StripeWebhookController extends Controller
             $priceStripeId = $stripeSubscription->items->data[0]->price->id ?? null;
         }
 
+        // Compute ends_at from Stripe cancellation flags. Ticket #1889:
+        // - cancel_at_period_end=true → user clicked "cancel" in the Billing Portal; sub stays
+        //   active until current_period_end, then ends. Cashier's onGracePeriod() reads this.
+        // - canceled_at set without cancel_at_period_end → immediate cancellation (rare via UI).
+        // - Neither set → null (sub is fully active or being reactivated).
+        $endsAt = $this->resolveEndsAt($stripeSubscription);
+
         // Find existing subscription by stripe_id (Stripe subscription ID remains the same even when plan changes)
         $existingSubscription = $team->subscriptions()
             ->where('stripe_id', $stripeSubscription->id)
@@ -581,6 +652,7 @@ class StripeWebhookController extends Controller
             $existingSubscription->update([
                 'stripe_status' => $stripeSubscription->status,
                 'stripe_price' => $priceStripeId,
+                'ends_at' => $endsAt,
             ]);
 
             // Update subscription items
@@ -632,7 +704,7 @@ class StripeWebhookController extends Controller
             'stripe_status' => $stripeSubscription->status,
             'stripe_price' => $priceStripeId,
             'quantity' => 1,
-            'ends_at' => null,
+            'ends_at' => $endsAt,
         ]);
 
         // Create subscription items
