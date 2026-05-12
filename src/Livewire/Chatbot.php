@@ -1339,6 +1339,9 @@ class Chatbot extends Component
             'message_preview' => $data['message'] ?? 'N/A',
             'error_type' => $data['errorType'] ?? 'unknown',
             'error_message' => $data['errorMessage'] ?? 'N/A',
+            'js_error_name' => $data['jsErrorName'] ?? 'N/A',
+            'js_error_message' => $data['jsErrorMessage'] ?? 'N/A',
+            'js_error_stack' => $data['jsErrorStack'] ?? null,
             'retry_count' => $data['retryCount'] ?? 0,
             'timestamp' => now()->toIso8601String(),
             'environment' => app()->environment(),
@@ -1353,15 +1356,20 @@ class Chatbot extends Component
         Log::error('[AICAD] Session ID: '.($this->chat->session_id ?? 'N/A'));
         Log::error('[AICAD] Error Type: '.($data['errorType'] ?? 'unknown'));
         Log::error('[AICAD] Error Message: '.($data['errorMessage'] ?? 'N/A'));
+        Log::error('[AICAD] JS Error: '.($data['jsErrorName'] ?? 'N/A').' — '.($data['jsErrorMessage'] ?? 'N/A'));
         Log::error('[AICAD] Retry Count: '.($data['retryCount'] ?? 0));
         Log::error('[AICAD] Message Preview: '.($data['message'] ?? 'N/A'));
         Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-        // Report exception to Nightwatch / error tracker
+        // Report exception to Nightwatch / error tracker.
+        // The raw JS error name/message are included so we can tell apart
+        // "TypeError: Failed to fetch" (client network blip) from "Stream error: 504"
+        // (server / proxy timeout) directly in the Nightwatch issue title.
         report(new \RuntimeException(
             '[AICAD] Stream failure after '.$errorDetails['retry_count'].' retries — '
             .'Type: '.($data['errorType'] ?? 'unknown').' — '
             .'Message: '.($data['errorMessage'] ?? 'N/A').' — '
+            .'JS: '.($data['jsErrorName'] ?? 'N/A').': '.($data['jsErrorMessage'] ?? 'N/A').' — '
             .'User: '.$user->email.' — '
             .'Chat: '.$this->chat->id
         ));

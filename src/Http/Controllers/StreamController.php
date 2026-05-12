@@ -82,6 +82,10 @@ class StreamController extends Controller
                 flush();
 
             } catch (\Exception $e) {
+                // Report to Nightwatch so we can distinguish server-side failures
+                // (CURL/API DFM down, non-200 response) from pure client-side network blips.
+                report($e);
+
                 Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 Log::error('[AICAD] ❌ StreamController EXCEPTION');
                 Log::error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
