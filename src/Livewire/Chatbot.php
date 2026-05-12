@@ -996,14 +996,48 @@ class Chatbot extends Component
     }
 
     /**
-     * Redirige vers la page de souscription d'abonnement
+     * Redirige vers la page de souscription d'abonnement.
+     *
+     * Stocke en session l'URL de retour vers le chat en cours, avec un flag
+     * `auto_download=1` qui déclenchera le téléchargement automatiquement après
+     * la fin du tunnel Stripe Checkout. Ticket #1895.
      */
     public function redirectToSubscription(): void
     {
         $this->showPurchaseModal = false;
 
-        // Rediriger vers la page de gestion d'abonnement ToleryCad
+        $returnUrl = route('client.tolerycad.show-chatbot', ['chat' => $this->chat]).'?auto_download=1';
+        session(['return_to_chatbot' => $returnUrl]);
+
         $this->redirect(route('client.tolerycad.subscription'));
+    }
+
+    /**
+     * Tente de déclencher le téléchargement automatiquement après retour de Stripe Checkout.
+     *
+     * Appelée par le polling JS au mount du composant quand l'URL contient `auto_download=1`.
+     * Renvoie true dès que le téléchargement est lancé (l'abonnement est actif côté DB),
+     * false tant que le webhook Stripe n'a pas encore synchronisé l'abonnement.
+     */
+    public function attemptAutoDownload(): bool
+    {
+        /** @var ChatUser|null $user */
+        $user = auth()->user();
+        $team = $user?->team;
+
+        if (! $team) {
+            return false;
+        }
+
+        $status = app(FileAccessService::class)->canDownloadChat($team, $this->chat);
+
+        if (! $status['can_download']) {
+            return false;
+        }
+
+        $this->initiateDownload();
+
+        return true;
     }
 
     /**
