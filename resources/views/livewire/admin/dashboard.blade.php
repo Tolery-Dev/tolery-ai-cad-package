@@ -115,5 +115,11 @@
                 Gérer les codes d'erreurs DFM
             </flux:button>
         @endif
+        @if(Route::has('admin.tolerycad.subscriptions'))
+            <flux:button href="{{ route('admin.tolerycad.subscriptions') }}" variant="outline" class="justify-start">
+                <flux:icon name="credit-card" class="mr-2" />
+                Suivre les abonnements
+            </flux:button>
+        @endif
     </div>
 </div>
