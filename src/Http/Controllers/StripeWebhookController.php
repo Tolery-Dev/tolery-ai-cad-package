@@ -380,14 +380,14 @@ class StripeWebhookController extends Controller
      * - canceled_at if the sub was canceled immediately
      * - null otherwise (active or reactivated subscription)
      */
-    protected function resolveEndsAt(Subscription $stripeSubscription): ?\Carbon\Carbon
+    protected function resolveEndsAt(Subscription $stripeSubscription): ?Carbon
     {
         if (! empty($stripeSubscription->cancel_at_period_end) && ! empty($stripeSubscription->current_period_end)) {
-            return \Carbon\Carbon::createFromTimestamp($stripeSubscription->current_period_end);
+            return Carbon::createFromTimestamp($stripeSubscription->current_period_end);
         }
 
         if (! empty($stripeSubscription->canceled_at)) {
-            return \Carbon\Carbon::createFromTimestamp($stripeSubscription->canceled_at);
+            return Carbon::createFromTimestamp($stripeSubscription->canceled_at);
         }
 
         return null;
