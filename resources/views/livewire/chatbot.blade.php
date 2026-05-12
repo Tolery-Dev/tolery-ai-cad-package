@@ -360,7 +360,7 @@
                 const delay = this.retryDelays[this.retryCount] / 1000;
                 return `Nouvelle tentative dans ${delay}s... (${remaining} essai${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''})`;
             },
-            async notifyTeamOfFailure() {
+            async notifyTeamOfFailure(jsError = null) {
                 if (this.teamNotified) return;
 
                 aicadLog('[AICAD] 📧 Notifying Tolery team of repeated failure...');
@@ -370,6 +370,9 @@
                         sessionId: this.lastRequest.sessionId,
                         errorType: this.errorType,
                         errorMessage: this.errorMessage,
+                        jsErrorName: jsError?.name || jsError?.constructor?.name || 'N/A',
+                        jsErrorMessage: jsError?.message || 'N/A',
+                        jsErrorStack: jsError?.stack?.substring(0, 2000) || null,
                         retryCount: this.retryCount,
                     });
                     this.teamNotified = true;
@@ -648,16 +651,30 @@
                         return;
                     }
 
-                    // Retry disabled — go straight to error state
-                    // Logs and Nightwatch reporting are still active via reportStreamError above
-                    aicadError('[AICAD] ❌ Error — retry disabled, showing error to user');
+                    // Auto-retry once on transient network errors (Wi-Fi blip, tab backgrounded, etc.).
+                    // Other error types (auth, server, backend) go straight to user — they won't fix
+                    // themselves on a retry and we don't want to double-bill DFM on a genuine server issue.
+                    const NETWORK_RETRY_LIMIT = 1;
+                    if (errorInfo.canRetry && errorInfo.type === 'network' && this.retryCount < NETWORK_RETRY_LIMIT) {
+                        this.retryCount++;
+                        this.isRetrying = true;
+                        const delay = this.retryDelays[this.retryCount - 1] ?? 2000;
+                        this.statusText = `Nouvelle tentative dans ${Math.round(delay / 1000)}s...`;
+                        aicadLog(`[AICAD] 🔁 Auto-retrying after network error (attempt ${this.retryCount}/${NETWORK_RETRY_LIMIT}) in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        await this.retryStream();
+                        return;
+                    }
+
+                    aicadError('[AICAD] ❌ Showing error to user (no further retry)');
 
                     this.hasError = true;
                     this.cancelable = true;
                     this.statusText = errorInfo.message;
 
-                    // Notify team via Nightwatch (without storing failure message in chat)
-                    await this.notifyTeamOfFailure();
+                    // Notify team via Nightwatch — pass the raw JS error so we can tell apart
+                    // client-side blips (TypeError: Failed to fetch) from server/proxy issues.
+                    await this.notifyTeamOfFailure(e);
 
                     window.dispatchEvent(new CustomEvent('cad-generation-ended'));
                 }
