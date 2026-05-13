@@ -1,29 +1,4 @@
-<div class="relative h-screen flex flex-col bg-grey-background"
-     x-data="{
-         isGenerating: false,
-         init() {
-             // Écouter les événements de génération
-             window.addEventListener('cad-generation-started', () => {
-                 this.isGenerating = true;
-                 aicadLog('[RELOAD PROTECTION] Generation started, protection enabled');
-             });
-
-             window.addEventListener('cad-generation-ended', () => {
-                 this.isGenerating = false;
-                 aicadLog('[RELOAD PROTECTION] Generation ended, protection disabled');
-             });
-
-             // Protection contre le reload/fermeture pendant la génération
-             window.addEventListener('beforeunload', (e) => {
-                 if (this.isGenerating) {
-                     aicadLog('[RELOAD PROTECTION] Blocking reload/close attempt');
-                     e.preventDefault();
-                     e.returnValue = ''; // Chrome nécessite returnValue
-                     return ''; // Firefox/Safari
-                 }
-             });
-         }
-     }">
+<div class="relative h-screen flex flex-col bg-grey-background">
 
     @include('ai-cad::livewire.partials.chat-header')
 
