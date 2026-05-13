@@ -68,7 +68,12 @@ class ChatHistoryPanel extends Component
 
         $filtered = $history->filter(fn ($item) => $item['chat'] !== null);
 
-        $unique = $filtered->unique(fn ($item) => $item['chat']->id);
+        $unique = $filtered->unique(function ($item) {
+            /** @var \Tolery\AiCad\Models\Chat $chat */
+            $chat = $item['chat'];
+
+            return $chat->id;
+        });
 
         return $unique->sortByDesc('date')->values()->take(20);
     }

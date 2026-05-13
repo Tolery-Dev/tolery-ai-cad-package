@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tolery\AiCad\Enum\GenerationStatus;
 use Tolery\AiCad\Events\CadGenerationCompleted;
@@ -49,7 +50,9 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
      */
     public function uniqueId(): string
     {
-        return 'cad-gen-chat-'.($this->getMessage()?->chat_id ?? $this->messageId);
+        $message = $this->getMessage();
+
+        return 'cad-gen-chat-'.($message ? $message->chat_id : $this->messageId);
     }
 
     public function uniqueFor(): int
@@ -113,10 +116,7 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
 
                     CadGenerationCompleted::dispatch($message);
 
-                    $user = $message->chat?->user ?? $message->user;
-                    if ($user) {
-                        $user->notify(new CadGenerationCompletedNotification($message));
-                    }
+                    $this->notifyUser($message, new CadGenerationCompletedNotification($message));
                 },
                 onError: function (int $curlErrno, int $httpCode, string $error) use ($message) {
                     $message->update([
@@ -127,10 +127,7 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
 
                     CadGenerationFailed::dispatch($message, $error);
 
-                    $user = $message->chat?->user ?? $message->user;
-                    if ($user) {
-                        $user->notify(new CadGenerationFailedNotification($message, $error));
-                    }
+                    $this->notifyUser($message, new CadGenerationFailedNotification($message, $error));
                 },
             );
         } catch (\Throwable $e) {
@@ -157,15 +154,29 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
 
         CadGenerationFailed::dispatch($message, $e->getMessage());
 
-        $user = $message->chat?->user ?? $message->user;
-        if ($user) {
-            $user->notify(new CadGenerationFailedNotification($message, $e->getMessage()));
-        }
+        $this->notifyUser($message, new CadGenerationFailedNotification($message, $e->getMessage()));
     }
 
     protected function getMessage(): ?ChatMessage
     {
         return ChatMessage::find($this->messageId);
+    }
+
+    /**
+     * Send a notification to the user who initiated the generation.
+     *
+     * Uses the Notification facade rather than `$user->notify(...)` so PHPStan
+     * doesn't complain about the missing trait — ChatUser extends
+     * `Foundation\Auth\User` which doesn't include `Notifiable` by default.
+     * At runtime the consuming app's User model carries the trait so this works.
+     */
+    protected function notifyUser(ChatMessage $message, \Illuminate\Notifications\Notification $notification): void
+    {
+        $user = $message->user ?? $message->chat?->user;
+
+        if ($user) {
+            Notification::send($user, $notification);
+        }
     }
 
     /**

@@ -19,5 +19,5 @@ Broadcast::channel('chat.{chatId}', function (ChatUser $user, int $chatId) {
     }
 
     return $chat->user_id === $user->id
-        || ($chat->team_id !== null && $chat->team_id === $user->team_id);
+        || $chat->team_id === $user->team_id;
 });
