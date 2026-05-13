@@ -2,6 +2,8 @@
 
 namespace Tolery\AiCad\Notifications;
 
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -48,19 +50,19 @@ class CadGenerationCompletedNotification extends Notification implements ShouldQ
             return false;
         }
 
-        $lastSeen = $raw instanceof \Carbon\CarbonInterface ? $raw : $this->parseTimestamp($raw);
+        $lastSeen = $raw instanceof CarbonInterface ? $raw : $this->parseTimestamp($raw);
 
         return $lastSeen !== null && $lastSeen->greaterThan(now()->subSeconds(30));
     }
 
-    protected function parseTimestamp(mixed $value): ?\Carbon\Carbon
+    protected function parseTimestamp(mixed $value): ?Carbon
     {
         if (! is_string($value) && ! is_numeric($value)) {
             return null;
         }
 
         try {
-            return \Carbon\Carbon::parse((string) $value);
+            return Carbon::parse((string) $value);
         } catch (\Throwable) {
             return null;
         }
