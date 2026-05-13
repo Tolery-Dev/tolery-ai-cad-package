@@ -10,6 +10,7 @@ use Tolery\AiCad\Enum\GenerationStatus;
 use Tolery\AiCad\Jobs\GenerateCadJob;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
+use Tolery\AiCad\Models\ChatUser;
 
 /**
  * HTTP entry point for the async CAD generation flow (Phase 2 of issue #152).
@@ -37,8 +38,9 @@ class GenerationController extends Controller
         /** @var Chat $chat */
         $chat = Chat::findOrFail($validated['chat_id']);
 
+        /** @var ChatUser|null $user */
         $user = $request->user();
-        if (! $user || ! $user->can('view', $chat)) {
+        if (! $this->userCanAccessChat($user, $chat)) {
             return response()->json(['error' => 'forbidden'], 403);
         }
 
@@ -101,8 +103,9 @@ class GenerationController extends Controller
      */
     public function progress(Request $request, ChatMessage $message): JsonResponse
     {
+        /** @var ChatUser|null $user */
         $user = $request->user();
-        if (! $user || ! $user->can('view', $message->chat)) {
+        if (! $this->userCanAccessChat($user, $message->chat)) {
             return response()->json(['error' => 'forbidden'], 403);
         }
 
@@ -117,5 +120,20 @@ class GenerationController extends Controller
             'completed_at' => $message->generation_completed_at?->toIso8601String(),
             'error' => $message->generation_error,
         ]);
+    }
+
+    /**
+     * Same access rule as the chat.{chatId} broadcast channel: the user must own
+     * the chat or belong to its team. Inlined because ChatPolicy doesn't expose
+     * a `view` ability — only admin abilities (viewAsAdmin / downloadFiles / viewAny).
+     */
+    private function userCanAccessChat(?ChatUser $user, ?Chat $chat): bool
+    {
+        if (! $user || ! $chat) {
+            return false;
+        }
+
+        return $chat->user_id === $user->id
+            || ($chat->team_id !== null && $chat->team_id === $user->team_id);
     }
 }
