@@ -213,33 +213,24 @@
 
     Alpine.data('cadStreamModal', () => {
         return {
+            // Phase 2 of issue #152 — the progress modal listens to the Reverb
+            // PrivateChannel('chat.{id}') events broadcast by GenerateCadJob.
+            // No more browser-held SSE: the job survives reload / tab close.
+
             open: false,
-            cancelable: false,
-            controller: null,
             overall: 0,
             statusText: 'Initialisation...',
             activeStep: null,
             completedSteps: 0,
 
-            // Retry management
-            retryCount: 0,
-            maxRetries: 3,
-            isRetrying: false,
-            retryDelays: [2000, 4000, 8000], // Exponential backoff: 2s, 4s, 8s
-
-            // Error state
+            // Error state — surface a friendly message on CadGenerationFailed
             hasError: false,
-            errorType: null, // 'network', 'timeout', 'server', 'unknown'
             errorMessage: '',
-            teamNotified: false,
 
-            // Store request params for retry
-            lastRequest: {
-                message: null,
-                sessionId: null,
-                isEdit: false,
-                materialChoice: 'STEEL',
-            },
+            // Reverb subscription state
+            currentChatId: null,
+            currentMessageId: null,
+            echoChannel: null,
 
             steps: [
                 {key: 'analysis', shortLabel: 'Analyse', label: 'Analyse des informations et dimensions de la pièce', state: 'inactive'},
@@ -254,10 +245,8 @@
             stepMessageIndex: {},
             init() {
                 const comp = this;
-                this._onLivewire = ({message, sessionId, isEdit = false, materialChoice = 'STEEL'}) => comp.startStream(message, sessionId, isEdit, materialChoice);
-                Livewire.on('aicad:startStream', this._onLivewire);
-                Livewire.on('aicad-start-stream', this._onLivewire);
-
+                this._onSubscribe = ({messageId, chatId}) => comp.subscribeProgress(messageId, chatId);
+                Livewire.on('aicad-subscribe-progress', this._onSubscribe);
             },
             reset() {
                 this.overall = 0;
@@ -266,153 +255,16 @@
                 this.completedSteps = 0;
                 this.steps.forEach(s => s.state = 'inactive');
                 this.stepMessageIndex = {};
-                // Reset error state (but not retry count - that's managed separately)
-                this.hasError = false;
-                this.errorType = null;
-                this.errorMessage = '';
-            },
-            resetRetryState() {
-                this.retryCount = 0;
-                this.isRetrying = false;
-                this.teamNotified = false;
-            },
-            classifyError(error) {
-                // Classify error type for better user feedback
-                const msg = error.message || '';
-
-                if (error.name === 'AbortError') {
-                    return {
-                        type: 'cancelled',
-                        message: 'La génération a été annulée.',
-                        canRetry: false,
-                    };
-                }
-
-                // Backend error forwarded via SSE (from StreamController/AICADClient)
-                if (error.isBackendError) {
-                    // Extract useful info from backend message
-                    if (msg.includes('timeout') || msg.includes('Timeout') || msg.includes('timed out')) {
-                        return {
-                            type: 'timeout',
-                            message: 'Le serveur de génération met trop de temps à répondre. Veuillez réessayer.',
-                            canRetry: true,
-                        };
-                    }
-                    if (msg.includes('status 5') || msg.includes('500') || msg.includes('502') || msg.includes('503')) {
-                        return {
-                            type: 'server',
-                            message: 'Le serveur de génération rencontre un problème temporaire.',
-                            canRetry: true,
-                        };
-                    }
-                    return {
-                        type: 'server',
-                        message: 'Le serveur de génération a rencontré une erreur. Veuillez réessayer.',
-                        canRetry: true,
-                    };
-                }
-
-                // Real network errors: only TypeError with network-specific messages
-                const isNetworkTypeError = error instanceof TypeError && (
-                    msg.includes('Failed to fetch') ||
-                    msg.includes('NetworkError') ||
-                    msg.includes('Load failed') ||
-                    msg.includes('network') ||
-                    msg === 'fetch failed'
-                );
-                if (isNetworkTypeError || msg.includes('ERR_NETWORK') || msg.includes('ERR_CONNECTION')) {
-                    return {
-                        type: 'network',
-                        message: 'Impossible de joindre le serveur. Vérifiez votre connexion internet.',
-                        canRetry: true,
-                    };
-                }
-
-                if (msg.includes('timeout') || msg.includes('Timeout')) {
-                    return {
-                        type: 'timeout',
-                        message: 'Le serveur met trop de temps à répondre.',
-                        canRetry: true,
-                    };
-                }
-                if (msg.includes('500') || msg.includes('502') || msg.includes('503')) {
-                    return {
-                        type: 'server',
-                        message: 'Le serveur rencontre un problème temporaire.',
-                        canRetry: true,
-                    };
-                }
-                if (msg.includes('401') || msg.includes('403')) {
-                    return {
-                        type: 'auth',
-                        message: 'Session expirée. Veuillez rafraîchir la page.',
-                        canRetry: false,
-                    };
-                }
-                return {
-                    type: 'unknown',
-                    message: 'Une erreur inattendue s\'est produite. Veuillez réessayer.',
-                    canRetry: true,
-                };
-            },
-            getRetryMessage() {
-                const remaining = this.maxRetries - this.retryCount;
-                const delay = this.retryDelays[this.retryCount] / 1000;
-                return `Nouvelle tentative dans ${delay}s... (${remaining} essai${remaining > 1 ? 's' : ''} restant${remaining > 1 ? 's' : ''})`;
-            },
-            async notifyTeamOfFailure(jsError = null) {
-                if (this.teamNotified) return;
-
-                aicadLog('[AICAD] 📧 Notifying Tolery team of repeated failure...');
-                try {
-                    await $wire.notifyStreamFailure({
-                        message: this.lastRequest.message?.substring(0, 500),
-                        sessionId: this.lastRequest.sessionId,
-                        errorType: this.errorType,
-                        errorMessage: this.errorMessage,
-                        jsErrorName: jsError?.name || jsError?.constructor?.name || 'N/A',
-                        jsErrorMessage: jsError?.message || 'N/A',
-                        jsErrorStack: jsError?.stack?.substring(0, 2000) || null,
-                        retryCount: this.retryCount,
-                    });
-                    this.teamNotified = true;
-                    aicadLog('[AICAD] ✅ Team notification sent successfully');
-                } catch (e) {
-                    aicadError('[AICAD] ❌ Failed to notify team:', e);
-                }
-            },
-            async retryStream() {
-                if (!this.lastRequest.message) {
-                    aicadError('[AICAD] Cannot retry: no previous request stored');
-                    return;
-                }
-
                 this.hasError = false;
                 this.errorMessage = '';
-                this.errorType = null;
-
-                await this.startStream(
-                    this.lastRequest.message,
-                    this.lastRequest.sessionId,
-                    this.lastRequest.isEdit,
-                    this.lastRequest.materialChoice ?? 'STEEL'
-                );
-            },
-            manualRetry() {
-                // User clicked retry button - reset retry count and try again
-                this.retryCount = 0;
-                this.teamNotified = false;
-                this.retryStream();
             },
             getDetailedMessage(stepKey) {
                 const messages = this.stepMessages[stepKey];
                 if (!messages || messages.length === 0) return null;
 
-                // Initialiser l'index pour cette étape si nécessaire
                 if (this.stepMessageIndex[stepKey] === undefined) {
                     this.stepMessageIndex[stepKey] = 0;
                 } else {
-                    // Passer au message suivant (avec boucle)
                     this.stepMessageIndex[stepKey] = (this.stepMessageIndex[stepKey] + 1) % messages.length;
                 }
 
@@ -431,258 +283,78 @@
                 if (typeof pct === 'number') {
                     this.overall = Math.max(0, Math.min(100, pct));
                 }
-                // Utiliser le message détaillé si disponible, sinon fallback sur message API
                 const detailedMessage = this.getDetailedMessage(stepKey);
                 this.statusText = detailedMessage || message || status || 'Traitement en cours...';
             },
-            async startStream(message, sessionId, isEdit = false, materialChoice = 'STEEL') {
-                // Check if this is a retry or a new request
-                const isRetryAttempt = this.isRetrying;
+            /**
+             * Subscribe to the chat's broadcast channel for live progress updates.
+             * Triggered by the `aicad-subscribe-progress` Livewire event — emitted by
+             * Chatbot::send() after dispatching GenerateCadJob, and also by Chatbot::mount()
+             * if a generation is still in flight (reload-safe resume).
+             */
+            subscribeProgress(messageId, chatId) {
+                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                aicadLog(`[AICAD] 🔔 Subscribing to chat.${chatId} (message #${messageId})`);
+                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-                // Reset UI state
                 this.reset();
                 this.open = true;
+                this.currentMessageId = messageId;
+                this.currentChatId = chatId;
                 window.dispatchEvent(new CustomEvent('cad-generation-started'));
-                this.cancelable = true;
-                this.controller = new AbortController();
 
-                // Store request params for potential retry (only on new requests)
-                if (!isRetryAttempt) {
-                    this.resetRetryState();
-                    this.lastRequest = { message, sessionId, isEdit, materialChoice };
-                }
-                this.isRetrying = false;
+                // Defensive cleanup in case a previous subscription is still around
+                this.unsubscribe();
 
-                const url = @js(route('ai-cad.stream.generate-cad'));
-
-                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                aicadLog(`[AICAD] 🚀 ${isRetryAttempt ? 'RETRY' : 'NEW'} CAD GENERATION REQUEST`);
-                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                aicadLog('[AICAD] 🔑 Session ID:', sessionId || 'NEW SESSION (no ID provided)');
-                aicadLog('[AICAD] 📝 Message:', message?.substring(0, 150) + (message?.length > 150 ? '...' : ''));
-                aicadLog('[AICAD] ✏️  Is Edit Request:', isEdit ? 'YES' : 'NO');
-                aicadLog('[AICAD] 🔄 Retry Attempt:', isRetryAttempt ? `#${this.retryCount}` : 'N/A (new request)');
-                aicadLog('[AICAD] 📍 API Endpoint:', url);
-                aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-                try {
-                    aicadLog('[AICAD] 📡 Sending fetch request...');
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'text/event-stream',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                        },
-                        body: JSON.stringify({
-                            message: String(message ?? ''),
-                            session_id: String(sessionId ?? ''),
-                            is_edit_request: isEdit,
-                            material_choice: materialChoice ?? 'STEEL',
-                        }),
-                        signal: this.controller.signal,
-                    });
-
-                    aicadLog('[AICAD] 📨 Response received:', {
-                        status: res.status,
-                        statusText: res.statusText,
-                        ok: res.ok,
-                        headers: Object.fromEntries(res.headers.entries()),
-                        bodyExists: !!res.body,
-                    });
-
-                    if (!res.ok || !res.body) {
-                        aicadError('[AICAD] ❌ Response not OK or no body:', {
-                            status: res.status,
-                            statusText: res.statusText,
-                            ok: res.ok,
-                            bodyExists: !!res.body,
-                        });
-                        throw new Error(`Stream error: ${res.status} ${res.statusText}`);
-                    }
-                    const reader = res.body.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-
-                    while (true) {
-                        const {value, done} = await reader.read();
-                        if (done) break;
-                        buffer += decoder.decode(value, {stream: true});
-
-                        let sep;
-                        while ((sep = buffer.indexOf('\n\n')) !== -1) {
-                            const packet = buffer.slice(0, sep);
-                            buffer = buffer.slice(sep + 2);
-
-                            const lines = packet.split('\n').map(l => l.trim());
-                            for (const line of lines) {
-                                if (!line || line.startsWith(':')) continue;
-                                if (!line.startsWith('data:')) continue;
-
-                                const json = line.slice(5).trim();
-                                if (!json || json === '[DONE]') continue;
-
-                                let payload;
-                                try {
-                                    payload = JSON.parse(json);
-                                } catch {
-                                    continue;
-                                }
-
-                                // Handle backend error events (sent by StreamController on CURL/API failures)
-                                if (payload.error) {
-                                    aicadError('[AICAD] ❌ Backend error received via SSE:', payload.message || 'Unknown server error');
-                                    const serverError = new Error(payload.message || 'Server error');
-                                    serverError.isBackendError = true;
-                                    throw serverError;
-                                }
-
-                                if (payload.final_response) {
-                                    const resp = payload.final_response || {};
-
-                                    // Extract session_id from various possible locations
-                                    const extractedSessionId = resp.session_id || payload.session_id || sessionId;
-
-                                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                                    aicadLog('[AICAD] ✅ GENERATION COMPLETED - Final Response Received');
-                                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                                    aicadLog('[AICAD] 🔑 Session ID:', extractedSessionId || 'N/A');
-                                    aicadLog('[AICAD] 🔍 Full payload keys:', Object.keys(payload));
-                                    aicadLog('[AICAD] 🔍 Response keys:', Object.keys(resp));
-                                    if (resp.obj_export) {
-                                        aicadLog('[AICAD] 📦 OBJ File:', resp.obj_export);
-                                    }
-                                    if (resp.step_export) {
-                                        aicadLog('[AICAD] 📐 STEP File:', resp.step_export);
-                                    }
-                                    if (resp.tessellated_export) {
-                                        aicadLog('[AICAD] 🔺 Tessellated File:', resp.tessellated_export);
-                                    }
-                                    if (resp.attribute_and_transientid_map) {
-                                        aicadLog('[AICAD] 🗺️  Attribute Map:', resp.attribute_and_transientid_map);
-                                    }
-                                    if (resp.technical_drawing) {
-                                        aicadLog('[AICAD] 📄 Technical Drawing:', resp.technical_drawing);
-                                    }
-                                    if (resp.screenshot) {
-                                        aicadLog('[AICAD] 📸 Screenshot:', resp.screenshot);
-                                    }
-                                    if (resp.manufacturing_errors && resp.manufacturing_errors.length > 0) {
-                                        aicadWarn('[AICAD] ⚠️  Manufacturing Errors:', resp.manufacturing_errors);
-                                    }
-                                    if (resp.chat_response) {
-                                        aicadLog('[AICAD] 💬 Chat Response:', resp.chat_response.substring(0, 200) + (resp.chat_response.length > 200 ? '...' : ''));
-                                    }
-                                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-                                    // saveStreamFinal met déjà à jour $this->messages et dispatche les événements
-                                    await $wire.saveStreamFinal(resp);
-                                    this.markStep('complete', 'Completed', resp.chat_response || 'Completed', 100);
-
-                                    // Success! Reset retry state
-                                    this.resetRetryState();
-
-                                    this.cancelable = true;
-                                    setTimeout(() => this.close(), 800);
-                                    window.dispatchEvent(new CustomEvent('cad-generation-ended'));
-                                    continue;
-                                }
-
-                                const step = payload.step || null;
-                                const status = payload.status || '';
-                                const msg = payload.message || '';
-                                const pct = typeof payload.overall_percentage === 'number' ? payload.overall_percentage : null;
-                                if (step) this.markStep(step, status, msg, pct ?? this.overall);
-                            }
-                        }
-                    }
-                } catch (e) {
-                    // Detailed error logging
-                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    aicadError('[AICAD] ❌ STREAM ERROR');
-                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    aicadError('[AICAD] 🔑 Session ID:', sessionId || 'N/A');
-                    aicadError('[AICAD] 📝 Message:', message?.substring(0, 150));
-                    aicadError('[AICAD] 📍 Endpoint:', url);
-                    aicadError('[AICAD] 🔄 Retry Count:', this.retryCount, '/', this.maxRetries);
-                    aicadError('[AICAD] ⚠️  Error Type:', e.constructor.name);
-                    aicadError('[AICAD] ⚠️  Error Message:', e.message);
-                    aicadError('[AICAD] 📍 Stack:', e.stack);
-                    aicadError('[AICAD] 🔍 Error Object:', {
-                        name: e.name,
-                        message: e.message,
-                        cause: e.cause,
-                        isAbortError: e.name === 'AbortError',
-                        isNetworkError: e instanceof TypeError,
-                    });
-                    aicadLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-                    // Classify the error
-                    const errorInfo = this.classifyError(e);
-                    this.errorType = errorInfo.type;
-                    this.errorMessage = errorInfo.message;
-
-                    aicadLog('[AICAD] 🏷️  Error classified as:', errorInfo.type);
-                    aicadLog('[AICAD] 💬 User message:', errorInfo.message);
-                    aicadLog('[AICAD] 🔁 Can retry:', errorInfo.canRetry);
-
-                    // Report error to backend for Nightwatch monitoring (fire-and-forget)
-                    if (errorInfo.type !== 'cancelled') {
-                        try {
-                            $wire.reportStreamError({
-                                errorType: errorInfo.type,
-                                errorMessage: errorInfo.message,
-                                jsErrorName: e.name || e.constructor?.name || 'Unknown',
-                                jsErrorMessage: e.message || 'N/A',
-                                retryCount: this.retryCount,
-                                maxRetries: this.maxRetries,
-                            });
-                        } catch (reportErr) {
-                            aicadError('[AICAD] Failed to report error to backend:', reportErr);
-                        }
-                    }
-
-                    // Handle cancelled requests (user aborted)
-                    if (errorInfo.type === 'cancelled') {
-                        this.hasError = false;
-                        this.statusText = errorInfo.message;
-                        this.cancelable = true;
-                        window.dispatchEvent(new CustomEvent('cad-generation-ended'));
-                        return;
-                    }
-
-                    // Auto-retry once on transient network errors (Wi-Fi blip, tab backgrounded, etc.).
-                    // Other error types (auth, server, backend) go straight to user — they won't fix
-                    // themselves on a retry and we don't want to double-bill DFM on a genuine server issue.
-                    const NETWORK_RETRY_LIMIT = 1;
-                    if (errorInfo.canRetry && errorInfo.type === 'network' && this.retryCount < NETWORK_RETRY_LIMIT) {
-                        this.retryCount++;
-                        this.isRetrying = true;
-                        const delay = this.retryDelays[this.retryCount - 1] ?? 2000;
-                        this.statusText = `Nouvelle tentative dans ${Math.round(delay / 1000)}s...`;
-                        aicadLog(`[AICAD] 🔁 Auto-retrying after network error (attempt ${this.retryCount}/${NETWORK_RETRY_LIMIT}) in ${delay}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        await this.retryStream();
-                        return;
-                    }
-
-                    aicadError('[AICAD] ❌ Showing error to user (no further retry)');
-
+                if (typeof window.Echo === 'undefined') {
+                    aicadError('[AICAD] window.Echo is not available — broadcasting is misconfigured.');
                     this.hasError = true;
-                    this.cancelable = true;
-                    this.statusText = errorInfo.message;
+                    this.statusText = 'Connexion temps-réel indisponible.';
+                    return;
+                }
 
-                    // Notify team via Nightwatch — pass the raw JS error so we can tell apart
-                    // client-side blips (TypeError: Failed to fetch) from server/proxy issues.
-                    await this.notifyTeamOfFailure(e);
+                this.echoChannel = window.Echo.private(`chat.${chatId}`);
 
-                    window.dispatchEvent(new CustomEvent('cad-generation-ended'));
+                this.echoChannel
+                    .listen('.Tolery\\AiCad\\Events\\CadGenerationStarted', (e) => {
+                        aicadLog('[AICAD] 🚀 CadGenerationStarted', e);
+                    })
+                    .listen('.Tolery\\AiCad\\Events\\CadGenerationProgress', (e) => {
+                        if (e.message_id !== this.currentMessageId) return;
+                        this.markStep(e.step, null, e.message, e.pct);
+                    })
+                    .listen('.Tolery\\AiCad\\Events\\CadGenerationCompleted', (e) => {
+                        if (e.message_id !== this.currentMessageId) return;
+                        aicadLog('[AICAD] ✅ CadGenerationCompleted', e);
+                        this.markStep('complete', 'Completed', 'Terminé', 100);
+                        this.unsubscribe();
+                        // Refresh the Livewire component so the new message + viewer show up.
+                        $wire.$refresh();
+                        setTimeout(() => this.close(), 800);
+                        window.dispatchEvent(new CustomEvent('cad-generation-ended'));
+                    })
+                    .listen('.Tolery\\AiCad\\Events\\CadGenerationFailed', (e) => {
+                        if (e.message_id !== this.currentMessageId) return;
+                        aicadError('[AICAD] ❌ CadGenerationFailed', e);
+                        this.hasError = true;
+                        this.statusText = e.error || 'Une erreur est survenue pendant la génération.';
+                        this.unsubscribe();
+                        $wire.$refresh();
+                        window.dispatchEvent(new CustomEvent('cad-generation-ended'));
+                    });
+            },
+            unsubscribe() {
+                if (this.echoChannel && this.currentChatId !== null) {
+                    try {
+                        window.Echo.leave(`chat.${this.currentChatId}`);
+                    } catch (e) {
+                        aicadError('[AICAD] Failed to leave Echo channel', e);
+                    }
+                    this.echoChannel = null;
                 }
             },
             close() {
-                try {
-                    this.controller?.abort();
-                } catch {}
+                this.unsubscribe();
                 this.open = false;
                 window.dispatchEvent(new CustomEvent('cad-generation-ended'));
             }
