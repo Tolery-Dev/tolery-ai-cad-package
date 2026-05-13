@@ -207,6 +207,156 @@ readonly class AICADClient
     }
 
     /**
+     * GET /api/generate-cad-stream — SSE progress + final payload (callback-based).
+     *
+     * Same wire protocol as streamDirectlyToOutput() but instead of echoing raw
+     * SSE chunks to PHP output, it parses them and invokes structured callbacks.
+     * Built for queue jobs (GenerateCadJob — Phase 2 of issue #152) so the
+     * generation can be persisted and broadcast independently of any HTTP
+     * connection to a browser. Uses native cURL for the same reasons as
+     * streamDirectlyToOutput (Guzzle struggles with long-lived SSE streams).
+     *
+     * @param  callable(array): void  $onProgress  receives parsed progress events
+     *                                             {step, status, message, overall_percentage, ...}
+     * @param  callable(array): void  $onComplete  receives the final_response payload
+     * @param  callable(int, int, string): void  $onError  receives (curl_errno, http_code, message)
+     *
+     * @throws \RuntimeException if the underlying cURL request fails — but $onError
+     *                           is called before the throw, so the consumer can persist
+     *                           error context first.
+     */
+    public function streamToCallback(
+        string $message,
+        ?string $projectId,
+        bool $isEditRequest,
+        int $timeoutSec,
+        string $materialChoice,
+        callable $onProgress,
+        callable $onComplete,
+        callable $onError,
+    ): void {
+        $url = $this->endpoint('/api/generate-cad-stream');
+
+        $queryParams = [
+            'message' => $message,
+            'stream' => 'true',
+            'material_choice' => $materialChoice,
+        ];
+
+        if ($projectId !== null) {
+            $queryParams['session_id'] = $projectId;
+        }
+
+        if ($isEditRequest) {
+            $queryParams['is_edit_request'] = 'true';
+        }
+
+        $fullUrl = $url.'?'.http_build_query($queryParams);
+        $bearerToken = config('ai-cad.api.key', '');
+
+        Log::info('[AICAD] 🚀 streamToCallback: starting SSE stream', [
+            'endpoint' => $fullUrl,
+            'session_id' => $projectId ?? 'NEW',
+            'is_edit' => $isEditRequest,
+            'timeout' => $timeoutSec,
+        ]);
+
+        $buffer = '';
+        $eventCount = 0;
+
+        $ch = curl_init($fullUrl);
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => false,
+            CURLOPT_HEADER => false,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_TIMEOUT => $timeoutSec,
+            CURLOPT_CONNECTTIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_WRITEFUNCTION => function ($ch, $data) use (&$buffer, &$eventCount, $onProgress, $onComplete) {
+                $buffer .= $data;
+
+                // Parse SSE packets (separated by \n\n)
+                while (($pos = strpos($buffer, "\n\n")) !== false) {
+                    $packet = substr($buffer, 0, $pos);
+                    $buffer = substr($buffer, $pos + 2);
+
+                    foreach (explode("\n", $packet) as $line) {
+                        $line = ltrim($line);
+                        if ($line === '' || str_starts_with($line, ':')) {
+                            continue;
+                        }
+                        if (! str_starts_with($line, 'data:')) {
+                            continue;
+                        }
+
+                        $json = trim(substr($line, 5));
+                        if ($json === '' || $json === '[DONE]') {
+                            continue;
+                        }
+
+                        $payload = json_decode($json, true);
+                        if (! is_array($payload)) {
+                            continue;
+                        }
+
+                        $eventCount++;
+
+                        if (isset($payload['final_response'])) {
+                            $onComplete((array) $payload['final_response']);
+
+                            continue;
+                        }
+
+                        $onProgress($payload);
+                    }
+                }
+
+                return strlen($data);
+            },
+            CURLOPT_HTTPHEADER => [
+                'Accept: text/event-stream',
+                'Authorization: Bearer '.$bearerToken,
+            ],
+        ]);
+
+        $success = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        $curlErrno = curl_errno($ch);
+        curl_close($ch);
+
+        if (! $success || $curlErrno !== 0) {
+            Log::error('[AICAD] ❌ streamToCallback: cURL failure', [
+                'errno' => $curlErrno,
+                'error' => $curlError,
+                'http_code' => $httpCode,
+                'events_received' => $eventCount,
+            ]);
+
+            $onError($curlErrno, $httpCode, "cURL error: {$curlError}");
+
+            throw new \RuntimeException("SSE stream failed: {$curlError}", $curlErrno);
+        }
+
+        if ($httpCode !== 200) {
+            Log::error('[AICAD] ❌ streamToCallback: non-200 response', [
+                'http_code' => $httpCode,
+                'events_received' => $eventCount,
+            ]);
+
+            $onError(0, $httpCode, "DFM API returned status {$httpCode}");
+
+            throw new \RuntimeException("API returned status {$httpCode}");
+        }
+
+        Log::info('[AICAD] ✅ streamToCallback: stream completed', [
+            'events_received' => $eventCount,
+        ]);
+    }
+
+    /**
      * GET /api/generate-cad-stream — SSE progress + final payload (Generator)
      *
      * This method yields parsed SSE events as arrays (for CLI commands).

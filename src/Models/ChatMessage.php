@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Tolery\AiCad\Enum\GenerationStatus;
 
 /**
  * @property int $id
@@ -22,6 +23,13 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $ai_technical_drawing_path
  * @property string|null $ai_screenshot_path
  * @property bool $cad_files_ready
+ * @property GenerationStatus|null $generation_status
+ * @property int|null $generation_progress_pct
+ * @property string|null $generation_progress_step
+ * @property string|null $generation_progress_message
+ * @property Carbon|null $generation_started_at
+ * @property Carbon|null $generation_completed_at
+ * @property string|null $generation_error
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -41,6 +49,10 @@ class ChatMessage extends Model
     {
         return [
             'edge_object_map_id' => AsCollection::class,
+            'generation_status' => GenerationStatus::class,
+            'generation_started_at' => 'datetime',
+            'generation_completed_at' => 'datetime',
+            'cad_files_ready' => 'boolean',
         ];
     }
 

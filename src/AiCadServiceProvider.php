@@ -4,6 +4,7 @@ namespace Tolery\AiCad;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\Compilers\BladeCompiler;
 use Laravel\Cashier\Cashier;
@@ -90,6 +91,10 @@ class AiCadServiceProvider extends PackageServiceProvider
         if (config('ai-cad.admin.enabled', true)) {
             $this->loadRoutesFrom(__DIR__.'/../routes/admin.php');
         }
+
+        // Broadcast channels for async CAD generation (Phase 2 / issue #152)
+        Broadcast::routes(['middleware' => ['web', 'auth']]);
+        require __DIR__.'/../routes/channels.php';
 
         // Publish admin views
         $this->publishes([
