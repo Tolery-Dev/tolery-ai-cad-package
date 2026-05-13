@@ -69,7 +69,7 @@ class ChatHistoryPanel extends Component
         $filtered = $history->filter(fn ($item) => $item['chat'] !== null);
 
         $unique = $filtered->unique(function ($item) {
-            /** @var \Tolery\AiCad\Models\Chat $chat */
+            /** @var Chat $chat */
             $chat = $item['chat'];
 
             return $chat->id;

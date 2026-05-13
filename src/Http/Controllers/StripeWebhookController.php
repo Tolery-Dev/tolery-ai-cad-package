@@ -350,7 +350,7 @@ class StripeWebhookController extends Controller
 
             // If ends_at was already set in the future (grace period), keep it — Stripe is just
             // confirming the natural expiry we'd already recorded. Otherwise, set it to now.
-            /** @var \Carbon\Carbon|null $currentEndsAt */
+            /** @var Carbon|null $currentEndsAt */
             $currentEndsAt = $subscription->getAttribute('ends_at');
             $newEndsAt = ($currentEndsAt && ! $currentEndsAt->isPast()) ? $currentEndsAt : now();
 
