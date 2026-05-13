@@ -2,70 +2,37 @@
 
 namespace Tolery\AiCad\Notifications;
 
-use Carbon\Carbon;
-use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Tolery\AiCad\Models\ChatMessage;
 
+/**
+ * Sent when a CAD generation finishes successfully.
+ *
+ * The channel set is normally `['database']` only — the SendCompletionEmailIfUnreadJob
+ * dispatches the same notification with `forceChannels = ['mail']` after a delay
+ * if the database notification hasn't been read yet. That ensures the modal's
+ * promise ("Vous serez notifié dès que votre pièce sera prête") is always
+ * honored, without spamming users who are still in the app and saw the cloche.
+ */
 class CadGenerationCompletedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public ChatMessage $message) {}
-
     /**
-     * Email is only sent when the user is unlikely to be looking at the app
-     * (last_seen_at older than 30s). Otherwise the Reverb event + the database
-     * notification (cloche) is enough — no need to spam the inbox.
-     *
-     * @return array<int, string>
+     * @param  array<int, string>|null  $forceChannels  Override the default channel set (e.g. ['mail'])
      */
+    public function __construct(
+        public ChatMessage $message,
+        public ?array $forceChannels = null,
+    ) {}
+
+    /** @return array<int, string> */
     public function via(mixed $notifiable): array
     {
-        $channels = ['database'];
-
-        if (! $this->isOnline($notifiable)) {
-            $channels[] = 'mail';
-        }
-
-        return $channels;
-    }
-
-    /**
-     * Was the user active in the last 30 seconds?
-     *
-     * Defensive parsing: the consuming app's User model must add the column
-     * `last_seen_at` (populated by mn-tolery's TrackUserActivity middleware),
-     * but it isn't guaranteed to declare the `datetime` cast — in that case
-     * Eloquent hands us a raw string. We accept Carbon, string, or null.
-     */
-    protected function isOnline(mixed $notifiable): bool
-    {
-        $raw = $notifiable->last_seen_at ?? null;
-
-        if ($raw === null) {
-            return false;
-        }
-
-        $lastSeen = $raw instanceof CarbonInterface ? $raw : $this->parseTimestamp($raw);
-
-        return $lastSeen !== null && $lastSeen->greaterThan(now()->subSeconds(30));
-    }
-
-    protected function parseTimestamp(mixed $value): ?Carbon
-    {
-        if (! is_string($value) && ! is_numeric($value)) {
-            return null;
-        }
-
-        try {
-            return Carbon::parse((string) $value);
-        } catch (\Throwable) {
-            return null;
-        }
+        return $this->forceChannels ?? ['database'];
     }
 
     public function toMail(mixed $notifiable): MailMessage

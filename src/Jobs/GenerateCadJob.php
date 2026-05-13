@@ -116,7 +116,14 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
 
                     CadGenerationCompleted::dispatch($message);
 
+                    // Send the database (cloche) notification immediately. After 60s,
+                    // SendCompletionEmailIfUnreadJob checks whether it has been read;
+                    // if not, it dispatches the email so the user isn't left in the dark
+                    // (modal says "Vous serez notifié" — we keep that promise).
                     $this->notifyUser($message, new CadGenerationCompletedNotification($message));
+
+                    SendCompletionEmailIfUnreadJob::dispatch($message->id)
+                        ->delay(now()->addSeconds(60));
                 },
                 onError: function (int $curlErrno, int $httpCode, string $error) use ($message) {
                     $message->update([
