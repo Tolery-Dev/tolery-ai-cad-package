@@ -25,14 +25,45 @@ class CadGenerationCompletedNotification extends Notification implements ShouldQ
     {
         $channels = ['database'];
 
-        $lastSeen = $notifiable->last_seen_at ?? null;
-        $isOnline = $lastSeen && $lastSeen->greaterThan(now()->subSeconds(30));
-
-        if (! $isOnline) {
+        if (! $this->isOnline($notifiable)) {
             $channels[] = 'mail';
         }
 
         return $channels;
+    }
+
+    /**
+     * Was the user active in the last 30 seconds?
+     *
+     * Defensive parsing: the consuming app's User model must add the column
+     * `last_seen_at` (populated by mn-tolery's TrackUserActivity middleware),
+     * but it isn't guaranteed to declare the `datetime` cast — in that case
+     * Eloquent hands us a raw string. We accept Carbon, string, or null.
+     */
+    protected function isOnline(mixed $notifiable): bool
+    {
+        $raw = $notifiable->last_seen_at ?? null;
+
+        if ($raw === null) {
+            return false;
+        }
+
+        $lastSeen = $raw instanceof \Carbon\CarbonInterface ? $raw : $this->parseTimestamp($raw);
+
+        return $lastSeen !== null && $lastSeen->greaterThan(now()->subSeconds(30));
+    }
+
+    protected function parseTimestamp(mixed $value): ?\Carbon\Carbon
+    {
+        if (! is_string($value) && ! is_numeric($value)) {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse((string) $value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function toMail(mixed $notifiable): MailMessage
