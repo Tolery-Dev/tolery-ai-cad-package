@@ -65,11 +65,16 @@ class ChatMessage extends Model
     }
 
     /**
-     * @return BelongsTo<ChatUser, $this>
+     * @return BelongsTo<Model, $this>
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(ChatUser::class);
+        // Use the consuming app's User model when configured — only that model
+        // is guaranteed to carry the `Notifiable` trait. The package's bundled
+        // ChatUser is a minimal placeholder for tests / standalone use.
+        $userModel = config('ai-cad.chat_user_model') ?: ChatUser::class;
+
+        return $this->belongsTo($userModel, 'user_id');
     }
 
     public function getObjUrl(): ?string

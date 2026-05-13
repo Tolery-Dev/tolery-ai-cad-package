@@ -41,11 +41,15 @@ class SendCompletionEmailIfUnreadJob implements ShouldQueue
             return;
         }
 
+        // The standard Laravel notifications table stores `data` as `text` (not
+        // jsonb) on PostgreSQL, so whereJsonContains can't use the JSON operator.
+        // We match on the serialized JSON string instead — `message_id` is an
+        // integer in the payload so the encoded form is stable.
         $unread = DatabaseNotification::query()
             ->where('notifiable_type', $user::class)
             ->where('notifiable_id', $user->getKey())
             ->where('type', CadGenerationCompletedNotification::class)
-            ->whereJsonContains('data->message_id', $message->id)
+            ->where('data', 'like', '%"message_id":'.$message->id.'%')
             ->whereNull('read_at')
             ->exists();
 
