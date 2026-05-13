@@ -12,8 +12,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Tolery\AiCad\Enum\GenerationStatus;
 use Tolery\AiCad\Enum\MaterialFamily;
 use Tolery\AiCad\Jobs\DownloadCadAssetsJob;
+use Tolery\AiCad\Jobs\GenerateCadJob;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatUser;
@@ -145,6 +147,25 @@ class Chatbot extends Component
 
         if ($lastMsg && $lastMsg->role === ChatMessage::ROLE_USER) {
             $this->hasPendingGeneration = true;
+        }
+
+        // Resume after reload: if a generation is still in flight on this chat
+        // (Phase 2 of #152), tell the frontend to reopen the progress modal and
+        // resubscribe to the Reverb channel. The job keeps running on the queue
+        // worker independently of the browser.
+        $runningMessage = $this->chat->messages()
+            ->whereIn('generation_status', [
+                GenerationStatus::PENDING->value,
+                GenerationStatus::RUNNING->value,
+            ])
+            ->latest('id')
+            ->first();
+
+        if ($runningMessage) {
+            $this->dispatch('aicad-subscribe-progress',
+                messageId: $runningMessage->id,
+                chatId: $this->chat->id,
+            );
         }
     }
 
@@ -278,6 +299,8 @@ class Chatbot extends Component
         }
 
         $mAsst = $this->storeMessage(ChatMessage::ROLE_ASSISTANT, '[TYPING_INDICATOR]');
+        $mAsst->generation_status = GenerationStatus::PENDING;
+        $mAsst->save();
         $mAsst->load('user');
         $this->messages[] = [
             'role' => 'assistant',
@@ -290,11 +313,22 @@ class Chatbot extends Component
         $this->hasPendingGeneration = false;
 
         $this->dispatch('tolery-chat-append');
-        $this->dispatch('aicad-start-stream',
-            message: $lastUserMsg->message,
-            sessionId: (string) $this->chat->session_id,
-            isEdit: $this->shouldUseEditMode(),
-            materialChoice: $this->chat->material_family !== null ? $this->chat->material_family->value : 'STEEL',
+
+        $materialChoice = $this->chat->material_family !== null
+            ? $this->chat->material_family->value
+            : 'STEEL';
+
+        GenerateCadJob::dispatch(
+            messageId: $mAsst->id,
+            userMessage: $lastUserMsg->message,
+            sessionId: $this->chat->session_id,
+            isEditRequest: $this->shouldUseEditMode(),
+            materialChoice: $materialChoice,
+        );
+
+        $this->dispatch('aicad-subscribe-progress',
+            messageId: $mAsst->id,
+            chatId: $this->chat->id,
         );
     }
 
@@ -371,9 +405,13 @@ class Chatbot extends Component
             ];
             $this->dispatch('tolery-chat-append');
 
-            // Placeholder assistant with typing indicator
+            // Placeholder assistant with typing indicator and `pending` generation status
+            // so we can resume the modal if the user reloads before the job finishes
+            // (issue #152 Phase 2 — async generation backend).
             $mAsst = $this->storeMessage('assistant', '[TYPING_INDICATOR]');
-            $mAsst->load('user'); // Charger la relation user
+            $mAsst->generation_status = GenerationStatus::PENDING;
+            $mAsst->save();
+            $mAsst->load('user');
             $this->messages[] = [
                 'role' => 'assistant',
                 'content' => '[TYPING_INDICATOR]',
@@ -384,18 +422,31 @@ class Chatbot extends Component
             $this->streamingIndex = array_key_last($this->messages);
             $this->lastRefreshAt = microtime(true);
 
-            // Démarre le stream côté navigateur: ouverture du modal + progression live
-            logger()->info('[AICAD] Dispatching stream to frontend', [
+            $materialChoice = $this->chat->material_family !== null
+                ? $this->chat->material_family->value
+                : 'STEEL';
+
+            // Dispatch the queue job that will stream from DFM, persist progress, and
+            // broadcast Reverb events. The browser no longer holds the SSE stream open.
+            GenerateCadJob::dispatch(
+                messageId: $mAsst->id,
+                userMessage: $userText,
+                sessionId: $this->chat->session_id,
+                isEditRequest: $isEdit,
+                materialChoice: $materialChoice,
+            );
+
+            logger()->info('[AICAD] GenerateCadJob dispatched', [
                 'chat_id' => $this->chat->id,
-                'session_id' => $this->chat->session_id,
+                'message_id' => $mAsst->id,
                 'is_edit' => $isEdit,
             ]);
 
-            $this->dispatch('aicad-start-stream',
-                message: $userText,
-                sessionId: (string) $this->chat->session_id,
-                isEdit: $isEdit,
-                materialChoice: $this->chat->material_family !== null ? $this->chat->material_family->value : 'STEEL',
+            // Tell the frontend to open the progress modal and subscribe to
+            // PrivateChannel('chat.{id}') via Echo for real-time updates.
+            $this->dispatch('aicad-subscribe-progress',
+                messageId: $mAsst->id,
+                chatId: $this->chat->id,
             );
 
         } finally {
