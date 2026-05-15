@@ -52,7 +52,8 @@
                         <div class="font-semibold" x-text="`${overall}%`"></div>
                     </div>
 
-                    {{-- Error state with retry button --}}
+                    {{-- Error state (async flow — the job reports to Nightwatch and notifies
+                         the user; a retry is just a new message in the chat). --}}
                     <template x-if="hasError">
                         <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                             <div class="flex items-start gap-3">
@@ -61,35 +62,14 @@
                                 </svg>
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-red-900 mb-1" x-text="errorMessage || 'Une erreur est survenue'"></p>
-
-                                    {{-- Team notified message --}}
-                                    <template x-if="teamNotified">
-                                        <div class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-                                            <p class="font-medium">L'équipe Tolery a été automatiquement notifiée.</p>
-                                            <p class="mt-1">Nous analysons le problème et reviendrons vers vous rapidement.</p>
-                                        </div>
-                                    </template>
-
-                                    {{-- Retry button --}}
-                                    <template x-if="!teamNotified">
-                                        <button
-                                            @click="manualRetry()"
-                                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                            </svg>
-                                            Réessayer
-                                        </button>
-                                    </template>
-
-                                    {{-- Close button when team is notified --}}
-                                    <template x-if="teamNotified">
-                                        <button
-                                            @click="close()"
-                                            class="mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-                                            Fermer
-                                        </button>
-                                    </template>
+                                    <p class="text-xs text-red-700">
+                                        L'équipe Tolery a été automatiquement notifiée. Vous pouvez réessayer en renvoyant votre demande dans le chat.
+                                    </p>
+                                    <button
+                                        @click="close()"
+                                        class="mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                                        Fermer
+                                    </button>
                                 </div>
                             </div>
                         </div>
