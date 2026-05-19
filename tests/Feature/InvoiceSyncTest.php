@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Collection;
+use Laravel\Cashier\Billable;
 use Stripe\Event as StripeEvent;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatTeam;
@@ -10,7 +12,7 @@ use Tolery\AiCad\Services\InvoiceSyncService;
 
 class CashierCompatibleChatTeam extends ChatTeam
 {
-    use Laravel\Cashier\Billable;
+    use Billable;
 }
 
 beforeEach(function () {
@@ -62,7 +64,7 @@ it('keeps the Cashier invoices API available for application team models', funct
     $method = new ReflectionMethod(CashierCompatibleChatTeam::class, 'invoices');
 
     expect($method->getNumberOfParameters())->toBe(2)
-        ->and($method->getReturnType()?->getName())->toBe(Illuminate\Support\Collection::class);
+        ->and($method->getReturnType()?->getName())->toBe(Collection::class);
 });
 
 it('is idempotent when the same invoice is synced twice', function () {
