@@ -73,17 +73,17 @@
                                     $ttc = $ht + $tva;
                                 @endphp
                                 <div class="mb-4 space-y-1">
-                                    <div class="flex justify-between text-sm text-zinc-700">
+                                    <div class="flex justify-between gap-x-4 text-sm text-zinc-700">
                                         <span>Montant fichier CAO</span>
-                                        <span>{{ number_format($ht / 100, 2, ',', ' ') }} € HT</span>
+                                        <span class="shrink-0 whitespace-nowrap">{{ number_format($ht / 100, 2, ',', ' ') }} € HT</span>
                                     </div>
-                                    <div class="flex justify-between text-sm text-zinc-500">
+                                    <div class="flex justify-between gap-x-4 text-sm text-zinc-500">
                                         <span>TVA 20%</span>
-                                        <span>{{ number_format($tva / 100, 2, ',', ' ') }} €</span>
+                                        <span class="shrink-0 whitespace-nowrap">{{ number_format($tva / 100, 2, ',', ' ') }} €</span>
                                     </div>
-                                    <div class="flex justify-between text-base font-bold text-violettes pt-1 border-t border-zinc-200">
+                                    <div class="flex justify-between gap-x-4 text-base font-bold text-violettes pt-1 border-t border-zinc-200">
                                         <span>Total TTC</span>
-                                        <span>{{ number_format($ttc / 100, 2, ',', ' ') }} €</span>
+                                        <span class="shrink-0 whitespace-nowrap">{{ number_format($ttc / 100, 2, ',', ' ') }} €</span>
                                     </div>
                                 </div>
                             @endif
