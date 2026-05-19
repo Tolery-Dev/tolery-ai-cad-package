@@ -50,7 +50,7 @@ it('mirrors a subscription invoice into the local table', function () {
         ->and($invoice->total)->toBe(6000)
         ->and($invoice->number)->toBe('TOLERY-0001');
 
-    expect($team->invoices()->count())->toBe(1);
+    expect($team->localInvoices()->count())->toBe(1);
 });
 
 it('is idempotent when the same invoice is synced twice', function () {
