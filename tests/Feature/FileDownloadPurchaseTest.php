@@ -1,11 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Http;
+use Stripe\Collection;
 use Tolery\AiCad\Http\Controllers\StripeWebhookController;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\SubscriptionProduct;
+use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\FileAccessService;
 
 beforeEach(function () {
@@ -171,6 +173,39 @@ describe('FileAccessService - One-Shot Pricing', function () {
         $price = $service->getOneTimePurchasePrice();
 
         expect($price)->toBe(999);
+    });
+
+    it('retrieves the one-shot price id from Stripe API', function () {
+        $collection = Collection::constructFrom([
+            'object' => 'list',
+            'has_more' => false,
+            'url' => '/v1/prices',
+            'data' => [
+                [
+                    'id' => 'price_test_oneshot',
+                    'object' => 'price',
+                    'unit_amount' => 2900,
+                    'currency' => 'eur',
+                    'active' => true,
+                ],
+            ],
+        ]);
+
+        $this->mock(AiCadStripe::class, function ($mock) use ($collection) {
+            $mock->shouldReceive('listPrices')->andReturn($collection);
+        });
+
+        $service = app(FileAccessService::class);
+
+        expect($service->getOneTimePurchasePriceId())->toBe('price_test_oneshot');
+    });
+
+    it('returns null price id if no one-shot product exists', function () {
+        SubscriptionProduct::where('files_allowed', 1)->delete();
+
+        $service = app(FileAccessService::class);
+
+        expect($service->getOneTimePurchasePriceId())->toBeNull();
     });
 
     it('returns default price if Stripe API fails', function () {

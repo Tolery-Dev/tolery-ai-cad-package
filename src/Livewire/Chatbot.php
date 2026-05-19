@@ -1111,7 +1111,21 @@ class Chatbot extends Component
         }
 
         $aiCadStripe = app(AiCadStripe::class);
-        $amount = app(FileAccessService::class)->getOneTimePurchasePrice();
+        $priceId = app(FileAccessService::class)->getOneTimePurchasePriceId();
+
+        if (! $priceId) {
+            Log::error('[AICAD] No one-shot price configured in Stripe', [
+                'chat_id' => $this->chat->id,
+            ]);
+
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Le paiement à l\'unité n\'est pas disponible pour le moment.'
+            );
+
+            return;
+        }
 
         try {
             // Issuing a Stripe invoice requires a customer: attach the team if needed.
@@ -1126,7 +1140,7 @@ class Chatbot extends Component
             // success_url carries `auto_download=1`: the existing post-checkout polling
             // (see chatbot.blade.php) triggers the download once the webhook lands.
             $session = $aiCadStripe->createFilePurchaseCheckoutSession(
-                amount: $amount,
+                priceId: $priceId,
                 successUrl: $chatUrl.'?auto_download=1',
                 cancelUrl: $chatUrl,
                 customerId: $team->tolerycad_stripe_id,
@@ -1141,7 +1155,7 @@ class Chatbot extends Component
                 'session_id' => $session->id,
                 'team_id' => $team->id,
                 'chat_id' => $this->chat->id,
-                'amount' => $amount,
+                'price_id' => $priceId,
             ]);
 
             $this->showPurchaseModal = false;

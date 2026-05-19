@@ -117,21 +117,21 @@ class AiCadStripe
      * Create a one-shot Checkout Session for a single file purchase.
      *
      * Uses `mode=payment` with `invoice_creation` so Stripe issues a real, numbered
-     * invoice, and `automatic_tax` so VAT is added on top of the HT amount.
+     * invoice, and `automatic_tax` so VAT is added on top of the HT price. The Price
+     * must use `tax_behavior=exclusive` (HT).
      *
-     * @param  int  $amount  Amount in cents, excluding tax (HT)
+     * @param  string  $priceId  Stripe Price ID of the one-shot product
      * @param  string  $successUrl  URL to redirect after successful payment
      * @param  string  $cancelUrl  URL to redirect after cancelled payment
      * @param  string  $customerId  Stripe Customer ID (required to issue an invoice)
      * @param  array  $metadata  Metadata copied onto both the session and the invoice
      */
     public function createFilePurchaseCheckoutSession(
-        int $amount,
+        string $priceId,
         string $successUrl,
         string $cancelUrl,
         string $customerId,
-        array $metadata = [],
-        string $currency = 'eur'
+        array $metadata = []
     ): Session {
         return $this->client()->checkout->sessions->create([
             'mode' => 'payment',
@@ -149,14 +149,7 @@ class AiCadStripe
             ],
             'line_items' => [
                 [
-                    'price_data' => [
-                        'currency' => $currency,
-                        'unit_amount' => $amount,
-                        'tax_behavior' => 'exclusive',
-                        'product_data' => [
-                            'name' => 'Achat fichiers CAO',
-                        ],
-                    ],
+                    'price' => $priceId,
                     'quantity' => 1,
                 ],
             ],
