@@ -50,7 +50,7 @@ class ChatTeam extends Model
     /**
      * @return HasMany<Invoice, $this>
      */
-    public function invoices(): HasMany
+    public function aiCadInvoices(): HasMany
     {
         return $this->hasMany(Invoice::class, 'team_id');
     }
