@@ -1128,9 +1128,28 @@ class Chatbot extends Component
         }
 
         try {
-            // Issuing a Stripe invoice requires a customer: attach the team if needed.
+            // Issuing a Stripe invoice requires a customer. We (re)sync the team's
+            // billing address onto the Stripe customer so the issued invoice carries
+            // the team's coordinates automatically. `main_address` / `getStripeArray()`
+            // belong to the host app's Team model, so they are read defensively.
+            $addressData = [];
+            $customerName = $team->name;
+            // @phpstan-ignore-next-line — `main_address` relation of the host app's Team model
+            $billingAddress = method_exists($team, 'main_address') ? $team->main_address : null;
+
+            if (is_object($billingAddress) && method_exists($billingAddress, 'getStripeArray')) {
+                $addressData = $billingAddress->getStripeArray();
+                $customerName = $billingAddress->society_name ?? $team->name;
+            }
+
+            $customer = $aiCadStripe->createOrUpdateCustomer(
+                email: $user->email,
+                name: $customerName,
+                existingCustomerId: $team->tolerycad_stripe_id,
+                address: $addressData,
+            );
+
             if (! $team->tolerycad_stripe_id) {
-                $customer = $aiCadStripe->createOrUpdateCustomer($user->email, $team->name);
                 $team->tolerycad_stripe_id = $customer->id;
                 $team->save();
             }
