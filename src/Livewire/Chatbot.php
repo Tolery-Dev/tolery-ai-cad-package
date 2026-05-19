@@ -185,6 +185,43 @@ class Chatbot extends Component
         }
     }
 
+    /**
+     * Server-side counterpart to the `CadGenerationCompleted` broadcast event.
+     *
+     * Triggered from the Alpine `cadStreamModal` when the modal receives the
+     * Reverb event. A bare `$wire.$refresh()` re-renders the component but does
+     * NOT re-execute `mount()` — so neither the messages array nor the
+     * `jsonEdgesLoaded` dispatch were refreshed, leaving the typing indicator
+     * up and the 3D viewer on its placeholder.
+     *
+     * This handler reloads the messages from DB and re-fires every dispatch
+     * `mount()` normally does for the freshly generated message, so the UI
+     * lands in the same state as after a full page reload.
+     */
+    #[On('cad-generation-completed')]
+    public function onCadGenerationCompleted(int $messageId): void
+    {
+        // Reload the chat history so the assistant placeholder ('[TYPING_INDICATOR]')
+        // is replaced by the real generated message text.
+        $this->messages = $this->mapDbMessagesToArray();
+
+        $message = ChatMessage::find($messageId);
+
+        if (! $message || ! $message->ai_cad_path) {
+            return;
+        }
+
+        $jsonUrl = $message->getJSONEdgeUrl();
+        if ($jsonUrl) {
+            // Re-feed the Three.js viewer with the freshly generated piece.
+            $this->dispatch('jsonEdgesLoaded', jsonPath: $jsonUrl);
+        }
+
+        $this->updateExportUrls($message);
+        $this->dispatchExportLinks($message);
+        $this->updateDownloadStatus();
+    }
+
     #[On('face-selection-state-changed')]
     public function updateComposerPlaceholder(bool $hasSelection): void
     {
