@@ -229,13 +229,19 @@ class AiCadStripe
 
     /**
      * Create or update a Stripe customer for the team.
+     *
+     * @param  array<string, mixed>  $address  Optional billing address (Stripe `address` shape).
      */
-    public function createOrUpdateCustomer(string $email, string $name, ?string $existingCustomerId = null): Customer
+    public function createOrUpdateCustomer(string $email, string $name, ?string $existingCustomerId = null, array $address = []): Customer
     {
         $customerData = [
             'email' => $email,
             'name' => $name,
         ];
+
+        if ($address !== []) {
+            $customerData['address'] = $address;
+        }
 
         if ($existingCustomerId) {
             return $this->client()->customers->update($existingCustomerId, $customerData);
