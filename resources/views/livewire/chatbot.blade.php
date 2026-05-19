@@ -300,8 +300,12 @@
                         aicadLog('[AICAD] ✅ CadGenerationCompleted', e);
                         this.markStep('complete', 'Completed', 'Terminé', 100);
                         this.unsubscribe();
-                        // Refresh the Livewire component so the new message + viewer show up.
-                        $wire.$refresh();
+                        // Trigger the server-side listener so the new message text is
+                        // loaded from DB AND `jsonEdgesLoaded` is redispatched to the
+                        // viewer. `$wire.$refresh()` alone only re-renders the
+                        // component — it does NOT re-execute mount(), so the typing
+                        // indicator stays and the 3D viewer keeps its placeholder.
+                        $wire.dispatch('cad-generation-completed', { messageId: e.message_id });
                         setTimeout(() => this.close(), 800);
                         window.dispatchEvent(new CustomEvent('cad-generation-ended'));
                     })
