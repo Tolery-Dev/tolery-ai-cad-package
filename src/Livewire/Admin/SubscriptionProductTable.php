@@ -71,8 +71,12 @@ class SubscriptionProductTable extends Component
 
         $products = [];
 
-        foreach ($stripeProducts->data as $stripeProduct) {
+        /** @var array<int, Product> $stripeProductList */
+        $stripeProductList = $stripeProducts->data;
+
+        foreach ($stripeProductList as $stripeProduct) {
             try {
+                /** @var array<int, Price> $prices */
                 $prices = $aiCadStripe->listPrices($stripeProduct->id)->data;
             } catch (\Throwable $e) {
                 $prices = [];

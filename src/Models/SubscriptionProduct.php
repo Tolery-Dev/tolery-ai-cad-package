@@ -2,6 +2,7 @@
 
 namespace Tolery\AiCad\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -24,6 +25,8 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property string $stripe_id
  * @property string $stripe_price_id
  * @property ResetFrequency|null $frequency
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  * @property-read Collection<int, SubscriptionPrice> $prices
  * @property-read ?SubscriptionPrice $activeMonthlyPrice
  * @property-read ?SubscriptionPrice $activeYearlyPrice

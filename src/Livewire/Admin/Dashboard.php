@@ -124,7 +124,7 @@ class Dashboard extends Component
     /**
      * Teams currently on a free trial, paired with their plan and trial end date.
      *
-     * @return Collection<int, array{team_name: string, product_name: string, trial_ends_at: ?Carbon, started_at: ?Carbon, days_left: ?int}>
+     * Each row: array{team_name: string, product_name: string, trial_ends_at: ?Carbon, started_at: ?Carbon, days_left: ?int}
      */
     public function getTrialingSubscriptions(): Collection
     {
@@ -135,33 +135,42 @@ class Dashboard extends Component
             ->orderBy('trial_ends_at')
             ->get();
 
-        /** @var Collection<int, ChatTeam> $teams */
-        $teams = ChatTeam::query()
+        /** @var array<int, string> $teamNames */
+        $teamNames = ChatTeam::query()
             ->whereIn('id', $subscriptions->pluck('team_id')->filter()->unique()->all())
-            ->get()
-            ->keyBy('id');
+            ->pluck('name', 'id')
+            ->all();
 
-        return $subscriptions->map(function (Subscription $subscription) use ($teams): array {
-            /** @var SubscriptionItem|null $item */
-            $item = $subscription->items->first();
+        /** @var array<string, string> $productNames */
+        $productNames = SubscriptionProduct::query()
+            ->pluck('name', 'stripe_id')
+            ->all();
 
-            $product = $item !== null
-                /** @phpstan-ignore-next-line - stripe_product is a dynamic attribute from Cashier */
-                ? SubscriptionProduct::where('stripe_id', $item->stripe_product)->first()
-                : null;
+        $rows = [];
 
-            $trialEndsAt = $subscription->trial_ends_at;
+        foreach ($subscriptions as $subscription) {
+            $teamId = (int) $subscription->getAttribute('team_id');
 
-            return [
-                'team_name' => $teams->get($subscription->team_id)?->name ?? 'Inconnu',
-                'product_name' => $product?->name ?? 'Inconnu',
+            $firstItem = $subscription->items->first();
+            $stripeProductId = (string) $firstItem?->getAttribute('stripe_product');
+
+            /** @var Carbon|null $trialEndsAt */
+            $trialEndsAt = $subscription->getAttribute('trial_ends_at');
+            /** @var Carbon|null $startedAt */
+            $startedAt = $subscription->getAttribute('created_at');
+
+            $rows[] = [
+                'team_name' => $teamNames[$teamId] ?? 'Inconnu',
+                'product_name' => $productNames[$stripeProductId] ?? 'Inconnu',
                 'trial_ends_at' => $trialEndsAt,
-                'started_at' => $subscription->created_at,
+                'started_at' => $startedAt,
                 'days_left' => $trialEndsAt !== null
                     ? (int) now()->startOfDay()->diffInDays($trialEndsAt->copy()->startOfDay(), false)
                     : null,
             ];
-        });
+        }
+
+        return collect($rows);
     }
 
     public function render(): View
