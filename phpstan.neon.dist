@@ -17,8 +17,6 @@ parameters:
         - src/Livewire/Admin/PredefinedPromptTable.php
         - src/Livewire/Admin/StepMessageTable.php
     ignoreErrors:
-        # ChatUser model is configured dynamically via config('ai-cad.chat_user_model')
-        - '#.*(unknown class|Class).*ChatUser#'
         # curl_close() deprecated in PHP 8.5+ but still works (preexisting code)
         -
             message: '#Call to deprecated function curl_close\(\)\.#'

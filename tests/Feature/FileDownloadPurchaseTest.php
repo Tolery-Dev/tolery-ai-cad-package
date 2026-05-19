@@ -1,11 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Http;
+use Stripe\Collection;
 use Tolery\AiCad\Http\Controllers\StripeWebhookController;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\SubscriptionProduct;
+use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\FileAccessService;
 
 beforeEach(function () {
@@ -173,6 +175,39 @@ describe('FileAccessService - One-Shot Pricing', function () {
         expect($price)->toBe(999);
     });
 
+    it('retrieves the one-shot price id from Stripe API', function () {
+        $collection = Collection::constructFrom([
+            'object' => 'list',
+            'has_more' => false,
+            'url' => '/v1/prices',
+            'data' => [
+                [
+                    'id' => 'price_test_oneshot',
+                    'object' => 'price',
+                    'unit_amount' => 2900,
+                    'currency' => 'eur',
+                    'active' => true,
+                ],
+            ],
+        ]);
+
+        $this->mock(AiCadStripe::class, function ($mock) use ($collection) {
+            $mock->shouldReceive('listPrices')->andReturn($collection);
+        });
+
+        $service = app(FileAccessService::class);
+
+        expect($service->getOneTimePurchasePriceId())->toBe('price_test_oneshot');
+    });
+
+    it('returns null price id if no one-shot product exists', function () {
+        SubscriptionProduct::where('files_allowed', 1)->delete();
+
+        $service = app(FileAccessService::class);
+
+        expect($service->getOneTimePurchasePriceId())->toBeNull();
+    });
+
     it('returns default price if Stripe API fails', function () {
         Http::fake([
             'https://api.stripe.com/v1/prices*' => Http::response([], 500),
@@ -195,29 +230,27 @@ describe('FileAccessService - One-Shot Pricing', function () {
 });
 
 describe('FilePurchase - Webhook Integration', function () {
-    it('creates file purchase record from webhook payload', function () {
+    it('creates a file purchase from a one-shot checkout session', function () {
         $team = ChatTeam::factory()->create();
         $chat = Chat::factory()->create(['team_id' => $team->id]);
 
-        $payload = [
-            'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_webhook',
-                    'amount' => 999,
-                    'currency' => 'eur',
-                    'metadata' => [
-                        'type' => 'file_purchase',
-                        'team_id' => (string) $team->id,
-                        'chat_id' => (string) $chat->id,
-                    ],
-                ],
+        $session = [
+            'id' => 'cs_test_oneshot',
+            'mode' => 'payment',
+            'customer' => 'cus_test_oneshot',
+            'payment_intent' => 'pi_test_checkout',
+            'amount_total' => 1199,
+            'currency' => 'eur',
+            'metadata' => [
+                'type' => 'file_purchase',
+                'team_id' => (string) $team->id,
+                'chat_id' => (string) $chat->id,
             ],
         ];
 
         $controller = app(StripeWebhookController::class);
-        $method = new ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
-        $response = $method->invoke($controller, $payload['data']);
+        $method = new ReflectionMethod($controller, 'handleCheckoutSessionCompleted');
+        $response = $method->invoke($controller, ['object' => $session]);
 
         expect($response->getStatusCode())->toBe(200);
         expect(FilePurchase::count())->toBe(1);
@@ -225,12 +258,14 @@ describe('FilePurchase - Webhook Integration', function () {
         $purchase = FilePurchase::first();
         expect($purchase->team_id)->toBe($team->id)
             ->and($purchase->chat_id)->toBe($chat->id)
-            ->and($purchase->stripe_payment_intent_id)->toBe('pi_test_webhook')
-            ->and($purchase->amount)->toBe(999)
+            ->and($purchase->stripe_payment_intent_id)->toBe('pi_test_checkout')
+            ->and($purchase->amount)->toBe(1199)
             ->and($purchase->currency)->toBe('eur');
+
+        expect($team->fresh()->tolerycad_stripe_id)->toBe('cus_test_oneshot');
     });
 
-    it('prevents duplicate purchases with same payment intent', function () {
+    it('does not duplicate a file purchase for the same payment intent', function () {
         $team = ChatTeam::factory()->create();
         $chat = Chat::factory()->create(['team_id' => $team->id]);
 
@@ -243,54 +278,24 @@ describe('FilePurchase - Webhook Integration', function () {
             'purchased_at' => now(),
         ]);
 
-        $payload = [
-            'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_duplicate',
-                    'amount' => 999,
-                    'currency' => 'eur',
-                    'metadata' => [
-                        'type' => 'file_purchase',
-                        'team_id' => (string) $team->id,
-                        'chat_id' => (string) $chat->id,
-                    ],
-                ],
+        $session = [
+            'id' => 'cs_test_duplicate',
+            'mode' => 'payment',
+            'payment_intent' => 'pi_test_duplicate',
+            'amount_total' => 1199,
+            'currency' => 'eur',
+            'metadata' => [
+                'type' => 'file_purchase',
+                'team_id' => (string) $team->id,
+                'chat_id' => (string) $chat->id,
             ],
         ];
 
         $controller = app(StripeWebhookController::class);
-        $method = new ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
-        $response = $method->invoke($controller, $payload['data']);
+        $method = new ReflectionMethod($controller, 'handleCheckoutSessionCompleted');
+        $response = $method->invoke($controller, ['object' => $session]);
 
         expect($response->getStatusCode())->toBe(200);
         expect(FilePurchase::count())->toBe(1);
-    });
-
-    it('ignores webhook if type is not file_purchase', function () {
-        $team = ChatTeam::factory()->create();
-        $chat = Chat::factory()->create(['team_id' => $team->id]);
-
-        $payload = [
-            'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_subscription',
-                    'amount' => 2999,
-                    'currency' => 'eur',
-                    'metadata' => [
-                        'type' => 'subscription_payment',
-                        'team_id' => (string) $team->id,
-                    ],
-                ],
-            ],
-        ];
-
-        $controller = app(StripeWebhookController::class);
-        $method = new ReflectionMethod($controller, 'handlePaymentIntentSucceeded');
-        $response = $method->invoke($controller, $payload['data']);
-
-        expect($response->getStatusCode())->toBe(200);
-        expect(FilePurchase::count())->toBe(0);
     });
 });

@@ -464,19 +464,42 @@ class FileAccessService
      */
     public function getOneTimePurchasePrice(): int
     {
+        $price = $this->getOneTimePurchaseStripePrice();
+
+        if ($price === null) {
+            return (int) config('ai-cad.file_purchase_price', 999);
+        }
+
+        return $price->unit_amount ?? (int) config('ai-cad.file_purchase_price', 999);
+    }
+
+    /**
+     * Récupère l'ID du prix Stripe du produit one-shot (files_allowed = 1).
+     *
+     * Utilisé par la Checkout Session one-shot : passer le Price ID existant
+     * (plutôt qu'un prix inline) garde la facture rattachée au vrai produit Stripe.
+     */
+    public function getOneTimePurchasePriceId(): ?string
+    {
+        return $this->getOneTimePurchaseStripePrice()?->id;
+    }
+
+    /**
+     * Récupère le premier prix actif du produit one-shot (files_allowed = 1).
+     */
+    private function getOneTimePurchaseStripePrice(): ?Price
+    {
         try {
-            // Chercher le produit one-shot (files_allowed = 1)
             $product = SubscriptionProduct::where('files_allowed', 1)
                 ->where('active', true)
                 ->first();
 
             if (! $product) {
-                Log::warning('One-shot product not found, using default price');
+                Log::warning('One-shot product not found');
 
-                return config('ai-cad.file_purchase_price', 999);
+                return null;
             }
 
-            // Récupérer le premier prix actif via AiCadStripe
             $prices = $this->aiCadStripe->listPrices($product->stripe_id, 1);
 
             if (empty($prices->data)) {
@@ -485,26 +508,19 @@ class FileAccessService
                     'stripe_id' => $product->stripe_id,
                 ]);
 
-                return config('ai-cad.file_purchase_price', 999);
+                return null;
             }
 
             /** @var Price $price */
             $price = $prices->data[0];
 
-            Log::info('Retrieved one-shot price from Stripe', [
-                'product_id' => $product->id,
-                'price' => $price->unit_amount,
-                'currency' => $price->currency,
-            ]);
-
-            return $price->unit_amount;
-
+            return $price;
         } catch (\Exception $e) {
             Log::error('Failed to retrieve one-shot price from Stripe', [
                 'error' => $e->getMessage(),
             ]);
 
-            return config('ai-cad.file_purchase_price', 999);
+            return null;
         }
     }
 }

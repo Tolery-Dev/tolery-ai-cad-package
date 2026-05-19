@@ -7,7 +7,6 @@ use Stripe\Collection;
 use Stripe\Customer;
 use Stripe\Event;
 use Stripe\Exception\SignatureVerificationException;
-use Stripe\PaymentIntent;
 use Stripe\PromotionCode;
 use Stripe\StripeClient;
 use Stripe\Subscription;
@@ -39,14 +38,6 @@ class AiCadStripe
     }
 
     /**
-     * Get the AI-CAD Stripe public key.
-     */
-    public function getPublicKey(): string
-    {
-        return config('ai-cad.stripe.key', '');
-    }
-
-    /**
      * Get the AI-CAD Stripe secret key.
      */
     public function getSecretKey(): string
@@ -63,36 +54,10 @@ class AiCadStripe
     }
 
     /**
-     * Create a PaymentIntent for a one-time file purchase.
-     *
-     * @param  int  $amount  Amount in cents
-     * @param  string  $currency  Currency code (default: eur)
-     * @param  array  $metadata  Additional metadata
-     */
-    public function createPaymentIntent(int $amount, string $currency = 'eur', array $metadata = []): PaymentIntent
-    {
-        return $this->client()->paymentIntents->create([
-            'amount' => $amount,
-            'currency' => $currency,
-            'automatic_payment_methods' => [
-                'enabled' => true,
-            ],
-            'metadata' => array_merge([
-                'type' => 'file_purchase',
-            ], $metadata),
-        ]);
-    }
-
-    /**
-     * Retrieve a PaymentIntent by ID.
-     */
-    public function retrievePaymentIntent(string $paymentIntentId): PaymentIntent
-    {
-        return $this->client()->paymentIntents->retrieve($paymentIntentId);
-    }
-
-    /**
      * Create a Checkout Session for subscription.
+     *
+     * Tax is computed by Stripe Tax (`automatic_tax`): platform prices are stored
+     * excluding tax (HT), so the relevant Stripe Prices must use `tax_behavior=exclusive`.
      *
      * @param  string  $priceId  Stripe Price ID
      * @param  string  $successUrl  URL to redirect after successful payment
@@ -111,6 +76,8 @@ class AiCadStripe
             'mode' => 'subscription',
             'locale' => 'fr',
             'billing_address_collection' => 'required',
+            'automatic_tax' => ['enabled' => true],
+            'tax_id_collection' => ['enabled' => true],
             'custom_fields' => [
                 [
                     'key' => 'company_name',
@@ -134,6 +101,9 @@ class AiCadStripe
 
         if ($customerId) {
             $params['customer'] = $customerId;
+            // Required by Stripe so the address/name collected at checkout are saved
+            // back onto the existing customer (needed by automatic_tax and tax_id_collection).
+            $params['customer_update'] = ['address' => 'auto', 'name' => 'auto'];
         }
 
         if ($promotionCodeId) {
@@ -141,6 +111,55 @@ class AiCadStripe
         }
 
         return $this->client()->checkout->sessions->create($params);
+    }
+
+    /**
+     * Create a one-shot Checkout Session for a single file purchase.
+     *
+     * Uses `mode=payment` with `invoice_creation` so Stripe issues a real, numbered
+     * invoice, and `automatic_tax` so VAT is added on top of the HT price. The Price
+     * must use `tax_behavior=exclusive` (HT).
+     *
+     * @param  string  $priceId  Stripe Price ID of the one-shot product
+     * @param  string  $successUrl  URL to redirect after successful payment
+     * @param  string  $cancelUrl  URL to redirect after cancelled payment
+     * @param  string  $customerId  Stripe Customer ID (required to issue an invoice)
+     * @param  array  $metadata  Metadata copied onto both the session and the invoice
+     */
+    public function createFilePurchaseCheckoutSession(
+        string $priceId,
+        string $successUrl,
+        string $cancelUrl,
+        string $customerId,
+        array $metadata = []
+    ): Session {
+        return $this->client()->checkout->sessions->create([
+            'mode' => 'payment',
+            'locale' => 'fr',
+            'customer' => $customerId,
+            'billing_address_collection' => 'required',
+            'customer_update' => ['address' => 'auto', 'name' => 'auto'],
+            'automatic_tax' => ['enabled' => true],
+            'tax_id_collection' => ['enabled' => true],
+            'invoice_creation' => [
+                'enabled' => true,
+                'invoice_data' => [
+                    'metadata' => $metadata,
+                ],
+            ],
+            'line_items' => [
+                [
+                    'price' => $priceId,
+                    'quantity' => 1,
+                ],
+            ],
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+            'metadata' => $metadata,
+            'consent_collection' => [
+                'terms_of_service' => 'required',
+            ],
+        ]);
     }
 
     /**
@@ -193,6 +212,17 @@ class AiCadStripe
         return $this->client()->prices->all([
             'product' => $productId,
             'active' => true,
+            'limit' => $limit,
+        ]);
+    }
+
+    /**
+     * List invoices for a customer (most recent first).
+     */
+    public function listInvoices(string $customerId, int $limit = 100): Collection
+    {
+        return $this->client()->invoices->all([
+            'customer' => $customerId,
             'limit' => $limit,
         ]);
     }
