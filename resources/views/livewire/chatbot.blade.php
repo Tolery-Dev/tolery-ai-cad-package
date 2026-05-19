@@ -78,9 +78,6 @@
         @include('ai-cad::livewire.partials.viewer-panel')
     </div>
 
-    {{-- Stripe Payment Modal Component --}}
-    <livewire:stripe-payment-modal />
-
     {{-- Modal Achat/Abonnement --}}
     @include('ai-cad::livewire.partials.purchase-modal')
 

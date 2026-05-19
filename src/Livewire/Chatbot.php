@@ -1110,48 +1110,45 @@ class Chatbot extends Component
             return;
         }
 
-        $fileAccessService = app(FileAccessService::class);
         $aiCadStripe = app(AiCadStripe::class);
-
-        // Récupère le prix de l'achat unitaire
-        $amount = $fileAccessService->getOneTimePurchasePrice();
-
-        // Récupère le dernier message assistant pour le screenshot
-        $lastAssistant = $this->findLatestAssistantMessage();
-        $screenshotUrl = $lastAssistant?->getScreenshotUrl();
+        $amount = app(FileAccessService::class)->getOneTimePurchasePrice();
 
         try {
-            // Crée un PaymentIntent Stripe avec les métadonnées nécessaires
-            $paymentIntent = $aiCadStripe->createPaymentIntent(
-                $amount,
-                'eur',
-                [
+            // Issuing a Stripe invoice requires a customer: attach the team if needed.
+            if (! $team->tolerycad_stripe_id) {
+                $customer = $aiCadStripe->createOrUpdateCustomer($user->email, $team->name);
+                $team->tolerycad_stripe_id = $customer->id;
+                $team->save();
+            }
+
+            $chatUrl = route('client.tolerycad.show-chatbot', ['chat' => $this->chat]);
+
+            // success_url carries `auto_download=1`: the existing post-checkout polling
+            // (see chatbot.blade.php) triggers the download once the webhook lands.
+            $session = $aiCadStripe->createFilePurchaseCheckoutSession(
+                amount: $amount,
+                successUrl: $chatUrl.'?auto_download=1',
+                cancelUrl: $chatUrl,
+                customerId: $team->tolerycad_stripe_id,
+                metadata: [
+                    'type' => 'file_purchase',
                     'team_id' => (string) $team->id,
                     'chat_id' => (string) $this->chat->id,
-                    'type' => 'file_purchase',
-                ]
+                ],
             );
 
-            Log::info('[AICAD] PaymentIntent created for file purchase', [
-                'payment_intent_id' => $paymentIntent->id,
+            Log::info('[AICAD] File purchase checkout session created', [
+                'session_id' => $session->id,
                 'team_id' => $team->id,
                 'chat_id' => $this->chat->id,
                 'amount' => $amount,
             ]);
 
-            // Ferme le modal d'achat/abonnement
             $this->showPurchaseModal = false;
 
-            // Ouvre le modal de paiement Stripe avec le client_secret
-            $this->dispatch('show-stripe-payment-modal',
-                clientSecret: $paymentIntent->client_secret,
-                amount: $amount,
-                chatId: $this->chat->id,
-                screenshotUrl: $screenshotUrl
-            );
-
+            $this->redirect($session->url);
         } catch (\Exception $e) {
-            Log::error('[AICAD] Failed to create PaymentIntent', [
+            Log::error('[AICAD] Failed to create file purchase checkout session', [
                 'error' => $e->getMessage(),
                 'team_id' => $team->id,
                 'chat_id' => $this->chat->id,
@@ -1163,19 +1160,6 @@ class Chatbot extends Component
                 text: 'Impossible d\'initialiser le paiement. Veuillez réessayer.'
             );
         }
-    }
-
-    #[On('payment-completed')]
-    public function handlePaymentCompleted(): void
-    {
-        // Rafraîchir le statut de téléchargement après un paiement réussi
-        $this->updateDownloadStatus();
-        $this->refreshFromDb();
-
-        Log::info('[AICAD] Download status refreshed after payment', [
-            'chat_id' => $this->chat->id,
-            'can_download' => $this->canDownload,
-        ]);
     }
 
     /* ----------------- Version Helpers ----------------- */

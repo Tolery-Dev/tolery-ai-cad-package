@@ -18,6 +18,7 @@ use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\Limit;
 use Tolery\AiCad\Models\SubscriptionProduct;
 use Tolery\AiCad\Services\AiCadStripe;
+use Tolery\AiCad\Services\InvoiceSyncService;
 
 /**
  * Webhook controller for AI-CAD Stripe events.
@@ -28,7 +29,8 @@ use Tolery\AiCad\Services\AiCadStripe;
 class StripeWebhookController extends Controller
 {
     public function __construct(
-        protected AiCadStripe $aiCadStripe
+        protected AiCadStripe $aiCadStripe,
+        protected InvoiceSyncService $invoiceSync
     ) {}
 
     /**
@@ -64,98 +66,6 @@ class StripeWebhookController extends Controller
         Log::info('[AICAD Webhook] Unhandled event type', ['type' => $event->type]);
 
         return response()->json(['success' => true], 200);
-    }
-
-    /**
-     * Handle payment_intent.succeeded webhook.
-     */
-    protected function handlePaymentIntentSucceeded(array $payload): JsonResponse
-    {
-        try {
-            $paymentIntent = $payload['object'];
-            $metadata = $paymentIntent['metadata'] ?? [];
-
-            // Vérifier que c'est un achat de fichier AI-CAD
-            if (($metadata['type'] ?? null) !== 'file_purchase') {
-                Log::info('[AICAD Webhook] Payment intent is not a file purchase, skipping', [
-                    'payment_intent_id' => $paymentIntent['id'],
-                    'type' => $metadata['type'] ?? 'unknown',
-                ]);
-
-                return response()->json(['success' => true], 200);
-            }
-
-            $teamId = $metadata['team_id'] ?? null;
-            $chatId = $metadata['chat_id'] ?? null;
-
-            if (! $teamId || ! $chatId) {
-                Log::error('[AICAD Webhook] Missing required metadata in payment intent', [
-                    'payment_intent_id' => $paymentIntent['id'],
-                    'metadata' => $metadata,
-                ]);
-
-                return response()->json(['success' => true], 200);
-            }
-
-            // Vérifier que la team et le chat existent
-            $teamModel = config('ai-cad.chat_team_model', ChatTeam::class);
-            $team = $teamModel::find($teamId);
-            $chat = Chat::find($chatId);
-
-            if (! $team || ! $chat) {
-                Log::error('[AICAD Webhook] Team or chat not found', [
-                    'team_id' => $teamId,
-                    'chat_id' => $chatId,
-                    'payment_intent_id' => $paymentIntent['id'],
-                ]);
-
-                return response()->json(['success' => true], 200);
-            }
-
-            // Vérifier que l'achat n'existe pas déjà (éviter les doublons)
-            $existingPurchase = FilePurchase::where('stripe_payment_intent_id', $paymentIntent['id'])->first();
-
-            if ($existingPurchase) {
-                Log::warning('[AICAD Webhook] File purchase already exists for this payment intent', [
-                    'payment_intent_id' => $paymentIntent['id'],
-                    'purchase_id' => $existingPurchase->id,
-                ]);
-
-                return response()->json(['success' => true], 200);
-            }
-
-            // Créer l'enregistrement FilePurchase dans une transaction
-            $purchase = DB::transaction(function () use ($team, $chat, $paymentIntent) {
-                return FilePurchase::create([
-                    'team_id' => $team->id,
-                    'chat_id' => $chat->id,
-                    'stripe_payment_intent_id' => $paymentIntent['id'],
-                    'amount' => $paymentIntent['amount'],
-                    'currency' => $paymentIntent['currency'],
-                    'purchased_at' => now(),
-                ]);
-            });
-
-            Log::info('[AICAD Webhook] File purchase created successfully', [
-                'purchase_id' => $purchase->id,
-                'team_id' => $team->id,
-                'chat_id' => $chat->id,
-                'amount' => $paymentIntent['amount'],
-                'payment_intent_id' => $paymentIntent['id'],
-            ]);
-
-            return response()->json(['success' => true], 200);
-
-        } catch (\Exception $e) {
-            Log::error('[AICAD Webhook] Failed to handle payment_intent.succeeded', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'payload' => $payload,
-            ]);
-
-            // Retourner un succès pour éviter que Stripe ne réessaie indéfiniment
-            return response()->json(['success' => true], 200);
-        }
     }
 
     /**
@@ -448,13 +358,27 @@ class StripeWebhookController extends Controller
 
     /**
      * Handle invoice.paid webhook.
+     *
+     * Mirrors the Stripe invoice into the local `invoices` table. For one-shot file
+     * purchases, the InvoiceSyncService also ensures the matching FilePurchase exists.
      */
     protected function handleInvoicePaid(array $payload): JsonResponse
     {
-        Log::info('[AICAD Webhook] Invoice paid', [
-            'invoice_id' => $payload['object']['id'] ?? null,
-            'subscription' => $payload['object']['subscription'] ?? null,
-        ]);
+        try {
+            $invoice = $payload['object'];
+            $record = $this->invoiceSync->syncInvoice($invoice);
+
+            Log::info('[AICAD Webhook] Invoice paid synced', [
+                'invoice_id' => $invoice['id'] ?? null,
+                'local_invoice_id' => $record?->id,
+                'subscription' => $invoice['subscription'] ?? null,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle invoice.paid', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
 
         return response()->json(['success' => true], 200);
     }
@@ -464,10 +388,20 @@ class StripeWebhookController extends Controller
      */
     protected function handleInvoicePaymentFailed(array $payload): JsonResponse
     {
-        Log::warning('[AICAD Webhook] Invoice payment failed', [
-            'invoice_id' => $payload['object']['id'] ?? null,
-            'subscription' => $payload['object']['subscription'] ?? null,
-        ]);
+        try {
+            $invoice = $payload['object'];
+            $this->invoiceSync->syncInvoice($invoice);
+
+            Log::warning('[AICAD Webhook] Invoice payment failed', [
+                'invoice_id' => $invoice['id'] ?? null,
+                'subscription' => $invoice['subscription'] ?? null,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle invoice.payment_failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
 
         return response()->json(['success' => true], 200);
     }
@@ -485,6 +419,12 @@ class StripeWebhookController extends Controller
     {
         try {
             $session = $payload['object'];
+
+            // One-shot file purchase (mode: payment) — handled separately from subscriptions.
+            if (($session['mode'] ?? null) === 'payment'
+                || ($session['metadata']['type'] ?? null) === 'file_purchase') {
+                return $this->handleFilePurchaseCheckout($session);
+            }
 
             // Get metadata from checkout session
             $teamId = $session['metadata']['team_id'] ?? null;
@@ -564,6 +504,78 @@ class StripeWebhookController extends Controller
             ]);
 
             // Return success to avoid Stripe retrying indefinitely
+            return response()->json(['success' => true], 200);
+        }
+    }
+
+    /**
+     * Handle a completed one-shot file purchase checkout (mode: payment).
+     *
+     * Records the FilePurchase so the file becomes downloadable. The Stripe invoice
+     * generated by `invoice_creation` is mirrored separately via the invoice.paid webhook.
+     */
+    protected function handleFilePurchaseCheckout(array $session): JsonResponse
+    {
+        try {
+            $metadata = $session['metadata'] ?? [];
+            $teamId = $metadata['team_id'] ?? null;
+            $chatId = $metadata['chat_id'] ?? null;
+            $paymentIntentId = $session['payment_intent'] ?? null;
+
+            if (! $teamId || ! $chatId || ! $paymentIntentId) {
+                Log::warning('[AICAD Webhook] Missing data in file purchase checkout', [
+                    'session_id' => $session['id'] ?? null,
+                    'team_id' => $teamId,
+                    'chat_id' => $chatId,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            $teamModel = config('ai-cad.chat_team_model', ChatTeam::class);
+            $team = $teamModel::find($teamId);
+            $chat = Chat::find($chatId);
+
+            if (! $team || ! $chat) {
+                Log::error('[AICAD Webhook] Team or chat not found for file purchase checkout', [
+                    'team_id' => $teamId,
+                    'chat_id' => $chatId,
+                ]);
+
+                return response()->json(['success' => true], 200);
+            }
+
+            DB::transaction(function () use ($team, $chat, $session, $paymentIntentId) {
+                if (! empty($session['customer'])) {
+                    $team->tolerycad_stripe_id = $session['customer'];
+                    $team->save();
+                }
+
+                FilePurchase::firstOrCreate(
+                    ['stripe_payment_intent_id' => $paymentIntentId],
+                    [
+                        'team_id' => $team->id,
+                        'chat_id' => $chat->id,
+                        'amount' => $session['amount_total'] ?? 0,
+                        'currency' => $session['currency'] ?? 'eur',
+                        'purchased_at' => now(),
+                    ],
+                );
+            });
+
+            Log::info('[AICAD Webhook] File purchase synced from checkout', [
+                'team_id' => $team->id,
+                'chat_id' => $chat->id,
+                'payment_intent_id' => $paymentIntentId,
+            ]);
+
+            return response()->json(['success' => true], 200);
+        } catch (\Exception $e) {
+            Log::error('[AICAD Webhook] Failed to handle file purchase checkout', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json(['success' => true], 200);
         }
     }

@@ -14,6 +14,7 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tolery\AiCad\Commands\DebugApiStream;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
 use Tolery\AiCad\Commands\MigratePrompts;
+use Tolery\AiCad\Commands\SyncInvoices;
 use Tolery\AiCad\Commands\SyncStripeProducts;
 use Tolery\AiCad\Commands\TestApiConnection;
 use Tolery\AiCad\Commands\TestStreamEndpoint;
@@ -30,7 +31,6 @@ use Tolery\AiCad\Livewire\Admin\StepMessageTable;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Livewire\ChatHistoryPanel;
-use Tolery\AiCad\Livewire\StripePaymentModal;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
 use Tolery\AiCad\Models\ChatTeam;
@@ -67,6 +67,7 @@ class AiCadServiceProvider extends PackageServiceProvider
                 DebugApiStream::class,
                 TestStreamEndpoint::class,
                 SyncStripeProducts::class,
+                SyncInvoices::class,
                 UpdateStripeMetadata::class,
                 MigratePrompts::class,
             ]);
@@ -119,7 +120,6 @@ class AiCadServiceProvider extends PackageServiceProvider
         $this->callAfterResolving(BladeCompiler::class, function () {
             Livewire::component('chatbot', Chatbot::class);
             Livewire::component('chat-config', ChatConfig::class);
-            Livewire::component('stripe-payment-modal', StripePaymentModal::class);
             Livewire::component('chat-history-panel', ChatHistoryPanel::class);
         });
 

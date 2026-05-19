@@ -13,6 +13,7 @@ use Tolery\AiCad\Traits\HasSubscription;
  * @property int $id
  * @property string $name
  * @property int|null $user_id
+ * @property string|null $tolerycad_stripe_id
  */
 class ChatTeam extends Model
 {
@@ -44,6 +45,14 @@ class ChatTeam extends Model
     public function FilesPurchase(): HasMany
     {
         return $this->hasMany(FilePurchase::class);
+    }
+
+    /**
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'team_id');
     }
 
     /**
