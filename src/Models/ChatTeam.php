@@ -48,16 +48,9 @@ class ChatTeam extends Model
     }
 
     /**
-     * Mirror local des factures Stripe (table `invoices`).
-     *
-     * Nommée `localInvoices` et non `invoices` pour ne pas entrer en conflit avec
-     * `Billable::invoices(): Collection` de Cashier : une app hôte qui étend ce
-     * modèle tout en utilisant le trait Billable provoquerait sinon une erreur
-     * fatale d'incompatibilité de signature.
-     *
      * @return HasMany<Invoice, $this>
      */
-    public function localInvoices(): HasMany
+    public function aiCadInvoices(): HasMany
     {
         return $this->hasMany(Invoice::class, 'team_id');
     }

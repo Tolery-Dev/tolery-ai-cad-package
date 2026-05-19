@@ -8,6 +8,11 @@ use Tolery\AiCad\Models\Invoice;
 use Tolery\AiCad\Services\AiCadStripe;
 use Tolery\AiCad\Services\InvoiceSyncService;
 
+class CashierCompatibleChatTeam extends ChatTeam
+{
+    use Laravel\Cashier\Billable;
+}
+
 beforeEach(function () {
     config(['ai-cad.chat_team_model' => ChatTeam::class]);
 });
@@ -50,7 +55,14 @@ it('mirrors a subscription invoice into the local table', function () {
         ->and($invoice->total)->toBe(6000)
         ->and($invoice->number)->toBe('TOLERY-0001');
 
-    expect($team->localInvoices()->count())->toBe(1);
+    expect($team->aiCadInvoices()->count())->toBe(1);
+});
+
+it('keeps the Cashier invoices API available for application team models', function () {
+    $method = new ReflectionMethod(CashierCompatibleChatTeam::class, 'invoices');
+
+    expect($method->getNumberOfParameters())->toBe(2)
+        ->and($method->getReturnType()?->getName())->toBe(Illuminate\Support\Collection::class);
 });
 
 it('is idempotent when the same invoice is synced twice', function () {
