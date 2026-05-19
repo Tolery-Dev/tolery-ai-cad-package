@@ -70,6 +70,7 @@ return [
                     ['name' => 'Dashboard', 'route' => 'ai-cad.admin.dashboard'],
                     ['name' => 'Conversations', 'route' => 'ai-cad.admin.chats.index'],
                     ['name' => 'Achats', 'route' => 'ai-cad.admin.purchases.index'],
+                    ['name' => 'Produits Stripe', 'route' => 'ai-cad.admin.products.index'],
                     ['name' => 'Téléchargements', 'route' => 'ai-cad.admin.downloads.index'],
                     ['name' => 'Prompts', 'route' => 'ai-cad.admin.prompts.index'],
                 ],

@@ -86,6 +86,25 @@ it('heals an existing product whose frequency is NULL', function () {
         ->and($product->frequency)->toBe(ResetFrequency::MONTHLY);
 });
 
+it('syncs the product image URL from Stripe', function () {
+    $service = new StripeSyncService($this->aiCadStripe);
+    $stripeProduct = makeStripeProduct([
+        'images' => ['https://files.stripe.com/product-image.png'],
+    ]);
+
+    $product = invokeSyncProduct($service, $stripeProduct);
+
+    expect($product->image_url)->toBe('https://files.stripe.com/product-image.png');
+});
+
+it('sets the image URL to null when the Stripe product has no image', function () {
+    $service = new StripeSyncService($this->aiCadStripe);
+
+    $product = invokeSyncProduct($service, makeStripeProduct(['images' => []]));
+
+    expect($product->image_url)->toBeNull();
+});
+
 it('updates basic attributes from Stripe payload', function () {
     SubscriptionProduct::factory()->create([
         'stripe_id' => 'prod_update_attrs',

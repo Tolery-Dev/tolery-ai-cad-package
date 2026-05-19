@@ -28,6 +28,7 @@ use Tolery\AiCad\Livewire\Admin\PredefinedPromptForm;
 use Tolery\AiCad\Livewire\Admin\PredefinedPromptTable;
 use Tolery\AiCad\Livewire\Admin\StepMessageForm;
 use Tolery\AiCad\Livewire\Admin\StepMessageTable;
+use Tolery\AiCad\Livewire\Admin\SubscriptionProductTable;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Livewire\ChatConfig;
 use Tolery\AiCad\Livewire\ChatHistoryPanel;
@@ -142,6 +143,7 @@ class AiCadServiceProvider extends PackageServiceProvider
             Livewire::component('ai-cad-admin-predefined-prompt-form', PredefinedPromptForm::class);
             Livewire::component('ai-cad-admin-step-message-table', StepMessageTable::class);
             Livewire::component('ai-cad-admin-step-message-form', StepMessageForm::class);
+            Livewire::component('ai-cad-admin-subscription-product-table', SubscriptionProductTable::class);
         });
 
         return $this;

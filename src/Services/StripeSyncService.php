@@ -79,8 +79,11 @@ class StripeSyncService
 
         $product = SubscriptionProduct::firstOrNew(['stripe_id' => $stripeProduct->id]);
 
+        $images = $stripeProduct->images ?? [];
+
         $product->name = $stripeProduct->name;
         $product->description = $stripeProduct->description ?? '';
+        $product->image_url = ! empty($images) ? $images[0] : null;
         $product->active = $stripeProduct->active;
         $product->files_allowed = $filesAllowed ? (int) $filesAllowed : null;
 
