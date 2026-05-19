@@ -17,6 +17,7 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property int $id
  * @property string $name
  * @property string $description
+ * @property ?string $image_url
  * @property int $price
  * @property bool $active
  * @property int $files_allowed
@@ -36,6 +37,7 @@ class SubscriptionProduct extends Model
         'stripe_id',
         'name',
         'description',
+        'image_url',
         'files_allowed',
         'active',
         'frequency',

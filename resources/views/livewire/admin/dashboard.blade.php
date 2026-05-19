@@ -49,6 +49,13 @@
         <flux:card class="bg-purple-50 dark:bg-purple-900/20">
             <flux:heading level="3" size="sm">Total abonnés</flux:heading>
             <div class="mt-2 text-3xl font-bold text-purple-600 dark:text-purple-400">{{ $kpis['subscription_count'] }}</div>
+            <flux:text class="text-sm text-gray-500 mt-1">actifs et essais inclus</flux:text>
+        </flux:card>
+
+        <flux:card class="bg-amber-50 dark:bg-amber-900/20">
+            <flux:heading level="3" size="sm">Essais gratuits en cours</flux:heading>
+            <div class="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-400">{{ $kpis['trialing_count'] }}</div>
+            <flux:text class="text-sm text-gray-500 mt-1">compte(s) en période d'essai</flux:text>
         </flux:card>
 
         @forelse ($kpis['subscriptions_by_product'] as $productName => $count)
@@ -62,6 +69,51 @@
                 <flux:text class="text-gray-500">Aucun abonnement actif</flux:text>
             </flux:card>
         @endforelse
+    </div>
+
+    {{-- Comptes en essai gratuit --}}
+    <flux:heading level="2" size="lg" class="mb-4">Comptes en essai gratuit</flux:heading>
+    <div class="mb-8 overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
+        @if ($trialingSubscriptions->isEmpty())
+            <div class="p-6">
+                <flux:text class="text-gray-500">Aucun compte en essai gratuit actuellement.</flux:text>
+            </div>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-100 text-left text-gray-500 dark:border-gray-700">
+                            <th class="px-4 py-3 font-medium">Équipe</th>
+                            <th class="px-4 py-3 font-medium">Produit</th>
+                            <th class="px-4 py-3 font-medium">Début d'essai</th>
+                            <th class="px-4 py-3 font-medium">Fin d'essai</th>
+                            <th class="px-4 py-3 font-medium">Jours restants</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($trialingSubscriptions as $trial)
+                            <tr class="border-b border-gray-50 last:border-0 dark:border-gray-800">
+                                <td class="px-4 py-3 font-medium">{{ $trial['team_name'] }}</td>
+                                <td class="px-4 py-3">{{ $trial['product_name'] }}</td>
+                                <td class="px-4 py-3 text-gray-500">{{ $trial['started_at']?->format('d/m/Y') ?? '-' }}</td>
+                                <td class="px-4 py-3 text-gray-500">{{ $trial['trial_ends_at']?->format('d/m/Y') ?? '-' }}</td>
+                                <td class="px-4 py-3">
+                                    @if ($trial['days_left'] === null)
+                                        <span class="text-gray-400">-</span>
+                                    @elseif ($trial['days_left'] < 0)
+                                        <flux:badge size="sm" color="red">Expiré</flux:badge>
+                                    @else
+                                        <flux:badge size="sm" color="{{ $trial['days_left'] <= 3 ? 'amber' : 'green' }}">
+                                            {{ $trial['days_left'] }} jour(s)
+                                        </flux:badge>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
     </div>
 
     {{-- Activity KPIs --}}
@@ -90,6 +142,10 @@
         <flux:button href="{{ route('ai-cad.admin.chats.index') }}" variant="outline" class="justify-start">
             <flux:icon name="chat-bubble-left-right" class="mr-2" />
             Voir les conversations
+        </flux:button>
+        <flux:button href="{{ route('ai-cad.admin.products.index') }}" variant="outline" class="justify-start">
+            <flux:icon name="cube" class="mr-2" />
+            Produits Stripe
         </flux:button>
         <flux:button href="{{ route('ai-cad.admin.downloads.index') }}" variant="outline" class="justify-start">
             <flux:icon name="arrow-down-tray" class="mr-2" />

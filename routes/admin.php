@@ -8,6 +8,7 @@ use Tolery\AiCad\Http\Controllers\Admin\DownloadController;
 use Tolery\AiCad\Http\Controllers\Admin\FilePurchaseController;
 use Tolery\AiCad\Http\Controllers\Admin\PredefinedPromptController;
 use Tolery\AiCad\Http\Controllers\Admin\StepMessageController;
+use Tolery\AiCad\Http\Controllers\Admin\SubscriptionProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +39,9 @@ Route::middleware(config('ai-cad.admin.middleware', ['web', 'auth', 'admin']))
 
         // File Purchases
         Route::get('/purchases', [FilePurchaseController::class, 'index'])->name('purchases.index');
+
+        // Subscription Products (Stripe catalog)
+        Route::get('/products', [SubscriptionProductController::class, 'index'])->name('products.index');
 
         // Downloads
         Route::get('/downloads', [ChatDownloadController::class, 'index'])->name('downloads.index');

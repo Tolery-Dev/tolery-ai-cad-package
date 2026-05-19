@@ -4,12 +4,15 @@ namespace Tolery\AiCad\Livewire\Admin;
 
 use Composer\InstalledVersions;
 use Flux\DateRange;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Laravel\Cashier\Subscription;
 use Laravel\Cashier\SubscriptionItem;
 use Livewire\Component;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
+use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\SubscriptionPrice;
 use Tolery\AiCad\Models\SubscriptionProduct;
@@ -32,6 +35,7 @@ class Dashboard extends Component
      *     conversation_count: int,
      *     download_count: int,
      *     subscription_count: int,
+     *     trialing_count: int,
      *     subscriptions_by_product: array<string, int>
      * }
      */
@@ -112,14 +116,59 @@ class Dashboard extends Component
             'conversation_count' => $chatQuery->count(),
             'download_count' => $downloadQuery->count(),
             'subscription_count' => $activeSubscriptions->count(),
+            'trialing_count' => $activeSubscriptions->where('stripe_status', 'trialing')->count(),
             'subscriptions_by_product' => $subscriptionsByProduct,
         ];
+    }
+
+    /**
+     * Teams currently on a free trial, paired with their plan and trial end date.
+     *
+     * @return Collection<int, array{team_name: string, product_name: string, trial_ends_at: ?Carbon, started_at: ?Carbon, days_left: ?int}>
+     */
+    public function getTrialingSubscriptions(): Collection
+    {
+        $subscriptions = Subscription::query()
+            ->where('type', 'default')
+            ->where('stripe_status', 'trialing')
+            ->with('items')
+            ->orderBy('trial_ends_at')
+            ->get();
+
+        /** @var Collection<int, ChatTeam> $teams */
+        $teams = ChatTeam::query()
+            ->whereIn('id', $subscriptions->pluck('team_id')->filter()->unique()->all())
+            ->get()
+            ->keyBy('id');
+
+        return $subscriptions->map(function (Subscription $subscription) use ($teams): array {
+            /** @var SubscriptionItem|null $item */
+            $item = $subscription->items->first();
+
+            $product = $item !== null
+                /** @phpstan-ignore-next-line - stripe_product is a dynamic attribute from Cashier */
+                ? SubscriptionProduct::where('stripe_id', $item->stripe_product)->first()
+                : null;
+
+            $trialEndsAt = $subscription->trial_ends_at;
+
+            return [
+                'team_name' => $teams->get($subscription->team_id)?->name ?? 'Inconnu',
+                'product_name' => $product?->name ?? 'Inconnu',
+                'trial_ends_at' => $trialEndsAt,
+                'started_at' => $subscription->created_at,
+                'days_left' => $trialEndsAt !== null
+                    ? (int) now()->startOfDay()->diffInDays($trialEndsAt->copy()->startOfDay(), false)
+                    : null,
+            ];
+        });
     }
 
     public function render(): View
     {
         return view('ai-cad::livewire.admin.dashboard', [
             'kpis' => $this->getKpis(),
+            'trialingSubscriptions' => $this->getTrialingSubscriptions(),
             'version' => InstalledVersions::getPrettyVersion('tolery/ai-cad') ?? 'dev',
         ]);
     }
