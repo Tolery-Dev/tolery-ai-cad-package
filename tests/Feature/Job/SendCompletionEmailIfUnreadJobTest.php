@@ -1,8 +1,11 @@
 <?php
 
+use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Tolery\AiCad\Jobs\SendCompletionEmailIfUnreadJob;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
@@ -30,7 +33,7 @@ beforeEach(function () {
     }
 });
 
-function makeChatMessageForCompletion(?\Carbon\Carbon $lastSeenAt): ChatMessage
+function makeChatMessageForCompletion(?Carbon $lastSeenAt): ChatMessage
 {
     $team = ChatTeam::factory()->create();
 
@@ -52,10 +55,10 @@ function makeChatMessageForCompletion(?\Carbon\Carbon $lastSeenAt): ChatMessage
     ]);
 }
 
-function insertDatabaseNotification(ChatMessage $message, ?\Carbon\Carbon $readAt): void
+function insertDatabaseNotification(ChatMessage $message, ?Carbon $readAt): void
 {
-    \Illuminate\Support\Facades\DB::table('notifications')->insert([
-        'id' => (string) \Illuminate\Support\Str::uuid(),
+    DB::table('notifications')->insert([
+        'id' => (string) Str::uuid(),
         'type' => CadGenerationCompletedNotification::class,
         'notifiable_type' => ChatUser::class,
         'notifiable_id' => $message->user->getKey(),

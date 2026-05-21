@@ -1,5 +1,6 @@
 <?php
 
+use Carbon\Carbon;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatTeam;
@@ -11,7 +12,7 @@ beforeEach(function () {
     config()->set('ai-cad.chat_user_model', ChatUser::class);
 });
 
-function makeChatMessageForFailure(?\Carbon\Carbon $lastSeenAt): ChatMessage
+function makeChatMessageForFailure(?Carbon $lastSeenAt): ChatMessage
 {
     $team = ChatTeam::factory()->create();
 
