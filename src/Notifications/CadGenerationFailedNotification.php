@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Tolery\AiCad\Models\ChatMessage;
+use Tolery\AiCad\Support\UserPresence;
 
 class CadGenerationFailedNotification extends Notification implements ShouldQueue
 {
@@ -18,13 +19,19 @@ class CadGenerationFailedNotification extends Notification implements ShouldQueu
     ) {}
 
     /**
-     * Failure notifications are always sent by both database and email — the user
-     * needs to know without having to come back to the app.
+     * Failure notifications go through both the database (cloche) and email
+     * channels so a user who closed the tab still hears about it. When the
+     * user is actively on the chatbot UI (issue #2199), the cloche alone is
+     * enough — we drop the email to avoid inbox spam.
      *
      * @return array<int, string>
      */
     public function via(mixed $notifiable): array
     {
+        if (UserPresence::isOnline($notifiable)) {
+            return ['database'];
+        }
+
         return ['database', 'mail'];
     }
 
