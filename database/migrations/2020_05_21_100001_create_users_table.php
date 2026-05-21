@@ -23,6 +23,7 @@ return new class extends Migration
             Schema::create('users', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('team_id')->index()->nullable()->constrained()->cascadeOnDelete();
+                $table->timestamp('last_seen_at')->nullable();
                 $table->timestamps();
             });
         }
@@ -30,6 +31,17 @@ return new class extends Migration
         if (! Schema::hasColumn('users', 'team_id')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->foreignId('team_id')->index()->nullable()->constrained()->cascadeOnDelete();
+            });
+        }
+
+        // `last_seen_at` is owned by the host app's `users` table (mn-tolery
+        // updates it via TrackUserActivity middleware). The package only reads
+        // it through `UserPresence` to decide whether to skip redundant
+        // email notifications. We declare it here so the package's test suite
+        // can simulate online/offline users.
+        if (! Schema::hasColumn('users', 'last_seen_at')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->timestamp('last_seen_at')->nullable();
             });
         }
     }

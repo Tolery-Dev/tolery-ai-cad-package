@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Notifications\CadGenerationCompletedNotification;
+use Tolery\AiCad\Support\UserPresence;
 
 /**
  * Dispatched (with a delay) immediately after the database completion notification
@@ -38,6 +39,20 @@ class SendCompletionEmailIfUnreadJob implements ShouldQueue
         $user = $message->user ?? $message->chat?->user;
 
         if (! $user) {
+            return;
+        }
+
+        // Issue #2199 — don't email a user who is actively on the chatbot UI:
+        // the cloche notification is already visible, an email on top of it
+        // just fills their inbox. The host app refreshes `last_seen_at` on
+        // every authenticated request, so a "recent" timestamp is a strong
+        // signal the user is still around.
+        if (UserPresence::isOnline($user)) {
+            Log::info('[AICAD] Completion email skipped — user currently online', [
+                'message_id' => $message->id,
+                'user_id' => $user->getKey(),
+            ]);
+
             return;
         }
 
