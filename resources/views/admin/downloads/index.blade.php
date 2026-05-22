@@ -1,7 +1,3 @@
-<x-layout.app>
-    <x-slot:title returnUrl="{{ route('ai-cad.admin.dashboard') }}">
-        ToleryCad - Téléchargements
-    </x-slot>
-
+<x-layout.admin.tolerycad title="ToleryCAD - Téléchargements">
     <livewire:ai-cad-admin-chat-download-table />
-</x-layout.app>
+</x-layout.admin.tolerycad>

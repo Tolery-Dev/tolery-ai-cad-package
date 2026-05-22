@@ -1,7 +1,3 @@
-<x-layout.app>
-    <x-slot:title returnUrl="{{ route('ai-cad.admin.dashboard') }}">
-        ToleryCad - Achats de fichiers
-    </x-slot>
-
+<x-layout.admin.tolerycad title="ToleryCAD - Achats de fichiers">
     <livewire:ai-cad-admin-file-purchase-table />
-</x-layout.app>
+</x-layout.admin.tolerycad>

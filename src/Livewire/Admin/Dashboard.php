@@ -36,7 +36,10 @@ class Dashboard extends Component
      *     download_count: int,
      *     subscription_count: int,
      *     trialing_count: int,
-     *     subscriptions_by_product: array<string, int>
+     *     paying_count: int,
+     *     at_risk_count: int,
+     *     subscriptions_by_product: array<string, int>,
+     *     deltas: array{total_revenue: ?float, subscription_revenue: ?float, purchase_revenue: ?float, conversation_count: ?int, download_count: ?int}
      * }
      */
     public function getKpis(): array
@@ -53,72 +56,141 @@ class Dashboard extends Component
         // "Tout le temps" : start()/end() both return null — no date filter applied
         $hasDateFilter = $startDate !== null && $endDate !== null;
 
-        // Achats unitaires
-        $purchaseQuery = FilePurchase::query();
+        $current = $this->windowMetrics($startDate, $endDate, $hasDateFilter);
+
+        // Comparable previous window (same length, immediately before) for deltas.
+        // Only computed when a finite period is selected.
+        $previous = null;
         if ($hasDateFilter) {
-            $purchaseQuery->whereBetween('purchased_at', [$startDate, $endDate]);
-        }
-        $purchaseAmount = (clone $purchaseQuery)->sum('amount');
-        $purchaseCount = (clone $purchaseQuery)->count();
-
-        // Abonnements créés sur la période
-        $subscriptionsQuery = Subscription::query()
-            ->where('type', 'default')
-            ->whereIn('stripe_status', ['active', 'trialing']);
-        if ($hasDateFilter) {
-            $subscriptionsQuery->whereBetween('created_at', [$startDate, $endDate]);
-        }
-        $subscriptionsOnPeriod = $subscriptionsQuery->get();
-
-        // Calculer le revenu des abonnements
-        $subscriptionRevenue = 0;
-        foreach ($subscriptionsOnPeriod as $subscription) {
-            /** @phpstan-ignore-next-line - stripe_price is a dynamic attribute from Cashier */
-            $stripePrice = $subscription->stripe_price;
-            $price = SubscriptionPrice::where('stripe_price_id', $stripePrice)->first();
-            if ($price) {
-                $subscriptionRevenue += $price->amount;
-            }
+            $duration = (int) $startDate->diffInSeconds($endDate);
+            $previous = $this->windowMetrics(
+                $startDate->copy()->subSeconds($duration),
+                $startDate->copy(),
+                true,
+            );
         }
 
-        // Abonnements actifs actuels (pas limités à la période)
+        // Current snapshot (independent of the selected period)
         $activeSubscriptions = Subscription::query()
             ->where('type', 'default')
             ->whereIn('stripe_status', ['active', 'trialing'])
+            ->with('items')
             ->get();
 
-        // Grouper par produit
-        $subscriptionsByProduct = [];
-        foreach ($activeSubscriptions as $subscription) {
-            /** @var SubscriptionItem|null $item */
-            $item = $subscription->items()->first();
-            if ($item) {
-                /** @phpstan-ignore-next-line - stripe_product is a dynamic attribute from Cashier */
-                $stripeProduct = $item->stripe_product;
-                $product = SubscriptionProduct::where('stripe_id', $stripeProduct)->first();
-                $productName = $product->name ?? 'Inconnu';
-                $subscriptionsByProduct[$productName] = ($subscriptionsByProduct[$productName] ?? 0) + 1;
-            }
-        }
+        $subscriptionsByProduct = $this->groupByProduct($activeSubscriptions);
 
-        $chatQuery = Chat::query();
-        $downloadQuery = ChatDownload::query();
-        if ($hasDateFilter) {
-            $chatQuery->whereBetween('created_at', [$startDate, $endDate]);
-            $downloadQuery->whereBetween('downloaded_at', [$startDate, $endDate]);
-        }
+        // À risque : résiliation programmée encore en période de grâce.
+        $atRiskCount = Subscription::query()
+            ->where('type', 'default')
+            ->whereNotNull('ends_at')
+            ->where('ends_at', '>', now())
+            ->count();
+
+        $currentTotal = $current['purchase_amount'] + $current['subscription_amount'];
+        $previousTotal = $previous !== null
+            ? $previous['purchase_amount'] + $previous['subscription_amount']
+            : null;
 
         return [
-            'purchase_revenue' => $purchaseAmount / 100,
-            'subscription_revenue' => $subscriptionRevenue / 100,
-            'total_revenue' => ($purchaseAmount + $subscriptionRevenue) / 100,
-            'purchase_count' => $purchaseCount,
-            'conversation_count' => $chatQuery->count(),
-            'download_count' => $downloadQuery->count(),
+            'purchase_revenue' => $current['purchase_amount'] / 100,
+            'subscription_revenue' => $current['subscription_amount'] / 100,
+            'total_revenue' => $currentTotal / 100,
+            'purchase_count' => $current['purchase_count'],
+            'conversation_count' => $current['conversation_count'],
+            'download_count' => $current['download_count'],
             'subscription_count' => $activeSubscriptions->count(),
             'trialing_count' => $activeSubscriptions->where('stripe_status', 'trialing')->count(),
+            'paying_count' => $activeSubscriptions->where('stripe_status', 'active')->count(),
+            'at_risk_count' => $atRiskCount,
             'subscriptions_by_product' => $subscriptionsByProduct,
+            'deltas' => [
+                'total_revenue' => $this->deltaPct($previousTotal, $currentTotal),
+                'subscription_revenue' => $this->deltaPct($previous['subscription_amount'] ?? null, $current['subscription_amount']),
+                'purchase_revenue' => $this->deltaPct($previous['purchase_amount'] ?? null, $current['purchase_amount']),
+                'conversation_count' => $previous !== null ? $current['conversation_count'] - $previous['conversation_count'] : null,
+                'download_count' => $previous !== null ? $current['download_count'] - $previous['download_count'] : null,
+            ],
         ];
+    }
+
+    /**
+     * Period-dependent revenue and activity metrics for a single time window.
+     *
+     * @return array{purchase_amount: int, subscription_amount: int, purchase_count: int, conversation_count: int, download_count: int}
+     */
+    private function windowMetrics(?\Carbon\Carbon $start, ?\Carbon\Carbon $end, bool $hasDateFilter): array
+    {
+        $purchaseQuery = FilePurchase::query();
+        $chatQuery = Chat::query();
+        $downloadQuery = ChatDownload::query();
+        $subscriptionsQuery = Subscription::query()
+            ->where('type', 'default')
+            ->whereIn('stripe_status', ['active', 'trialing']);
+
+        if ($hasDateFilter) {
+            $purchaseQuery->whereBetween('purchased_at', [$start, $end]);
+            $chatQuery->whereBetween('created_at', [$start, $end]);
+            $downloadQuery->whereBetween('downloaded_at', [$start, $end]);
+            $subscriptionsQuery->whereBetween('created_at', [$start, $end]);
+        }
+
+        // Subscription revenue: sum each created subscription's plan amount,
+        // resolved in one batch to avoid N+1.
+        $subscriptions = $subscriptionsQuery->get(['id', 'stripe_price']);
+        $priceAmounts = SubscriptionPrice::query()
+            ->whereIn('stripe_price_id', $subscriptions->pluck('stripe_price')->filter()->unique()->all())
+            ->pluck('amount', 'stripe_price_id');
+
+        $subscriptionAmount = (int) $subscriptions->sum(
+            /** @phpstan-ignore-next-line - stripe_price is a dynamic Cashier attribute */
+            fn (Subscription $s) => (int) ($priceAmounts[$s->stripe_price] ?? 0)
+        );
+
+        return [
+            'purchase_amount' => (int) $purchaseQuery->sum('amount'),
+            'subscription_amount' => $subscriptionAmount,
+            'purchase_count' => $purchaseQuery->count(),
+            'conversation_count' => $chatQuery->count(),
+            'download_count' => $downloadQuery->count(),
+        ];
+    }
+
+    /**
+     * Count active/trialing subscriptions grouped by product name.
+     *
+     * @param  Collection<int, Subscription>  $activeSubscriptions
+     * @return array<string, int>
+     */
+    private function groupByProduct(Collection $activeSubscriptions): array
+    {
+        $productNames = SubscriptionProduct::query()->pluck('name', 'stripe_id');
+
+        $grouped = [];
+        foreach ($activeSubscriptions as $subscription) {
+            /** @var SubscriptionItem|null $item */
+            $item = $subscription->items->first();
+            if ($item === null) {
+                continue;
+            }
+
+            /** @phpstan-ignore-next-line - stripe_product is a dynamic Cashier attribute */
+            $productName = $productNames[$item->stripe_product] ?? 'Inconnu';
+            $grouped[$productName] = ($grouped[$productName] ?? 0) + 1;
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * Percentage change between two amounts, or null when there is no comparable base.
+     */
+    private function deltaPct(?int $previous, int $current): ?float
+    {
+        if ($previous === null || $previous === 0) {
+            return null;
+        }
+
+        return round((($current - $previous) / $previous) * 100, 1);
     }
 
     /**

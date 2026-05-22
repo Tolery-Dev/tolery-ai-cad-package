@@ -1,13 +1,9 @@
-<x-layout.app>
-    <x-slot:title returnUrl="{{ route('ai-cad.admin.dashboard') }}">
-        ToleryCad - Messages d'etape
-    </x-slot>
-
+<x-layout.admin.tolerycad title="ToleryCAD - Messages d'étape">
     <div class="mb-4 flex justify-end">
         <flux:button href="{{ route('ai-cad.admin.step-messages.create') }}" icon="plus">
-            Nouveau message d'etape
+            Nouveau message d'étape
         </flux:button>
     </div>
 
     <livewire:ai-cad-admin-step-message-table />
-</x-layout.app>
+</x-layout.admin.tolerycad>
