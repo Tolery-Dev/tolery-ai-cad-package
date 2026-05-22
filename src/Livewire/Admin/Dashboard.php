@@ -118,7 +118,7 @@ class Dashboard extends Component
      *
      * @return array{purchase_amount: int, subscription_amount: int, purchase_count: int, conversation_count: int, download_count: int}
      */
-    private function windowMetrics(?Carbon $start, ?Carbon $end, bool $hasDateFilter): array
+    private function windowMetrics(?\Carbon\Carbon $start, ?\Carbon\Carbon $end, bool $hasDateFilter): array
     {
         $purchaseQuery = FilePurchase::query();
         $chatQuery = Chat::query();
