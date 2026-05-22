@@ -1,5 +1,3 @@
-<x-layout.app>
-    <x-slot:title>ToleryCad - Dashboard</x-slot>
-
+<x-layout.admin.tolerycad title="ToleryCAD - Tableau de bord">
     <livewire:ai-cad-admin-dashboard />
-</x-layout.app>
+</x-layout.admin.tolerycad>

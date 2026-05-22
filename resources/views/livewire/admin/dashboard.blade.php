@@ -1,12 +1,22 @@
+@php
+    /**
+     * Render a period-over-period delta as a coloured Flux badge.
+     * $value is a percentage (float) or an absolute count (int); null hides the badge.
+     */
+    $deltaColor = fn ($value) => $value === null ? 'zinc' : ($value > 0 ? 'green' : ($value < 0 ? 'red' : 'zinc'));
+
+    $maxByProduct = collect($kpis['subscriptions_by_product'])->max() ?: 1;
+@endphp
+
 <div>
     {{-- Header with Period Selector --}}
-    <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <div class="flex items-center gap-3">
-                <flux:heading level="1" size="xl">Dashboard ToleryCAD</flux:heading>
+                <flux:heading level="1" size="xl">Tableau de bord</flux:heading>
                 <flux:badge color="zinc" size="sm">v{{ $version }}</flux:badge>
             </div>
-            <flux:text class="text-gray-500">Statistiques et revenus</flux:text>
+            <flux:text class="text-zinc-500">Revenus, abonnements et activité de la plateforme ToleryCAD.</flux:text>
         </div>
         <flux:date-picker
             wire:model.live="range"
@@ -21,70 +31,82 @@
         </flux:date-picker>
     </div>
 
-    {{-- Revenue Summary --}}
-    <flux:heading level="2" size="lg" class="mb-4">Revenus</flux:heading>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-3 mb-8">
-        <flux:card class="bg-green-50 dark:bg-green-900/20">
-            <flux:heading level="3" size="sm">Total revenus ToleryCAD</flux:heading>
-            <div class="mt-2 text-3xl font-bold text-green-600 dark:text-green-400">{{ number_format($kpis['total_revenue'], 2, ',', ' ') }} €</div>
-            <flux:text class="text-sm text-gray-500 mt-1">Sur la période sélectionnée</flux:text>
-        </flux:card>
+    {{-- Revenue KPIs --}}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        @php
+            $revenueCards = [
+                ['label' => 'Revenus totaux', 'value' => $kpis['total_revenue'], 'delta' => $kpis['deltas']['total_revenue'], 'icon' => 'banknotes'],
+                ['label' => 'Revenus abonnements', 'value' => $kpis['subscription_revenue'], 'delta' => $kpis['deltas']['subscription_revenue'], 'icon' => 'arrow-path'],
+                ['label' => 'Revenus à la pièce', 'value' => $kpis['purchase_revenue'], 'delta' => $kpis['deltas']['purchase_revenue'], 'icon' => 'cube'],
+            ];
+        @endphp
 
-        <flux:card>
-            <flux:heading level="3" size="sm">Revenus abonnements</flux:heading>
-            <div class="mt-2 text-3xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($kpis['subscription_revenue'], 2, ',', ' ') }} €</div>
-            <flux:text class="text-sm text-gray-500 mt-1">Nouveaux abonnements sur la période</flux:text>
-        </flux:card>
+        @foreach ($revenueCards as $card)
+            <flux:card class="flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                    <flux:text class="text-sm font-medium text-zinc-500">{{ $card['label'] }}</flux:text>
+                    <flux:icon :name="$card['icon']" class="size-4 text-zinc-400" />
+                </div>
+                <div class="text-2xl font-bold tabular-nums">{{ number_format($card['value'], 2, ',', ' ') }} €</div>
+                <div class="mt-auto">
+                    @if ($card['delta'] !== null)
+                        <flux:badge :color="$deltaColor($card['delta'])" size="sm">
+                            {{ $card['delta'] > 0 ? '+' : '' }}{{ number_format($card['delta'], 1, ',', ' ') }} %
+                        </flux:badge>
+                        <flux:text class="ml-1 text-xs text-zinc-500">vs période précédente</flux:text>
+                    @else
+                        <flux:text class="text-xs text-zinc-400">Sur la période sélectionnée</flux:text>
+                    @endif
+                </div>
+            </flux:card>
+        @endforeach
 
-        <flux:card>
-            <flux:heading level="3" size="sm">Revenus achats unitaires</flux:heading>
-            <div class="mt-2 text-3xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($kpis['purchase_revenue'], 2, ',', ' ') }} €</div>
-            <flux:text class="text-sm text-gray-500 mt-1">{{ $kpis['purchase_count'] }} achat(s) de fichier</flux:text>
+        <flux:card class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <flux:text class="text-sm font-medium text-zinc-500">Abonnés</flux:text>
+                <flux:icon name="user-group" class="size-4 text-zinc-400" />
+            </div>
+            <div class="text-2xl font-bold tabular-nums">{{ $kpis['subscription_count'] }}</div>
+            <div class="mt-auto flex flex-wrap gap-1.5">
+                <flux:badge color="green" size="sm">{{ $kpis['paying_count'] }} payant{{ $kpis['paying_count'] > 1 ? 's' : '' }}</flux:badge>
+                <flux:badge color="amber" size="sm">{{ $kpis['trialing_count'] }} en essai</flux:badge>
+                @if ($kpis['at_risk_count'] > 0)
+                    <flux:badge color="red" size="sm">{{ $kpis['at_risk_count'] }} à risque</flux:badge>
+                @endif
+            </div>
         </flux:card>
     </div>
 
-    {{-- Subscriptions --}}
-    <flux:heading level="2" size="lg" class="mb-4">Abonnements actifs</flux:heading>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <flux:card class="bg-purple-50 dark:bg-purple-900/20">
-            <flux:heading level="3" size="sm">Total abonnés</flux:heading>
-            <div class="mt-2 text-3xl font-bold text-purple-600 dark:text-purple-400">{{ $kpis['subscription_count'] }}</div>
-            <flux:text class="text-sm text-gray-500 mt-1">actifs et essais inclus</flux:text>
-        </flux:card>
-
-        <flux:card class="bg-amber-50 dark:bg-amber-900/20">
-            <flux:heading level="3" size="sm">Essais gratuits en cours</flux:heading>
-            <div class="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-400">{{ $kpis['trialing_count'] }}</div>
-            <flux:text class="text-sm text-gray-500 mt-1">compte(s) en période d'essai</flux:text>
-        </flux:card>
-
+    {{-- Subscriptions breakdown by plan --}}
+    <flux:heading level="2" size="lg" class="mb-4">Abonnements actifs par plan</flux:heading>
+    <flux:card class="mb-8">
         @forelse ($kpis['subscriptions_by_product'] as $productName => $count)
-            <flux:card>
-                <flux:heading level="3" size="sm">{{ $productName }}</flux:heading>
-                <div class="mt-2 text-3xl font-bold">{{ $count }}</div>
-                <flux:text class="text-sm text-gray-500 mt-1">abonné(s)</flux:text>
-            </flux:card>
+            <div class="flex items-center gap-3 py-1.5">
+                <span class="w-40 shrink-0 text-sm text-zinc-600 dark:text-zinc-300 truncate">{{ $productName }}</span>
+                <div class="flex-1 h-2 rounded-full bg-zinc-100 dark:bg-zinc-700 overflow-hidden">
+                    <div class="h-full rounded-full bg-violet-600" style="width: {{ max(4, round(($count / $maxByProduct) * 100)) }}%;"></div>
+                </div>
+                <span class="w-10 text-right text-sm font-medium tabular-nums">{{ $count }}</span>
+            </div>
         @empty
-            <flux:card class="md:col-span-3">
-                <flux:text class="text-gray-500">Aucun abonnement actif</flux:text>
-            </flux:card>
+            <flux:text class="text-zinc-500">Aucun abonnement actif.</flux:text>
         @endforelse
-    </div>
+    </flux:card>
 
     {{-- Comptes en essai gratuit --}}
     <flux:heading level="2" size="lg" class="mb-4">Comptes en essai gratuit</flux:heading>
-    <div class="mb-8 overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700">
+    <div class="mb-8 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
         @if ($trialingSubscriptions->isEmpty())
             <div class="p-6">
-                <flux:text class="text-gray-500">Aucun compte en essai gratuit actuellement.</flux:text>
+                <flux:text class="text-zinc-500">Aucun compte en essai gratuit actuellement.</flux:text>
             </div>
         @else
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
-                        <tr class="border-b border-gray-100 text-left text-gray-500 dark:border-gray-700">
+                        <tr class="border-b border-zinc-200 text-left text-zinc-500 dark:border-zinc-700">
                             <th class="px-4 py-3 font-medium">Équipe</th>
-                            <th class="px-4 py-3 font-medium">Produit</th>
+                            <th class="px-4 py-3 font-medium">Plan</th>
                             <th class="px-4 py-3 font-medium">Début d'essai</th>
                             <th class="px-4 py-3 font-medium">Fin d'essai</th>
                             <th class="px-4 py-3 font-medium">Jours restants</th>
@@ -92,14 +114,14 @@
                     </thead>
                     <tbody>
                         @foreach ($trialingSubscriptions as $trial)
-                            <tr class="border-b border-gray-50 last:border-0 dark:border-gray-800">
+                            <tr class="border-b border-zinc-100 last:border-0 dark:border-zinc-800">
                                 <td class="px-4 py-3 font-medium">{{ $trial['team_name'] }}</td>
                                 <td class="px-4 py-3">{{ $trial['product_name'] }}</td>
-                                <td class="px-4 py-3 text-gray-500">{{ $trial['started_at']?->format('d/m/Y') ?? '-' }}</td>
-                                <td class="px-4 py-3 text-gray-500">{{ $trial['trial_ends_at']?->format('d/m/Y') ?? '-' }}</td>
+                                <td class="px-4 py-3 text-zinc-500">{{ $trial['started_at']?->format('d/m/Y') ?? '-' }}</td>
+                                <td class="px-4 py-3 text-zinc-500">{{ $trial['trial_ends_at']?->format('d/m/Y') ?? '-' }}</td>
                                 <td class="px-4 py-3">
                                     @if ($trial['days_left'] === null)
-                                        <span class="text-gray-400">-</span>
+                                        <span class="text-zinc-400">-</span>
                                     @elseif ($trial['days_left'] < 0)
                                         <flux:badge size="sm" color="red">Expiré</flux:badge>
                                     @else
@@ -118,64 +140,29 @@
 
     {{-- Activity KPIs --}}
     <flux:heading level="2" size="lg" class="mb-4">Activité</flux:heading>
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 mb-8">
-        <flux:card>
-            <flux:heading level="3" size="sm">Conversations</flux:heading>
-            <div class="mt-2 text-3xl font-bold">{{ $kpis['conversation_count'] }}</div>
-            <flux:text class="text-sm text-gray-500 mt-1">Sur la période sélectionnée</flux:text>
-        </flux:card>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        @php
+            $activityCards = [
+                ['label' => 'Conversations CAO', 'value' => $kpis['conversation_count'], 'delta' => $kpis['deltas']['conversation_count']],
+                ['label' => 'Téléchargements', 'value' => $kpis['download_count'], 'delta' => $kpis['deltas']['download_count']],
+            ];
+        @endphp
 
-        <flux:card>
-            <flux:heading level="3" size="sm">Téléchargements</flux:heading>
-            <div class="mt-2 text-3xl font-bold">{{ $kpis['download_count'] }}</div>
-            <flux:text class="text-sm text-gray-500 mt-1">Sur la période sélectionnée</flux:text>
-        </flux:card>
-    </div>
-
-    {{-- Quick Links --}}
-    <flux:heading level="2" size="lg" class="mb-4">Accès rapide</flux:heading>
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <flux:button href="{{ route('ai-cad.admin.purchases.index') }}" variant="outline" class="justify-start">
-            <flux:icon name="banknotes" class="mr-2" />
-            Voir les achats
-        </flux:button>
-        <flux:button href="{{ route('ai-cad.admin.chats.index') }}" variant="outline" class="justify-start">
-            <flux:icon name="chat-bubble-left-right" class="mr-2" />
-            Voir les conversations
-        </flux:button>
-        <flux:button href="{{ route('ai-cad.admin.products.index') }}" variant="outline" class="justify-start">
-            <flux:icon name="cube" class="mr-2" />
-            Produits Stripe
-        </flux:button>
-        <flux:button href="{{ route('ai-cad.admin.downloads.index') }}" variant="outline" class="justify-start">
-            <flux:icon name="arrow-down-tray" class="mr-2" />
-            Voir les téléchargements
-        </flux:button>
-        <flux:button href="{{ route('ai-cad.admin.prompts.index') }}" variant="outline" class="justify-start">
-            <flux:icon name="document-text" class="mr-2" />
-            Gérer les prompts
-        </flux:button>
-        <flux:button href="{{ route('ai-cad.admin.step-messages.index') }}" variant="outline" class="justify-start">
-            <flux:icon name="chat-bubble-bottom-center" class="mr-2" />
-            Gérer les messages d'étapes
-        </flux:button>
-        @if(Route::has('admin.tolerycad.beta-testers'))
-            <flux:button href="{{ route('admin.tolerycad.beta-testers') }}" variant="outline" class="justify-start">
-                <flux:icon name="user-group" class="mr-2" />
-                Gérer les beta testeurs
-            </flux:button>
-        @endif
-        @if(Route::has('admin.tolerycad.dfm-error-codes'))
-            <flux:button href="{{ route('admin.tolerycad.dfm-error-codes') }}" variant="outline" class="justify-start">
-                <flux:icon name="exclamation-triangle" class="mr-2" />
-                Gérer les codes d'erreurs DFM
-            </flux:button>
-        @endif
-        @if(Route::has('admin.tolerycad.subscriptions'))
-            <flux:button href="{{ route('admin.tolerycad.subscriptions') }}" variant="outline" class="justify-start">
-                <flux:icon name="credit-card" class="mr-2" />
-                Suivre les abonnements
-            </flux:button>
-        @endif
+        @foreach ($activityCards as $card)
+            <flux:card class="flex flex-col gap-2">
+                <flux:text class="text-sm font-medium text-zinc-500">{{ $card['label'] }}</flux:text>
+                <div class="text-2xl font-bold tabular-nums">{{ $card['value'] }}</div>
+                @if ($card['delta'] !== null)
+                    <div>
+                        <flux:badge :color="$deltaColor($card['delta'])" size="sm">
+                            {{ $card['delta'] > 0 ? '+' : '' }}{{ $card['delta'] }}
+                        </flux:badge>
+                        <flux:text class="ml-1 text-xs text-zinc-500">vs période précédente</flux:text>
+                    </div>
+                @else
+                    <flux:text class="text-xs text-zinc-400">Sur la période sélectionnée</flux:text>
+                @endif
+            </flux:card>
+        @endforeach
     </div>
 </div>

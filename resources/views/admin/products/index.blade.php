@@ -1,7 +1,3 @@
-<x-layout.app>
-    <x-slot:title returnUrl="{{ route('ai-cad.admin.dashboard') }}">
-        ToleryCad - Produits Stripe
-    </x-slot>
-
+<x-layout.admin.tolerycad title="ToleryCAD - Produits Stripe">
     <livewire:ai-cad-admin-subscription-product-table />
-</x-layout.app>
+</x-layout.admin.tolerycad>
