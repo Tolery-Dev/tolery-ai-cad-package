@@ -22,6 +22,7 @@ use Tolery\AiCad\Observers\SubscriptionProductObserver;
  * @property int $price
  * @property bool $active
  * @property int $files_allowed
+ * @property ?int $priority
  * @property string $stripe_id
  * @property string $stripe_price_id
  * @property ResetFrequency|null $frequency
@@ -42,6 +43,7 @@ class SubscriptionProduct extends Model
         'description',
         'image_url',
         'files_allowed',
+        'priority',
         'active',
         'frequency',
         'price',

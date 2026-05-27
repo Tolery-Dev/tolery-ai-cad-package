@@ -19,7 +19,7 @@ readonly class AICADClient
      *
      * @throws \RuntimeException
      */
-    public function streamDirectlyToOutput(string $message, ?string $projectId = null, bool $isEditRequest = false, int $timeoutSec = 600, string $materialChoice = 'STEEL'): void
+    public function streamDirectlyToOutput(string $message, ?string $projectId = null, bool $isEditRequest = false, int $timeoutSec = 600, string $materialChoice = 'STEEL', int $priority = 0): void
     {
         $url = $this->endpoint('/api/generate-cad-stream');
 
@@ -36,6 +36,12 @@ readonly class AICADClient
 
         if ($isEditRequest) {
             $queryParams['is_edit_request'] = 'true';
+        }
+
+        // Forwarded to DFM so it can prioritize generation by plan tier.
+        // No effect until the DFM scheduler honors it (see issue #2201).
+        if ($priority > 0) {
+            $queryParams['priority'] = (string) $priority;
         }
 
         $fullUrl = $url.'?'.http_build_query($queryParams);
@@ -231,6 +237,7 @@ readonly class AICADClient
         bool $isEditRequest,
         int $timeoutSec,
         string $materialChoice,
+        int $priority,
         callable $onProgress,
         callable $onComplete,
         callable $onError,
@@ -249,6 +256,12 @@ readonly class AICADClient
 
         if ($isEditRequest) {
             $queryParams['is_edit_request'] = 'true';
+        }
+
+        // Forwarded to DFM so it can prioritize generation by plan tier.
+        // No effect until the DFM scheduler honors it (see issue #2201).
+        if ($priority > 0) {
+            $queryParams['priority'] = (string) $priority;
         }
 
         $fullUrl = $url.'?'.http_build_query($queryParams);

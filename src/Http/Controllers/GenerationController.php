@@ -81,6 +81,7 @@ class GenerationController extends Controller
             sessionId: $validated['session_id'] ?? null,
             isEditRequest: (bool) ($validated['is_edit_request'] ?? false),
             materialChoice: $validated['material_choice'] ?? 'STEEL',
+            priority: $chat->team?->getGenerationPriority() ?? 0,
         );
 
         Log::info('[AICAD] Generation dispatched', [
