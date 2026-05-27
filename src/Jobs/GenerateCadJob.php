@@ -40,8 +40,23 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
         public ?string $sessionId,
         public bool $isEditRequest,
         public string $materialChoice,
+        public int $priority = 0,
     ) {
-        $this->onQueue('tolerycad-long');
+        $this->onQueue(self::queueForPriority($priority));
+    }
+
+    /**
+     * Map a generation priority (0-100) to a weighted queue. Workers consume
+     * them high → normal → low so paid plans get a worker before free ones
+     * under contention. See HasSubscription::getGenerationPriority().
+     */
+    public static function queueForPriority(int $priority): string
+    {
+        return match (true) {
+            $priority >= 70 => 'tolerycad-long-high',
+            $priority >= 1 => 'tolerycad-long-normal',
+            default => 'tolerycad-long-low',
+        };
     }
 
     /**
@@ -91,6 +106,7 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
                 isEditRequest: $this->isEditRequest,
                 timeoutSec: 600,
                 materialChoice: $this->materialChoice,
+                priority: $this->priority,
                 onProgress: function (array $event) use ($message, &$lastDbWriteAt) {
                     $step = $event['step'] ?? null;
                     $pct = isset($event['overall_percentage']) ? (int) $event['overall_percentage'] : null;

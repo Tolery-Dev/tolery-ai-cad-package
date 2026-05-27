@@ -361,6 +361,7 @@ class Chatbot extends Component
             sessionId: $this->chat->session_id,
             isEditRequest: $this->shouldUseEditMode(),
             materialChoice: $materialChoice,
+            priority: $this->chat->team?->getGenerationPriority() ?? 0,
         );
 
         $this->dispatch('aicad-subscribe-progress',
@@ -471,6 +472,7 @@ class Chatbot extends Component
                 sessionId: $this->chat->session_id,
                 isEditRequest: $isEdit,
                 materialChoice: $materialChoice,
+                priority: $this->chat->team?->getGenerationPriority() ?? 0,
             );
 
             logger()->info('[AICAD] GenerateCadJob dispatched', [

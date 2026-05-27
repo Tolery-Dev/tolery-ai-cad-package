@@ -76,6 +76,7 @@ class StripeSyncService
     protected function syncProduct(Product $stripeProduct): SubscriptionProduct
     {
         $filesAllowed = $stripeProduct->metadata->files_allowed ?? null;
+        $priority = $stripeProduct->metadata->priority ?? null;
 
         $product = SubscriptionProduct::firstOrNew(['stripe_id' => $stripeProduct->id]);
 
@@ -86,6 +87,7 @@ class StripeSyncService
         $product->image_url = ! empty($images) ? $images[0] : null;
         $product->active = $stripeProduct->active;
         $product->files_allowed = $filesAllowed ? (int) $filesAllowed : null;
+        $product->priority = is_numeric($priority) ? (int) $priority : null;
 
         // Frequency drives the quota reset cadence used by LimitRenew.
         // Stripe products do not carry this notion, so we default to MONTHLY
@@ -157,10 +159,11 @@ class StripeSyncService
             'name' => $product->name,
             'description' => $product->description,
             'active' => $product->active,
-            'metadata' => [
+            'metadata' => array_filter([
                 'files_allowed' => (string) $product->files_allowed,
+                'priority' => $product->priority !== null ? (string) $product->priority : null,
                 'laravel_product_id' => (string) $product->id,
-            ],
+            ], static fn ($v) => $v !== null),
         ]);
     }
 

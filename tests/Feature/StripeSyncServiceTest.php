@@ -45,6 +45,26 @@ it('sets frequency to MONTHLY by default when creating a new product', function 
     expect($product->frequency)->toBe(ResetFrequency::MONTHLY);
 });
 
+it('syncs the generation priority from Stripe metadata', function () {
+    $service = new StripeSyncService($this->aiCadStripe);
+    $stripeProduct = makeStripeProduct([
+        'metadata' => ['files_allowed' => '100', 'priority' => '80'],
+    ]);
+
+    $product = invokeSyncProduct($service, $stripeProduct);
+
+    expect($product->priority)->toBe(80);
+});
+
+it('leaves priority null when Stripe metadata omits it', function () {
+    $service = new StripeSyncService($this->aiCadStripe);
+    $stripeProduct = makeStripeProduct();
+
+    $product = invokeSyncProduct($service, $stripeProduct);
+
+    expect($product->priority)->toBeNull();
+});
+
 it('uses Stripe metadata frequency when provided', function () {
     $service = new StripeSyncService($this->aiCadStripe);
     $stripeProduct = makeStripeProduct([
