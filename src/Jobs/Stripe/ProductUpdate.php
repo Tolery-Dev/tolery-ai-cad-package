@@ -5,10 +5,11 @@ namespace Tolery\AiCad\Jobs\Stripe;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Laravel\Cashier\Cashier;
 use Stripe\Exception\ApiErrorException;
 use Stripe\Exception\InvalidRequestException;
+use Stripe\StripeClient;
 use Tolery\AiCad\Models\SubscriptionProduct;
+use Tolery\AiCad\Services\AiCadStripe;
 
 class ProductUpdate implements ShouldQueue
 {
@@ -23,18 +24,19 @@ class ProductUpdate implements ShouldQueue
     }
 
     /**
-     * Execute the job.
+     * Execute the job. Uses the AI-CAD Stripe account (AICAD_STRIPE_SECRET),
+     * NOT the host app's Cashier account — the two are distinct.
      *
      * @throws ApiErrorException
      */
-    public function handle(): void
+    public function handle(AiCadStripe $stripe): void
     {
         if (! $this->subscriptionProduct->stripe_id) {
             return;
         }
 
         try {
-            $this->pushToStripe();
+            $this->pushToStripe($stripe->client());
         } catch (InvalidRequestException $e) {
             if (! $this->isStripeMissingResource($e)) {
                 throw $e;
@@ -53,24 +55,22 @@ class ProductUpdate implements ShouldQueue
         }
     }
 
-    protected function pushToStripe(): void
+    protected function pushToStripe(StripeClient $stripeClient): void
     {
         $price = null;
 
         if ($this->updatePrice) {
             // On désactive tous les prix précédents
-            $prices = Cashier::stripe()->prices->all([
+            $prices = $stripeClient->prices->all([
                 'product' => $this->subscriptionProduct->stripe_id,
                 'active' => true,
             ]);
 
             foreach ($prices->data as $price) {
-                Cashier::stripe()->prices->update($price->id, ['active' => false]);
+                $stripeClient->prices->update($price->id, ['active' => false]);
             }
 
-            $price = Cashier::stripe()
-                ->prices
-                ->create($this->subscriptionProduct->toStripePriceObject());
+            $price = $stripeClient->prices->create($this->subscriptionProduct->toStripePriceObject());
         }
 
         $productParams = $this->subscriptionProduct->toStripeObject();
@@ -79,9 +79,7 @@ class ProductUpdate implements ShouldQueue
             $productParams['default_price'] = $price->id;
         }
 
-        Cashier::stripe()
-            ->products
-            ->update($this->subscriptionProduct->stripe_id, $productParams);
+        $stripeClient->products->update($this->subscriptionProduct->stripe_id, $productParams);
     }
 
     protected function recreateMissingStripeProduct(): void
