@@ -7,6 +7,7 @@ use Stripe\Exception\InvalidRequestException;
 use Tolery\AiCad\Jobs\Stripe\ProductCreate;
 use Tolery\AiCad\Jobs\Stripe\ProductUpdate;
 use Tolery\AiCad\Models\SubscriptionProduct;
+use Tolery\AiCad\Services\AiCadStripe;
 
 function makeStripeInvalidRequestException(string $message, ?string $code): InvalidRequestException
 {
@@ -55,7 +56,7 @@ describe('ProductUpdate handle() resilience', function () {
             makeStripeInvalidRequestException("No such product: 'prod_dead_xyz'", 'resource_missing')
         );
 
-        $job->handle();
+        $job->handle(Mockery::mock(AiCadStripe::class)->shouldIgnoreMissing());
 
         $product->refresh();
 
@@ -80,7 +81,9 @@ describe('ProductUpdate handle() resilience', function () {
             makeStripeInvalidRequestException('Parameter missing: name', 'parameter_missing')
         );
 
-        expect(fn () => $job->handle())->toThrow(InvalidRequestException::class);
+        $stripe = Mockery::mock(AiCadStripe::class)->shouldIgnoreMissing();
+
+        expect(fn () => $job->handle($stripe))->toThrow(InvalidRequestException::class);
 
         Bus::assertNotDispatched(ProductCreate::class);
         expect($product->fresh()->stripe_id)->toBe('prod_alive');
@@ -92,7 +95,10 @@ describe('ProductUpdate handle() resilience', function () {
 
         $product = SubscriptionProduct::withoutEvents(fn () => SubscriptionProduct::factory()->create(['stripe_id' => null]));
 
-        (new ProductUpdate($product))->handle();
+        $stripe = Mockery::mock(AiCadStripe::class);
+        $stripe->shouldNotReceive('client');
+
+        (new ProductUpdate($product))->handle($stripe);
 
         Bus::assertNotDispatched(ProductCreate::class);
     });
