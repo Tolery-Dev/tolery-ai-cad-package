@@ -3,9 +3,9 @@
 namespace Tolery\AiCad\Livewire\Admin;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Tolery\AiCad\Models\ChatDownload;
+use Tolery\AiCad\Support\AdminColumnHelpers;
 use Ultraviolettes\FluxDataTable\Livewire\FluxDataTable;
 
 class ChatDownloadTable extends FluxDataTable
@@ -32,7 +32,7 @@ class ChatDownloadTable extends FluxDataTable
             [
                 'label' => 'Équipe',
                 'field' => 'team_id',
-                'render' => fn ($row) => $row->team->name ?? '-',
+                'render' => fn ($row) => AdminColumnHelpers::teamLinkOrName($row->team),
             ],
             [
                 'label' => 'Conversation',
@@ -63,8 +63,7 @@ class ChatDownloadTable extends FluxDataTable
                         return '-';
                     }
 
-                    $disk = Storage::disk(config('ai-cad.storage_disk', 's3'));
-                    $useS3 = method_exists($disk->getAdapter(), 'temporaryUrl');
+                    $useS3 = AdminColumnHelpers::diskSupportsTemporaryUrl(config('ai-cad.storage_disk', 's3'));
 
                     $downloadUrl = $useS3
                         ? URL::temporarySignedRoute('ai-cad.admin.download.s3', now()->addMinutes(5), ['chat' => $row->chat->id])

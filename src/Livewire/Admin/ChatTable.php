@@ -4,6 +4,7 @@ namespace Tolery\AiCad\Livewire\Admin;
 
 use Illuminate\Database\Eloquent\Builder;
 use Tolery\AiCad\Models\Chat;
+use Tolery\AiCad\Support\AdminColumnHelpers;
 use Ultraviolettes\FluxDataTable\Livewire\FluxDataTable;
 
 class ChatTable extends FluxDataTable
@@ -39,7 +40,7 @@ class ChatTable extends FluxDataTable
                 'label' => 'Équipe',
                 'field' => 'team_id',
                 'searchable' => true,
-                'render' => fn ($row) => '<span class="text-zinc-700 dark:text-zinc-300">'.e($row->team->name ?? '-').'</span>',
+                'render' => fn ($row) => AdminColumnHelpers::teamLinkOrName($row->team),
             ],
             [
                 'label' => 'Abonnement',

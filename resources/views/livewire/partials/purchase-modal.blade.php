@@ -1,4 +1,4 @@
-<flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 min-w-[32rem]">
+<flux:modal name="purchase-or-subscribe" :open="$showPurchaseModal" wire:model="showPurchaseModal" class="space-y-6 w-full max-w-4xl">
     <div class="space-y-6">
         <div>
             <flux:heading size="lg" class="mb-2">Télécharger ce fichier CAO</flux:heading>
