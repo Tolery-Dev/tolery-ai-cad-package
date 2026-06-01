@@ -11,7 +11,7 @@
  * @param {HTMLElement} container - The container element
  * @param {number} width - Screenshot width (default: 800)
  * @param {number} height - Screenshot height (default: 800)
- * @returns {Promise<Blob>} - Promise resolving with the PNG blob
+ * @returns {Promise<Blob>} - Promise resolving with the JPEG blob
  */
 export async function captureScreenshot(
     renderer,
@@ -27,6 +27,13 @@ export async function captureScreenshot(
             const originalWidth = container.clientWidth;
             const originalHeight = container.clientHeight;
             const originalAspect = camera.aspect;
+            const originalPixelRatio = renderer.getPixelRatio();
+
+            // Pin pixelRatio to 1 during capture: otherwise a Retina display
+            // (devicePixelRatio = 2) would encode a 1600×1600 buffer for an
+            // 800×800 request — 4× the pixels, 4× the payload. The preview
+            // doesn't need HiDPI.
+            renderer.setPixelRatio(1);
 
             // Temporarily resize the renderer
             camera.aspect = width / height;
@@ -36,12 +43,18 @@ export async function captureScreenshot(
             // Force a render
             renderer.render(scene, camera);
 
-            // Capture the screenshot
+            // Capture the screenshot. JPEG (not PNG): the scene background is
+            // opaque (no transparency to preserve) and a heavily perforated
+            // plate is a high-frequency image that PNG compresses very poorly —
+            // a 1254-hole part produced a multi-MB base64 that overflowed the
+            // Livewire request body (413 Payload Too Large). JPEG q=0.82 keeps
+            // the preview crisp while staying well under ~300 KB.
             renderer.domElement.toBlob(
                 (blob) => {
-                    // Restore original size
+                    // Restore original size + pixelRatio
                     camera.aspect = originalAspect;
                     camera.updateProjectionMatrix();
+                    renderer.setPixelRatio(originalPixelRatio);
                     renderer.setSize(originalWidth, originalHeight);
                     renderer.render(scene, camera);
 
@@ -51,8 +64,8 @@ export async function captureScreenshot(
                         reject(new Error("Failed to create blob from canvas"));
                     }
                 },
-                "image/png",
-                0.95,
+                "image/jpeg",
+                0.82,
             );
         } catch (error) {
             console.error("[screenshot] Capture failed:", error);
@@ -70,7 +83,7 @@ export function blobToBase64(blob) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
-            const base64 = reader.result.split(",")[1]; // Remove data:image/png;base64, prefix
+            const base64 = reader.result.split(",")[1]; // Remove data:*;base64, prefix
             resolve(base64);
         };
         reader.onerror = (error) => {
