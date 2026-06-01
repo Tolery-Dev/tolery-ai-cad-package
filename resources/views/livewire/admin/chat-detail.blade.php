@@ -150,15 +150,16 @@
                             {{-- Message Text --}}
                             @if($message->message)
                                 @php
-                                    $trimmed = trim($message->message);
-                                    $isDfmError = $message->role === 'assistant' && isset($dfmErrorCodes[$trimmed]);
+                                    $dfmError = $message->role === 'assistant'
+                                        ? $this::matchDfmError($message->message, $dfmErrorCodes)
+                                        : null;
                                 @endphp
-                                @if($isDfmError)
+                                @if($dfmError)
                                     <div class="flex items-start gap-2 text-amber-800 dark:text-amber-200">
                                         <flux:icon.exclamation-triangle class="size-5 shrink-0 text-amber-500 mt-0.5" />
                                         <div>
-                                            <span class="text-xs font-mono text-amber-500">Code {{ $trimmed }}</span>
-                                            <p class="text-sm mt-0.5">{{ $dfmErrorCodes[$trimmed] }}</p>
+                                            <span class="text-xs font-mono text-amber-500">Code {{ $dfmError['code'] }}</span>
+                                            <p class="text-sm mt-0.5">{{ $dfmError['message'] }}</p>
                                         </div>
                                     </div>
                                 @else
