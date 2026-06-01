@@ -1226,7 +1226,11 @@
                         changes.push(`la profondeur à ${this.fmt(this.edits.depth)}`);
                     }
                     if (this.edits.radius && this.edits.radius !== m.radius) {
-                        changes.push(`le rayon à ${this.fmt(this.edits.radius)}`);
+                        // Préciser « de congé » pour un fillet : sans ça le prompt
+                        // générique « le rayon » peut être interprété par le chatbot
+                        // comme le rayon de pliage (cf. issue #2263).
+                        const radiusLabel = faceType === 'fillet' ? 'le rayon de congé' : 'le rayon';
+                        changes.push(`${radiusLabel} à ${this.fmt(this.edits.radius)}`);
                     }
 
                     // Taraudage (thread) - modifications spécifiques
