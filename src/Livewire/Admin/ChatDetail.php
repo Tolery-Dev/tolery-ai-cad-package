@@ -102,6 +102,40 @@ class ChatDetail extends Component
             ->all();
     }
 
+    /**
+     * Reproduit `checkDfmErrorCode()` du front (chat-messages.blade.php) côté
+     * serveur, pour afficher le message d'erreur traduit au lieu du code brut.
+     *
+     * Cas 1 : le contenu trimé est exactement un code (ex: "104.1").
+     * Cas 2 : un code connu est noyé dans un texte plus long (ex: "104.1\nVeuillez
+     * réessayer") — regex avec garde-fou pour ne pas matcher "104.1" dans "1104.10".
+     *
+     * @param  array<string, string>  $dfmErrorCodes
+     * @return array{code: string, message: string}|null
+     */
+    public static function matchDfmError(?string $text, array $dfmErrorCodes): ?array
+    {
+        if ($text === null || trim($text) === '') {
+            return null;
+        }
+
+        // Cas 1 : le contenu est exactement un code
+        $trimmed = trim($text);
+        if (isset($dfmErrorCodes[$trimmed])) {
+            return ['code' => $trimmed, 'message' => $dfmErrorCodes[$trimmed]];
+        }
+
+        // Cas 2 : un code est noyé dans un texte plus long
+        foreach ($dfmErrorCodes as $code => $message) {
+            $pattern = '/(^|[^\d.])'.preg_quote((string) $code, '/').'($|[^\d.])/';
+            if (preg_match($pattern, $text) === 1) {
+                return ['code' => (string) $code, 'message' => $message];
+            }
+        }
+
+        return null;
+    }
+
     public function render(): View
     {
         return view('ai-cad::livewire.admin.chat-detail', [
