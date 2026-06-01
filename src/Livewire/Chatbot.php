@@ -540,9 +540,10 @@ class Chatbot extends Component
                 return;
             }
 
-            // Génère un nom de fichier unique
+            // Génère un nom de fichier unique (JPEG: cf. captureScreenshot côté JS,
+            // encodé en image/jpeg pour garder le payload sous la limite de requête)
             $folder = $this->chat->getStorageFolder();
-            $filename = uniqid('screenshot_').'.png';
+            $filename = uniqid('screenshot_').'.jpg';
             $path = "{$folder}/{$filename}";
 
             // Sauvegarde le fichier
