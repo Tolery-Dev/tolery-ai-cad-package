@@ -150,8 +150,10 @@
                             {{-- Message Text --}}
                             @if($message->message)
                                 @php
+                                    // $dfmErrorCodes ?? [] : filet de sécurité si un composant
+                                    // consommateur surcharge render() sans repasser la variable.
                                     $dfmError = $message->role === 'assistant'
-                                        ? $this::matchDfmError($message->message, $dfmErrorCodes)
+                                        ? $this::matchDfmError($message->message, $dfmErrorCodes ?? [])
                                         : null;
                                 @endphp
                                 @if($dfmError)
