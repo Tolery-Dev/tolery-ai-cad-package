@@ -1,5 +1,5 @@
 <footer class="bg-white shrink-0"
-    x-data="{ hasContent: false, busy: false }"
+    x-data="{ hasContent: false, busy: false, hasFaceSelection: false }"
     @cad-generation-ended.window="busy = false">
     <form wire:submit.prevent="send" class="px-6 pb-6 pt-4"
         @submit="if (busy) { $event.preventDefault(); return; } busy = true;">
@@ -11,9 +11,13 @@
                 data-face-selection-chips
                 class="hidden flex flex-wrap gap-2 mb-2"
                 @face-selection-changed.window="
-                    console.log('[DEBUG] Dispatching to Livewire, hasSelection:', $event.detail.hasSelection);
+                    hasFaceSelection = $event.detail.hasSelection;
                     $wire.dispatch('face-selection-state-changed', { hasSelection: $event.detail.hasSelection });
                 ">
+            </div>
+
+            <div class="text-xs text-gray-500" x-show="hasFaceSelection" x-cloak>
+                Votre demande sera appliquée uniquement à la face sélectionnée.
             </div>
 
             <div :class="busy ? 'opacity-50 pointer-events-none' : ''">
