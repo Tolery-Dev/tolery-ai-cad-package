@@ -48,9 +48,10 @@ class ZipGeneratorService
             'ai_screenshot_path' => $message->ai_screenshot_path,
         ]);
 
-        // Generate ZIP file name: [team_name]_YYYYMMDD_HHMMSS_tolerycad.zip
-        $teamName = $chat->team->name ?? 'team';
-        $zipFileName = str($teamName)->slug().'_'.now()->format('Ymd_His').'_tolerycad.zip';
+        // Generate ZIP file name: [part_name]_[version]_YYYYMMDD_HHMMSS_tolerycad.zip
+        $version = $message->getVersionLabel() ?? 'export';
+        $baseName = $this->buildBaseName($chat, $version);
+        $zipFileName = $baseName.'_'.now()->format('Ymd_His').'_tolerycad.zip';
 
         // Create temporary ZIP file
         $tempZipPath = storage_path('app/temp/'.$zipFileName);
@@ -79,12 +80,12 @@ class ZipGeneratorService
 
         // Add STEP file (use raw path, not URL)
         if ($message->ai_step_path) {
-            $this->addStorageFileToZip($zip, $message->ai_step_path, 'STEP', $filesAdded);
+            $this->addStorageFileToZip($zip, $message->ai_step_path, 'STEP', $filesAdded, $baseName);
         }
 
         // Add Technical Drawing (PDF) (use raw path, not URL)
         if ($message->ai_technical_drawing_path) {
-            $this->addStorageFileToZip($zip, $message->ai_technical_drawing_path, 'PDF', $filesAdded);
+            $this->addStorageFileToZip($zip, $message->ai_technical_drawing_path, 'PDF', $filesAdded, $baseName.'_plan');
         }
 
         $zip->close();
@@ -147,11 +148,11 @@ class ZipGeneratorService
             ];
         }
 
-        // Generate ZIP file name with version: [team_name]_[version]_YYYYMMDD_HHMMSS_tolerycad.zip
+        // Generate ZIP file name with version: [part_name]_[version]_YYYYMMDD_HHMMSS_tolerycad.zip
         $chat = $message->chat;
-        $teamName = $chat->team->name ?? 'team';
         $version = $message->getVersionLabel() ?? 'export';
-        $zipFileName = str($teamName)->slug().'_'.$version.'_'.now()->format('Ymd_His').'_tolerycad.zip';
+        $baseName = $this->buildBaseName($chat, $version);
+        $zipFileName = $baseName.'_'.now()->format('Ymd_His').'_tolerycad.zip';
 
         // Create temporary ZIP file
         $tempZipPath = storage_path('app/temp/'.$zipFileName);
@@ -180,12 +181,12 @@ class ZipGeneratorService
 
         // Add STEP file (use raw path, not URL)
         if ($message->ai_step_path) {
-            $this->addStorageFileToZip($zip, $message->ai_step_path, 'STEP', $filesAdded);
+            $this->addStorageFileToZip($zip, $message->ai_step_path, 'STEP', $filesAdded, $baseName);
         }
 
         // Add Technical Drawing (PDF) (use raw path, not URL)
         if ($message->ai_technical_drawing_path) {
-            $this->addStorageFileToZip($zip, $message->ai_technical_drawing_path, 'PDF', $filesAdded);
+            $this->addStorageFileToZip($zip, $message->ai_technical_drawing_path, 'PDF', $filesAdded, $baseName.'_plan');
         }
 
         $zip->close();
@@ -225,11 +226,27 @@ class ZipGeneratorService
     }
 
     /**
+     * Build a human-friendly base file name from the chat part name and version,
+     * e.g. "support-moteur_v2". Falls back to the team name, then "piece".
+     */
+    private function buildBaseName(Chat $chat, ?string $version): string
+    {
+        $source = $chat->name ?: ($chat->team->name ?? 'piece');
+        $slug = str($source)->slug()->toString();
+
+        if ($slug === '') {
+            $slug = 'piece';
+        }
+
+        return $version ? $slug.'_'.$version : $slug;
+    }
+
+    /**
      * Add a file from Storage to the ZIP archive.
      * This method reads directly from Storage instead of using URLs,
      * avoiding SSL issues with local .test domains.
      */
-    private function addStorageFileToZip(ZipArchive $zip, string $storagePath, string $type, array &$filesAdded): void
+    private function addStorageFileToZip(ZipArchive $zip, string $storagePath, string $type, array &$filesAdded, ?string $desiredBaseName = null): void
     {
         Log::info("[ZIP GENERATOR] Processing {$type} file from storage", [
             'storage_path' => $storagePath,
@@ -252,8 +269,11 @@ class ZipGeneratorService
                 return;
             }
 
-            // Get filename from path
-            $filename = basename($storagePath);
+            // Build a human-friendly filename when a base name is provided, preserving the original extension.
+            $extension = pathinfo($storagePath, PATHINFO_EXTENSION);
+            $filename = $desiredBaseName !== null && $extension !== ''
+                ? $desiredBaseName.'.'.$extension
+                : basename($storagePath);
 
             // Add content directly to ZIP
             $zip->addFromString($filename, $content);
