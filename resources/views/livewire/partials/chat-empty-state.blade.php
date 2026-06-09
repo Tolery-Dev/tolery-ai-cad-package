@@ -40,7 +40,7 @@
                 </div>
             </div>
 
-            <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
+            <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2 opacity-60">
                 <div class="shrink-0 w-10 h-10 pt-4">
                     <img src="{{ asset('vendor/ai-cad/images/pdf.svg') }}" alt="PDF to CAD">
                 </div>
@@ -70,7 +70,7 @@
                 </div>
             </div>
 
-            <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2">
+            <div class="relative bg-white border-[0.5px] border-[#D7DBE0] rounded-lg p-4 flex gap-2 opacity-60">
                 <div class="shrink-0 w-10 h-10 pt-4">
                     <img src="{{ asset('vendor/ai-cad/images/cad.svg') }}" alt="Tolery CAD files">
                 </div>
