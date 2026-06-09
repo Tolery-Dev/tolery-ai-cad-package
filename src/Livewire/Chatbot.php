@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -373,10 +374,22 @@ class Chatbot extends Component
     public function send(RateLimiter $limiter): void
     {
         if ($this->isProcessing) {
+            // Relâche le verrou optimiste du composer (flag Alpine `busy`) : sans cela
+            // la zone de saisie reste figée car seul `cad-generation-ended` la libère. (#2308)
+            $this->dispatch('composer-unlock');
+
             return;
         }
 
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            // Message vide ou trop court : on débloque le composer avant de laisser
+            // Livewire afficher l'erreur, sinon `busy` reste coincé à true. (#2308)
+            $this->dispatch('composer-unlock');
+
+            throw $e;
+        }
 
         // Si le chat n'existe pas encore, le créer MAINTENANT
         if (! $this->chat->exists) {
@@ -413,6 +426,7 @@ class Chatbot extends Component
             $wait = $limiter->availableIn($rateKey);
             $this->appendAssistant("Vous envoyez des messages trop vite. Réessayez dans {$wait}s.");
             $this->dispatch('tolery-chat-append');
+            $this->dispatch('composer-unlock');
 
             return;
         }
@@ -421,6 +435,8 @@ class Chatbot extends Component
 
         $lock = Cache::lock("aicad:send:chat:{$this->chat->id}", $this->lockSeconds);
         if (! $lock->get()) {
+            $this->dispatch('composer-unlock');
+
             return;
         }
         try {
