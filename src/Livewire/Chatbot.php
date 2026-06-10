@@ -98,6 +98,12 @@ class Chatbot extends Component
         $user = auth()->user();
         $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
 
+        // Charger les codes d'erreur DFM avant le early return : un ghost chat
+        // créé en lazy dans send() ne repasse jamais par mount() (l'URL est mise
+        // à jour via History API, sans remount), donc la propriété resterait
+        // vide pour toute la session et le front afficherait le code brut (#2338)
+        $this->dfmErrorCodes = $this->loadDfmErrorCodes();
+
         // Si le chat n'existe pas encore (ghost chat), ne rien faire
         // Il sera créé au premier message envoyé
         if (! $this->chat->exists) {
@@ -136,9 +142,6 @@ class Chatbot extends Component
             // 4. Initialize download status
             $this->updateDownloadStatus();
         }
-
-        // Charger les codes d'erreur DFM pour le mapping côté frontend
-        $this->dfmErrorCodes = $this->loadDfmErrorCodes();
 
         // Détecter une génération orpheline : dernier message = user sans réponse assistant
         $lastMsg = $this->chat->messages()
