@@ -34,15 +34,17 @@ function makeChatMessageForFailure(?Carbon $lastSeenAt): ChatMessage
     ]);
 }
 
-test('failure notification ships database+mail for offline users', function () {
+// ToleryCAD never emails users (issue mn-tolery#2352): the failure notification
+// is database (cloche) only, whatever the user's presence state.
+test('failure notification is database only for offline users', function () {
     $message = makeChatMessageForFailure(lastSeenAt: now()->subMinutes(10));
 
     $notification = new CadGenerationFailedNotification($message, 'boom');
 
-    expect($notification->via($message->user))->toBe(['database', 'mail']);
+    expect($notification->via($message->user))->toBe(['database']);
 });
 
-test('failure notification skips mail for users currently online (issue #2199)', function () {
+test('failure notification is database only for users currently online', function () {
     $message = makeChatMessageForFailure(lastSeenAt: now()->subSeconds(5));
 
     $notification = new CadGenerationFailedNotification($message, 'boom');
@@ -50,10 +52,10 @@ test('failure notification skips mail for users currently online (issue #2199)',
     expect($notification->via($message->user))->toBe(['database']);
 });
 
-test('failure notification ships database+mail when user has never been seen', function () {
+test('failure notification is database only when user has never been seen', function () {
     $message = makeChatMessageForFailure(lastSeenAt: null);
 
     $notification = new CadGenerationFailedNotification($message, 'boom');
 
-    expect($notification->via($message->user))->toBe(['database', 'mail']);
+    expect($notification->via($message->user))->toBe(['database']);
 });

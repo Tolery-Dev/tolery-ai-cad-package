@@ -54,22 +54,24 @@ return [
     | Notifications Configuration
     |--------------------------------------------------------------------------
     |
-    | Controls email/database notification behaviour for CAD generation events.
+    | Controls database (cloche) notification behaviour for CAD generation
+    | events. ToleryCAD never emails users (issue mn-tolery#2352).
     |
     */
     'notifications' => [
         // Seconds without activity before a user is considered "offline".
-        // Used to suppress redundant emails when the user is watching the UI.
+        // Used to suppress redundant notifications when the user is watching the UI.
         'online_threshold_seconds' => env('AICAD_ONLINE_THRESHOLD_SECONDS', 30),
 
-        // Delay (in seconds) before sending the completion email if the
-        // database (bell) notification has not been read yet.
-        'completion_email_delay_seconds' => env('AICAD_COMPLETION_EMAIL_DELAY_SECONDS', 60),
-
-        // How long (in minutes) an unanswered AI question must sit before a
-        // "pending question" reminder email is sent to the user.
+        // How long (in minutes) an unanswered user message must sit before a
+        // "pending question" cloche notification is sent.
         // Set to 0 to disable the pending-question reminder entirely.
         'pending_question_delay_minutes' => env('AICAD_PENDING_QUESTION_DELAY_MINUTES', 5),
+
+        // Messages older than this window are never notified — keeps the first
+        // run after a deploy from blasting the whole chat history (issue
+        // mn-tolery#2352).
+        'pending_question_max_age_hours' => env('AICAD_PENDING_QUESTION_MAX_AGE_HOURS', 24),
     ],
 
     /*

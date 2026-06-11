@@ -19,6 +19,7 @@ beforeEach(function () {
 
     config()->set('ai-cad.notifications.online_threshold_seconds', 30);
     config()->set('ai-cad.notifications.pending_question_delay_minutes', 5);
+    config()->set('ai-cad.notifications.pending_question_max_age_hours', 24);
     config()->set('ai-cad.chat_user_model', ChatUser::class);
 
     // Register the host-app route expected by notifications (lives in mn-tolery).
@@ -76,33 +77,47 @@ function makePendingChat(Carbon $lastUserMessageAt, bool $withAssistantReply = f
     return $chat;
 }
 
-function insertPendingQuestionNotification(Chat $chat, ?Carbon $readAt): void
+function insertPendingQuestionNotification(Chat $chat, ?Carbon $readAt, ?int $messageId = null): void
 {
+    $messageId ??= (int) ChatMessage::query()->where('chat_id', $chat->id)->max('id');
+
     DB::table('notifications')->insert([
         'id' => (string) Str::uuid(),
         'type' => CadQuestionPendingNotification::class,
         'notifiable_type' => ChatUser::class,
         'notifiable_id' => $chat->user_id,
-        'data' => json_encode(['chat_id' => $chat->id]),
+        'data' => json_encode(['chat_id' => $chat->id, 'message_id' => $messageId]),
         'read_at' => $readAt,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
 }
 
-test('sends notification when question unanswered for longer than delay', function () {
-    makePendingChat(lastUserMessageAt: now()->subMinutes(10));
+test('sends a database-only notification carrying the pending message id', function () {
+    $chat = makePendingChat(lastUserMessageAt: now()->subMinutes(10));
+    $pendingMessageId = ChatMessage::query()->where('chat_id', $chat->id)->max('id');
 
     (new SendPendingQuestionEmailJob)->handle();
 
     Notification::assertSentTo(
         ChatUser::first(),
         CadQuestionPendingNotification::class,
+        fn (CadQuestionPendingNotification $notification) => $notification->via(null) === ['database']
+            && $notification->pendingMessageId === $pendingMessageId,
     );
 });
 
 test('does not send notification when question is too recent', function () {
     makePendingChat(lastUserMessageAt: now()->subMinutes(2)); // below 5-minute threshold
+
+    (new SendPendingQuestionEmailJob)->handle();
+
+    Notification::assertNothingSent();
+});
+
+test('does not notify questions older than the max age window', function () {
+    // Stale chats from history must never be picked up after a deploy (issue mn-tolery#2352).
+    makePendingChat(lastUserMessageAt: now()->subHours(25));
 
     (new SendPendingQuestionEmailJob)->handle();
 
@@ -141,7 +156,7 @@ test('does not send when user is currently online', function () {
     Notification::assertNothingSent();
 });
 
-test('does not resend when an unread pending-question notification already exists', function () {
+test('does not resend when an unread notification already exists for the same message', function () {
     $chat = makePendingChat(lastUserMessageAt: now()->subMinutes(10));
 
     insertPendingQuestionNotification($chat, readAt: null); // already sent, unread
@@ -151,16 +166,49 @@ test('does not resend when an unread pending-question notification already exist
     Notification::assertNothingSent();
 });
 
-test('resends after user reads the previous pending-question notification', function () {
+test('does not resend for the same question after the notification is read', function () {
+    // Reading the cloche must never re-arm the reminder (issue mn-tolery#2352):
+    // each pending question is notified exactly once.
     $chat = makePendingChat(lastUserMessageAt: now()->subMinutes(10));
 
     insertPendingQuestionNotification($chat, readAt: now()->subMinutes(1)); // read
 
     (new SendPendingQuestionEmailJob)->handle();
 
+    Notification::assertNothingSent();
+});
+
+test('notifies a new pending question even when an older one was already notified', function () {
+    $chat = makePendingChat(lastUserMessageAt: now()->subHours(2));
+    $firstMessageId = (int) ChatMessage::query()->where('chat_id', $chat->id)->max('id');
+
+    // The first question was notified and read, then answered by the assistant.
+    insertPendingQuestionNotification($chat, readAt: now()->subHour(), messageId: $firstMessageId);
+    ChatMessage::query()->create([
+        'chat_id' => $chat->id,
+        'user_id' => null,
+        'role' => ChatMessage::ROLE_ASSISTANT,
+        'message' => 'Voici votre pièce.',
+        'created_at' => now()->subHours(2)->addMinutes(5),
+        'updated_at' => now()->subHours(2)->addMinutes(5),
+    ]);
+
+    // New user message, unanswered for 10 minutes — a brand new pending question.
+    $newMessage = ChatMessage::query()->create([
+        'chat_id' => $chat->id,
+        'user_id' => $chat->user_id,
+        'role' => ChatMessage::ROLE_USER,
+        'message' => 'Peux-tu modifier la hauteur ?',
+        'created_at' => now()->subMinutes(10),
+        'updated_at' => now()->subMinutes(10),
+    ]);
+
+    (new SendPendingQuestionEmailJob)->handle();
+
     Notification::assertSentTo(
         ChatUser::first(),
         CadQuestionPendingNotification::class,
+        fn (CadQuestionPendingNotification $notification) => $notification->pendingMessageId === $newMessage->id,
     );
 });
 
@@ -185,7 +233,7 @@ test('sends when chat has prior generations but latest user message is unanswere
     $chat = Chat::factory()->create(['user_id' => $user->id, 'team_id' => $team->id]);
 
     // Older exchange — this assistant reply must NOT block the pending detection.
-    $oldUser = ChatMessage::query()->create([
+    ChatMessage::query()->create([
         'chat_id' => $chat->id,
         'user_id' => $user->id,
         'role' => ChatMessage::ROLE_USER,
