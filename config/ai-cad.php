@@ -51,6 +51,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Notifications Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Controls email/database notification behaviour for CAD generation events.
+    |
+    */
+    'notifications' => [
+        // Seconds without activity before a user is considered "offline".
+        // Used to suppress redundant emails when the user is watching the UI.
+        'online_threshold_seconds' => env('AICAD_ONLINE_THRESHOLD_SECONDS', 30),
+
+        // Delay (in seconds) before sending the completion email if the
+        // database (bell) notification has not been read yet.
+        'completion_email_delay_seconds' => env('AICAD_COMPLETION_EMAIL_DELAY_SECONDS', 60),
+
+        // How long (in minutes) an unanswered AI question must sit before a
+        // "pending question" reminder email is sent to the user.
+        // Set to 0 to disable the pending-question reminder entirely.
+        'pending_question_delay_minutes' => env('AICAD_PENDING_QUESTION_DELAY_MINUTES', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Admin Configuration
     |--------------------------------------------------------------------------
     |

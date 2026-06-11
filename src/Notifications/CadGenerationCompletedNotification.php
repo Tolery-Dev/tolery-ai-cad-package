@@ -39,11 +39,21 @@ class CadGenerationCompletedNotification extends Notification implements ShouldQ
     {
         $chatUrl = route('client.tolerycad.show-chatbot', ['chat' => $this->message->chat_id]);
 
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject('Votre pièce CAO est prête')
             ->greeting('Bonjour,')
-            ->line('La génération de votre pièce ToleryCAD est terminée.')
-            ->action('Voir la pièce', $chatUrl)
+            ->line('La génération de votre pièce ToleryCAD est terminée.');
+
+        // Attach the screenshot preview when available so the user can see their
+        // piece directly in the email without having to open the app first.
+        $screenshotUrl = $this->message->getScreenshotUrl();
+        if ($screenshotUrl) {
+            $mail->line('Aperçu de votre pièce :')
+                ->line('![]('.$screenshotUrl.')');
+        }
+
+        return $mail
+            ->action('Télécharger la pièce', $chatUrl)
             ->line('Vous pouvez la télécharger depuis votre chat.');
     }
 

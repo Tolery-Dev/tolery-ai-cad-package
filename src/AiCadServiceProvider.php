@@ -19,6 +19,7 @@ use Tolery\AiCad\Commands\SyncStripeProducts;
 use Tolery\AiCad\Commands\TestApiConnection;
 use Tolery\AiCad\Commands\TestStreamEndpoint;
 use Tolery\AiCad\Commands\UpdateStripeMetadata;
+use Tolery\AiCad\Jobs\SendPendingQuestionEmailJob;
 use Tolery\AiCad\Livewire\Admin\ChatDetail;
 use Tolery\AiCad\Livewire\Admin\ChatDownloadTable;
 use Tolery\AiCad\Livewire\Admin\ChatTable;
@@ -182,6 +183,13 @@ class AiCadServiceProvider extends PackageServiceProvider
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             // Daily limit renewal
             $schedule->command(LimitsAutoRenewal::class)->dailyAt('01:00');
+
+            // Scan every minute for unanswered AI questions older than the configured
+            // threshold and send a single reminder notification per chat.
+            // Only runs when the feature is enabled (delay > 0).
+            if ((int) config('ai-cad.notifications.pending_question_delay_minutes', 5) > 0) {
+                $schedule->job(SendPendingQuestionEmailJob::class)->everyMinute();
+            }
         });
 
         return $this;
