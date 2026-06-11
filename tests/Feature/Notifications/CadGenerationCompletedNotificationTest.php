@@ -6,6 +6,8 @@ use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\ChatUser;
 use Tolery\AiCad\Notifications\CadGenerationCompletedNotification;
+use Tolery\AiCad\Notifications\CadGenerationFailedNotification;
+use Tolery\AiCad\Notifications\CadQuestionPendingNotification;
 
 beforeEach(function () {
     config()->set('ai-cad.chat_user_model', ChatUser::class);
@@ -15,7 +17,7 @@ beforeEach(function () {
     Route::get('/tolerycad/chat/{chat}', fn () => '')->name('client.tolerycad.show-chatbot');
 });
 
-function makeCompletedMessage(?string $screenshotPath = null): ChatMessage
+function makeCompletedMessage(): ChatMessage
 {
     $team = ChatTeam::factory()->create();
     $user = ChatUser::query()->create(['team_id' => $team->id]);
@@ -26,22 +28,28 @@ function makeCompletedMessage(?string $screenshotPath = null): ChatMessage
         'user_id' => $user->id,
         'role' => ChatMessage::ROLE_ASSISTANT,
         'message' => 'Votre pièce est prête.',
-        'ai_screenshot_path' => $screenshotPath,
     ]);
 }
 
-test('default channel is database only', function () {
+test('completed notification is database only (no email, issue mn-tolery#2352)', function () {
     $message = makeCompletedMessage();
     $notification = new CadGenerationCompletedNotification($message);
 
     expect($notification->via(null))->toBe(['database']);
 });
 
-test('forceChannels overrides to mail only', function () {
+test('failed notification is database only (no email, issue mn-tolery#2352)', function () {
     $message = makeCompletedMessage();
-    $notification = new CadGenerationCompletedNotification($message, ['mail']);
+    $notification = new CadGenerationFailedNotification($message, 'boom');
 
-    expect($notification->via(null))->toBe(['mail']);
+    expect($notification->via(null))->toBe(['database']);
+});
+
+test('pending-question notification is database only (no email, issue mn-tolery#2352)', function () {
+    $message = makeCompletedMessage();
+    $notification = new CadQuestionPendingNotification($message->chat, $message->id);
+
+    expect($notification->via(null))->toBe(['database']);
 });
 
 test('toArray contains message_id and chat_id', function () {
@@ -54,27 +62,12 @@ test('toArray contains message_id and chat_id', function () {
     expect($data['chat_id'])->toBe($message->chat_id);
 });
 
-test('toMail includes screenshot line when screenshot is available', function () {
-    $message = makeCompletedMessage(screenshotPath: 'https://example.com/screenshot.jpg');
-    $notification = new CadGenerationCompletedNotification($message, ['mail']);
+test('pending-question toArray contains chat_id and pending message_id', function () {
+    $message = makeCompletedMessage();
+    $notification = new CadQuestionPendingNotification($message->chat, $message->id);
+    $data = $notification->toArray(null);
 
-    $mail = $notification->toMail(null);
-    $rendered = implode(' ', array_column($mail->introLines, 'line') + $mail->introLines);
-
-    // The mail should contain a reference to the screenshot URL somewhere in its lines.
-    $allLines = $mail->introLines;
-    $hasScreenshot = collect($allLines)->contains(fn ($line) => str_contains((string) $line, 'screenshot.jpg'));
-
-    expect($hasScreenshot)->toBeTrue();
-});
-
-test('toMail does not include screenshot line when no screenshot', function () {
-    $message = makeCompletedMessage(screenshotPath: null);
-    $notification = new CadGenerationCompletedNotification($message, ['mail']);
-
-    $mail = $notification->toMail(null);
-    $allLines = $mail->introLines;
-    $hasScreenshot = collect($allLines)->contains(fn ($line) => str_contains((string) $line, 'screenshot'));
-
-    expect($hasScreenshot)->toBeFalse();
+    expect($data)->toHaveKeys(['message_id', 'chat_id', 'title', 'body', 'action_url']);
+    expect($data['message_id'])->toBe($message->id);
+    expect($data['chat_id'])->toBe($message->chat_id);
 });

@@ -132,16 +132,9 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
 
                     CadGenerationCompleted::dispatch($message);
 
-                    // Send the database (cloche) notification immediately. After the
-                    // configured delay, SendCompletionEmailIfUnreadJob checks whether
-                    // the notification has been read; if not, it dispatches the email
-                    // so the modal's "Vous serez notifié" promise is always honored.
+                    // Database (cloche) notification only — ToleryCAD no longer
+                    // sends notification emails (issue mn-tolery#2352).
                     $this->notifyUser($message, new CadGenerationCompletedNotification($message));
-
-                    $delaySeconds = (int) config('ai-cad.notifications.completion_email_delay_seconds', 60);
-
-                    SendCompletionEmailIfUnreadJob::dispatch($message->id)
-                        ->delay(now()->addSeconds($delaySeconds));
                 },
                 onError: function (int $curlErrno, int $httpCode, string $error) use ($message) {
                     $message->update([
