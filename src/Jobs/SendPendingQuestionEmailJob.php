@@ -5,6 +5,7 @@ namespace Tolery\AiCad\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Tolery\AiCad\Models\Chat;
@@ -73,7 +74,7 @@ class SendPendingQuestionEmailJob implements ShouldQueue
             return;
         }
 
-        /** @var \Illuminate\Support\Collection<int, int> $messageIdByChat */
+        /** @var Collection<int, int> $messageIdByChat */
         $messageIdByChat = $pendingMessages->pluck('id', 'chat_id');
 
         $chats = Chat::whereIn('id', $messageIdByChat->keys())->with('user')->get();
