@@ -234,9 +234,14 @@ class AiCadStripe
      */
     public function createOrUpdateCustomer(string $email, string $name, ?string $existingCustomerId = null, array $address = []): Customer
     {
+        // `preferred_locales` pilote la langue des factures PDF (et emails) Stripe. Sans lui,
+        // Stripe les émet dans la langue par défaut du compte (anglais) — le `locale` des
+        // sessions Checkout ne concerne QUE la page de paiement. Les clients ToleryCAD étant
+        // des entreprises françaises, on force le français sur le customer.
         $customerData = [
             'email' => $email,
             'name' => $name,
+            'preferred_locales' => ['fr-FR'],
         ];
 
         if ($address !== []) {
