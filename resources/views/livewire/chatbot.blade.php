@@ -81,7 +81,12 @@
     {{-- Modal Achat/Abonnement --}}
     @include('ai-cad::livewire.partials.purchase-modal')
 
-    {{-- Polling pour détecter la fin du téléchargement des fichiers CAO en background --}}
+    {{-- Modal « Vos fichiers sont en cours de préparation » (#2374) --}}
+    @include('ai-cad::livewire.partials.preparing-download-modal')
+
+    {{-- Polling pour détecter la fin du téléchargement des fichiers CAO en background.
+         Sert à la fois à rafraîchir les liens d'export et, depuis #2374, à déclencher
+         automatiquement un téléchargement différé via la modal de préparation. --}}
     @if ($pendingFilesDownload)
         <div wire:poll.5000ms="checkFilesReady" class="sr-only" aria-hidden="true"></div>
     @endif
