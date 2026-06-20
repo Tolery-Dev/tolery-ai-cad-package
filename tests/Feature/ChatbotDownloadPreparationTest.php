@@ -69,6 +69,9 @@ function makeAuthedChatForDownload(bool $filesReady): array
         'chat_id' => $chat->id,
         'role' => ChatMessage::ROLE_ASSISTANT,
         'message' => 'Votre pièce est prête.',
+        // ai_json_edge_path est posé dès la génération (pilote l'affichage de la
+        // pièce et donc du bouton de téléchargement, #2374).
+        'ai_json_edge_path' => 'cad/source.json',
         'ai_cad_path' => 'cad/source.obj',
         'ai_step_path' => $filesReady ? 'cad/source.step' : null,
         'ai_technical_drawing_path' => $filesReady ? 'cad/source.pdf' : null,
@@ -175,6 +178,46 @@ it('permet d\'annuler un téléchargement en attente et coupe le polling', funct
         ->assertSet('showPreparingModal', false)
         ->assertSet('pendingFilesDownload', false)
         ->assertSet('pendingDownloadMessageId', null);
+});
+
+it('affiche le bouton de téléchargement dès qu\'une pièce est affichée, même sans assets téléchargés', function () {
+    // Pièce générée (JSON posé → viewer 3D), mais DownloadCadAssetsJob n'a pas
+    // encore écrit l'OBJ/STEP : ai_cad_path null, cad_files_ready false (#2374).
+    $team = ChatTeam::factory()->create();
+    $user = ChatUser::create(['team_id' => $team->id]);
+    Auth::setUser($user);
+
+    $chat = Chat::factory()->create(['team_id' => $team->id, 'user_id' => $user->id]);
+    FilePurchase::create([
+        'team_id' => $team->id,
+        'chat_id' => $chat->id,
+        'stripe_payment_intent_id' => 'pi_test_'.uniqid(),
+        'amount' => 999,
+        'currency' => 'eur',
+        'purchased_at' => now(),
+    ]);
+
+    ChatMessage::query()->create([
+        'chat_id' => $chat->id,
+        'role' => ChatMessage::ROLE_ASSISTANT,
+        'message' => 'Voici votre pièce.',
+        'ai_json_edge_path' => 'cad/source.json', // pièce affichée
+        'ai_cad_path' => null,                      // OBJ pas encore téléchargé
+        'ai_step_path' => null,
+        'cad_files_ready' => false,
+    ]);
+
+    // Le bouton est disponible (pièce affichée) et un clic ouvre la modal de
+    // préparation au lieu de renvoyer « Aucun fichier… ».
+    Livewire::test(Chatbot::class, ['chat' => $chat])
+        ->assertSet('showPreparingModal', false)
+        ->tap(fn ($c) => expect($c->instance()->hasDownloadablePiece())->toBeTrue())
+        ->call('initiateDownload')
+        ->assertSet('showPreparingModal', true)
+        ->assertSet('pendingFilesDownload', true)
+        ->assertNotDispatched('toast-show');
+
+    expect(Storage::disk('public')->allFiles('downloads'))->toBeEmpty();
 });
 
 it('lie la modal de préparation à showPreparingModal via wire:model', function () {

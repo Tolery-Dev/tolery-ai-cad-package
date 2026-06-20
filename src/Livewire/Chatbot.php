@@ -1102,7 +1102,7 @@ class Chatbot extends Component
 
         // #2374 — Si les fichiers ne sont pas encore prêts (Job en background),
         // on diffère le téléchargement : modal loader + polling.
-        $currentMessage = $this->findCurrentVersionMessage();
+        $currentMessage = $this->findDisplayedPieceMessage();
 
         if ($currentMessage && ! $currentMessage->cad_files_ready) {
             $this->startDeferredDownload(null);
@@ -1215,13 +1215,31 @@ class Chatbot extends Component
      * Récupère le message de la version courante (dernier message assistant avec
      * une pièce générée). Sert d'ancre pour savoir si les assets sont prêts.
      */
-    private function findCurrentVersionMessage(): ?ChatMessage
+    /**
+     * Message de la pièce actuellement affichée dans le viewer 3D.
+     *
+     * Basé sur ai_json_edge_path (posé dès la génération, avant le téléchargement
+     * des assets OBJ/STEP/PDF par DownloadCadAssetsJob) — et non sur ai_cad_path —
+     * pour que le bouton « Télécharger » et la modal de préparation fonctionnent
+     * même quand les assets ne sont pas encore prêts (#2374).
+     */
+    private function findDisplayedPieceMessage(): ?ChatMessage
     {
         return $this->chat->messages()
             ->where('role', ChatMessage::ROLE_ASSISTANT)
-            ->whereNotNull('ai_cad_path')
+            ->whereNotNull('ai_json_edge_path')
             ->orderByDesc('created_at')
             ->first();
+    }
+
+    /**
+     * true dès qu'une pièce est affichée dans le viewer (générée), même si ses
+     * assets téléchargeables ne sont pas encore prêts. Pilote l'affichage
+     * permanent du bouton « Télécharger votre fichier » (#2374).
+     */
+    public function hasDownloadablePiece(): bool
+    {
+        return $this->findDisplayedPieceMessage() !== null;
     }
 
     /**

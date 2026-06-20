@@ -109,7 +109,7 @@
             ])
         </div>
 
-        @if(!$objExportUrl && !$stepExportUrl)
+        @if(! $this->hasDownloadablePiece())
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-8"
                  x-data="{ visible: true }"
                  x-show="visible"
@@ -127,7 +127,7 @@
             </div>
         @endif
 
-        @if($stepExportUrl || $objExportUrl)
+        @if($this->hasDownloadablePiece())
             <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
                 @if ($currentVersion = $this->getCurrentVersionLabel())
                     <div class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-purple-700 bg-white/90 backdrop-blur-sm rounded-full shadow-md border border-purple-200">
