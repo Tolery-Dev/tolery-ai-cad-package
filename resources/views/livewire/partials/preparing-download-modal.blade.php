@@ -11,6 +11,7 @@
 <flux:modal
     name="preparing-download"
     :open="$showPreparingModal"
+    wire:model="showPreparingModal"
     :dismissible="false"
     :closable="false"
     class="w-full max-w-md">

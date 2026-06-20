@@ -176,3 +176,15 @@ it('permet d\'annuler un téléchargement en attente et coupe le polling', funct
         ->assertSet('pendingFilesDownload', false)
         ->assertSet('pendingDownloadMessageId', null);
 });
+
+it('lie la modal de préparation à showPreparingModal via wire:model', function () {
+    // Garde-fou #2374 : sans wire:model, :open n'est qu'un état initial et Flux
+    // n'ouvre pas la modal quand showPreparingModal passe à true côté serveur
+    // → la modal ne s'afficherait jamais. Les tests Livewire utilisent une vue
+    // stub, on vérifie donc le binding directement dans le partial réel.
+    $partial = file_get_contents(
+        __DIR__.'/../../resources/views/livewire/partials/preparing-download-modal.blade.php'
+    );
+
+    expect($partial)->toContain('wire:model="showPreparingModal"');
+});
