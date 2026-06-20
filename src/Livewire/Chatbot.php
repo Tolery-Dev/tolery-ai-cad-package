@@ -19,6 +19,7 @@ use Tolery\AiCad\Jobs\DownloadCadAssetsJob;
 use Tolery\AiCad\Jobs\GenerateCadJob;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatMessage;
+use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\ChatUser;
 use Tolery\AiCad\Models\PredefinedPrompt;
 use Tolery\AiCad\Models\StepMessage;
@@ -80,6 +81,31 @@ class Chatbot extends Component
 
     /** true si le Job DownloadCadAssetsJob est en cours (polling actif) */
     public bool $pendingFilesDownload = false;
+
+    /**
+     * true quand l'utilisateur a cliqué sur « Télécharger » alors que les assets
+     * (STEP/PDF) n'étaient pas encore prêts. Affiche la modal « Vos fichiers sont
+     * en cours de préparation » et arme le polling pour déclencher le téléchargement
+     * automatiquement dès que le Job DownloadCadAssetsJob a terminé (#2374).
+     */
+    public bool $showPreparingModal = false;
+
+    /**
+     * Cible du téléchargement en attente :
+     * - null  → téléchargement de la version courante du chat (initiateDownload)
+     * - int   → id du message d'une version spécifique (downloadVersion)
+     */
+    public ?int $pendingDownloadMessageId = null;
+
+    /**
+     * Nombre de ticks de polling écoulés depuis l'ouverture de la modal de
+     * préparation. Garde-fou : au-delà de MAX_PREPARING_POLL_ATTEMPTS, on arrête
+     * le polling et on prévient l'utilisateur plutôt que de tourner sans fin (#2374).
+     */
+    public int $preparingPollAttempts = 0;
+
+    /** Nombre max de ticks (5s chacun) avant timeout de la préparation (≈ 2 min). */
+    private const MAX_PREPARING_POLL_ATTEMPTS = 24;
 
     /** true si le dernier message est un message user sans réponse assistant (génération orpheline) */
     public bool $hasPendingGeneration = false;
@@ -750,6 +776,9 @@ class Chatbot extends Component
     /**
      * Vérifie si le Job DownloadCadAssetsJob a terminé ses téléchargements.
      * Appelé par wire:poll toutes les 5s tant que $pendingFilesDownload est true.
+     *
+     * #2374 : si un téléchargement a été différé (modal « en cours de préparation »),
+     * on le déclenche automatiquement dès que les assets sont prêts.
      */
     public function checkFilesReady(): void
     {
@@ -760,7 +789,7 @@ class Chatbot extends Component
         $asst = $this->findLatestAssistantMessage();
 
         if (! $asst) {
-            $this->pendingFilesDownload = false;
+            $this->resetPendingDownload();
 
             return;
         }
@@ -768,12 +797,74 @@ class Chatbot extends Component
         $asst->refresh();
 
         if (! $asst->cad_files_ready) {
+            // #2374 — Garde-fou : si la préparation (modal ouverte) n'aboutit pas
+            // après MAX_PREPARING_POLL_ATTEMPTS ticks, on arrête le polling et on
+            // prévient l'utilisateur plutôt que de tourner indéfiniment.
+            if ($this->showPreparingModal) {
+                $this->preparingPollAttempts++;
+
+                if ($this->preparingPollAttempts >= self::MAX_PREPARING_POLL_ATTEMPTS) {
+                    $this->resetPendingDownload();
+
+                    Flux::toast(
+                        variant: 'warning',
+                        heading: 'Préparation trop longue',
+                        text: 'La préparation de vos fichiers a échoué ou pris trop de temps. Merci de réessayer dans un instant.'
+                    );
+                }
+            }
+
             return; // Continuer le polling
         }
 
         $this->pendingFilesDownload = false;
         $this->dispatchExportLinks($asst);
         $this->messages = $this->mapDbMessagesToArray();
+
+        // #2374 — Un téléchargement avait été différé : on le déclenche maintenant.
+        if ($this->showPreparingModal) {
+            $this->fulfillDeferredDownload();
+        }
+    }
+
+    /**
+     * Réinitialise l'état du téléchargement différé : ferme la modal, coupe le
+     * polling et remet le compteur de garde-fou à zéro (#2374).
+     */
+    private function resetPendingDownload(): void
+    {
+        $this->pendingFilesDownload = false;
+        $this->showPreparingModal = false;
+        $this->pendingDownloadMessageId = null;
+        $this->preparingPollAttempts = 0;
+    }
+
+    /**
+     * Déclenche le téléchargement qui avait été différé via la modal de préparation,
+     * puis ferme la modal (#2374).
+     */
+    private function fulfillDeferredDownload(): void
+    {
+        $messageId = $this->pendingDownloadMessageId;
+
+        $this->showPreparingModal = false;
+        $this->pendingDownloadMessageId = null;
+
+        if ($messageId !== null) {
+            $this->downloadVersion($messageId);
+
+            return;
+        }
+
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $team = $user->team;
+
+        if (! $team) {
+            return;
+        }
+
+        $this->performChatDownload($team);
     }
 
     /**
@@ -1000,8 +1091,13 @@ class Chatbot extends Component
     }
 
     /**
-     * Initie le téléchargement du fichier CAO
-     * Gère la logique d'achat/abonnement si nécessaire
+     * Initie le téléchargement du fichier CAO de la version courante.
+     * Gère la logique d'achat/abonnement si nécessaire.
+     *
+     * #2374 : si les assets (STEP/PDF) sont encore en cours de téléchargement
+     * en background (DownloadCadAssetsJob), on n'affiche plus de toast d'erreur :
+     * on ouvre la modal « Vos fichiers sont en cours de préparation » et on arme
+     * le polling qui déclenchera le téléchargement automatiquement une fois prêts.
      */
     public function initiateDownload(): void
     {
@@ -1041,6 +1137,27 @@ class Chatbot extends Component
             return;
         }
 
+        // #2374 — Si les fichiers ne sont pas encore prêts (Job en background),
+        // on diffère le téléchargement : modal loader + polling.
+        $currentMessage = $this->findDisplayedPieceMessage();
+
+        if ($currentMessage && ! $currentMessage->cad_files_ready) {
+            $this->startDeferredDownload(null);
+
+            return;
+        }
+
+        $this->performChatDownload($team);
+    }
+
+    /**
+     * Génère le ZIP de la version courante du chat et déclenche le téléchargement.
+     * Enregistre le téléchargement (consommation de quota) au passage.
+     */
+    private function performChatDownload(ChatTeam $team): void
+    {
+        $fileAccessService = app(FileAccessService::class);
+
         // Enregistre le téléchargement
         $fileAccessService->recordChatDownload($team, $this->chat);
         logger()->info('[CHATBOT] Download recorded');
@@ -1069,16 +1186,29 @@ class Chatbot extends Component
             'files' => $result['files'],
         ]);
 
+        $this->triggerZipDownload($result['path'], $result['filename']);
+
+        Flux::toast(
+            variant: 'success',
+            heading: 'Téléchargement lancé',
+            text: 'Votre archive contenant tous les fichiers CAO est en cours de téléchargement.'
+        );
+    }
+
+    /**
+     * Publie le ZIP temporaire vers le disque public et déclenche son téléchargement
+     * côté navigateur via un lien <a download> injecté par $this->js().
+     */
+    private function triggerZipDownload(string $tempPath, string $filename): void
+    {
         // Stocker le ZIP dans un emplacement accessible et créer une URL de téléchargement
-        $publicPath = 'downloads/'.basename($result['path']);
-        Storage::disk('public')->put($publicPath, file_get_contents($result['path']));
+        $publicPath = 'downloads/'.basename($tempPath);
+        Storage::disk('public')->put($publicPath, file_get_contents($tempPath));
 
         // Supprimer le fichier temporaire
-        @unlink($result['path']);
+        @unlink($tempPath);
 
-        // Déclenche le téléchargement via JavaScript
         $downloadUrl = Storage::disk('public')->url($publicPath);
-        $filename = $result['filename'];
 
         logger()->info('[CHATBOT] Triggering download', [
             'url' => $downloadUrl,
@@ -1097,12 +1227,66 @@ class Chatbot extends Component
                 document.body.removeChild(link);
             })();
         ");
+    }
 
-        Flux::toast(
-            variant: 'success',
-            heading: 'Téléchargement lancé',
-            text: 'Votre archive contenant tous les fichiers CAO est en cours de téléchargement.'
-        );
+    /**
+     * Ouvre la modal « Vos fichiers sont en cours de préparation » et arme le
+     * polling (checkFilesReady) qui déclenchera le téléchargement automatiquement
+     * dès que DownloadCadAssetsJob aura positionné cad_files_ready = true (#2374).
+     *
+     * @param  int|null  $messageId  null = version courante du chat, sinon version spécifique
+     */
+    private function startDeferredDownload(?int $messageId): void
+    {
+        logger()->info('[CHATBOT] Download deferred — assets not ready yet', [
+            'chat_id' => $this->chat->id,
+            'message_id' => $messageId,
+        ]);
+
+        $this->pendingDownloadMessageId = $messageId;
+        $this->showPreparingModal = true;
+        $this->pendingFilesDownload = true;
+        $this->preparingPollAttempts = 0;
+    }
+
+    /**
+     * Récupère le message de la version courante (dernier message assistant avec
+     * une pièce générée). Sert d'ancre pour savoir si les assets sont prêts.
+     */
+    /**
+     * Message de la pièce actuellement affichée dans le viewer 3D.
+     *
+     * Basé sur ai_json_edge_path (posé dès la génération, avant le téléchargement
+     * des assets OBJ/STEP/PDF par DownloadCadAssetsJob) — et non sur ai_cad_path —
+     * pour que le bouton « Télécharger » et la modal de préparation fonctionnent
+     * même quand les assets ne sont pas encore prêts (#2374).
+     */
+    private function findDisplayedPieceMessage(): ?ChatMessage
+    {
+        return $this->chat->messages()
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->whereNotNull('ai_json_edge_path')
+            ->orderByDesc('created_at')
+            ->first();
+    }
+
+    /**
+     * true dès qu'une pièce est affichée dans le viewer (générée), même si ses
+     * assets téléchargeables ne sont pas encore prêts. Pilote l'affichage
+     * permanent du bouton « Télécharger votre fichier » (#2374).
+     */
+    public function hasDownloadablePiece(): bool
+    {
+        return $this->findDisplayedPieceMessage() !== null;
+    }
+
+    /**
+     * Annule un téléchargement en attente : ferme la modal et coupe le polling.
+     * Appelé quand l'utilisateur ferme manuellement la modal de préparation.
+     */
+    public function cancelPendingDownload(): void
+    {
+        $this->resetPendingDownload();
     }
 
     /**
@@ -1390,6 +1574,15 @@ class Chatbot extends Component
             return;
         }
 
+        // #2374 — Si les assets de cette version ne sont pas encore prêts (Job en
+        // background), on diffère le téléchargement : modal loader + polling.
+        // Pas de toast d'erreur ni de consommation de quota tant que ce n'est pas prêt.
+        if (! $message->cad_files_ready) {
+            $this->startDeferredDownload($message->id);
+
+            return;
+        }
+
         // Enregistre le téléchargement de cette version spécifique (décompte 1 quota si jamais téléchargée)
         // Chaque version téléchargée consomme 1 quota. Re-télécharger la même version ne coûte rien.
         $fileAccessService->recordMessageDownload($team, $this->chat, $message);
@@ -1420,35 +1613,7 @@ class Chatbot extends Component
             'files' => $result['files'],
         ]);
 
-        // Store ZIP in accessible location and create download URL
-        $publicPath = 'downloads/'.basename($result['path']);
-        Storage::disk('public')->put($publicPath, file_get_contents($result['path']));
-
-        // Delete temporary file
-        @unlink($result['path']);
-
-        // Trigger download via JavaScript
-        $downloadUrl = Storage::disk('public')->url($publicPath);
-        $filename = $result['filename'];
-
-        logger()->info('[CHATBOT] Triggering version download', [
-            'url' => $downloadUrl,
-            'filename' => $filename,
-            'version' => $message->getVersionLabel(),
-        ]);
-
-        // Use $this->js() to trigger download directly
-        $this->js("
-            (function() {
-                const link = document.createElement('a');
-                link.href = '{$downloadUrl}';
-                link.download = '{$filename}';
-                link.style.display = 'none';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            })();
-        ");
+        $this->triggerZipDownload($result['path'], $result['filename']);
 
         Flux::toast(
             variant: 'success',
