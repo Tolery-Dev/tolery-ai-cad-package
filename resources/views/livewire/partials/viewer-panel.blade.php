@@ -136,8 +136,11 @@
                     </div>
                 @endif
 
+                {{-- #2374 — Désactivé pendant la préparation pour éviter les reclics
+                     (la modal « en cours de préparation » est déjà ouverte). --}}
                 <flux:button
                     wire:click="initiateDownload"
+                    :disabled="$this->showPreparingModal"
                     variant="primary"
                     color="purple"
                     icon="arrow-down-tray"

@@ -97,6 +97,16 @@ class Chatbot extends Component
      */
     public ?int $pendingDownloadMessageId = null;
 
+    /**
+     * Nombre de ticks de polling écoulés depuis l'ouverture de la modal de
+     * préparation. Garde-fou : au-delà de MAX_PREPARING_POLL_ATTEMPTS, on arrête
+     * le polling et on prévient l'utilisateur plutôt que de tourner sans fin (#2374).
+     */
+    public int $preparingPollAttempts = 0;
+
+    /** Nombre max de ticks (5s chacun) avant timeout de la préparation (≈ 2 min). */
+    private const MAX_PREPARING_POLL_ATTEMPTS = 24;
+
     /** true si le dernier message est un message user sans réponse assistant (génération orpheline) */
     public bool $hasPendingGeneration = false;
 
@@ -779,9 +789,7 @@ class Chatbot extends Component
         $asst = $this->findLatestAssistantMessage();
 
         if (! $asst) {
-            $this->pendingFilesDownload = false;
-            $this->showPreparingModal = false;
-            $this->pendingDownloadMessageId = null;
+            $this->resetPendingDownload();
 
             return;
         }
@@ -789,6 +797,23 @@ class Chatbot extends Component
         $asst->refresh();
 
         if (! $asst->cad_files_ready) {
+            // #2374 — Garde-fou : si la préparation (modal ouverte) n'aboutit pas
+            // après MAX_PREPARING_POLL_ATTEMPTS ticks, on arrête le polling et on
+            // prévient l'utilisateur plutôt que de tourner indéfiniment.
+            if ($this->showPreparingModal) {
+                $this->preparingPollAttempts++;
+
+                if ($this->preparingPollAttempts >= self::MAX_PREPARING_POLL_ATTEMPTS) {
+                    $this->resetPendingDownload();
+
+                    Flux::toast(
+                        variant: 'warning',
+                        heading: 'Préparation trop longue',
+                        text: 'La préparation de vos fichiers a échoué ou pris trop de temps. Merci de réessayer dans un instant.'
+                    );
+                }
+            }
+
             return; // Continuer le polling
         }
 
@@ -800,6 +825,18 @@ class Chatbot extends Component
         if ($this->showPreparingModal) {
             $this->fulfillDeferredDownload();
         }
+    }
+
+    /**
+     * Réinitialise l'état du téléchargement différé : ferme la modal, coupe le
+     * polling et remet le compteur de garde-fou à zéro (#2374).
+     */
+    private function resetPendingDownload(): void
+    {
+        $this->pendingFilesDownload = false;
+        $this->showPreparingModal = false;
+        $this->pendingDownloadMessageId = null;
+        $this->preparingPollAttempts = 0;
     }
 
     /**
@@ -1209,6 +1246,7 @@ class Chatbot extends Component
         $this->pendingDownloadMessageId = $messageId;
         $this->showPreparingModal = true;
         $this->pendingFilesDownload = true;
+        $this->preparingPollAttempts = 0;
     }
 
     /**
@@ -1248,9 +1286,7 @@ class Chatbot extends Component
      */
     public function cancelPendingDownload(): void
     {
-        $this->showPreparingModal = false;
-        $this->pendingFilesDownload = false;
-        $this->pendingDownloadMessageId = null;
+        $this->resetPendingDownload();
     }
 
     /**

@@ -231,3 +231,38 @@ it('lie la modal de préparation à showPreparingModal via wire:model', function
 
     expect($partial)->toContain('wire:model="showPreparingModal"');
 });
+
+it('arrête le polling et prévient l\'utilisateur si la préparation traîne (timeout)', function () {
+    [$chat] = makeAuthedChatForDownload(filesReady: false);
+
+    $component = Livewire::test(Chatbot::class, ['chat' => $chat])
+        ->call('initiateDownload')
+        ->assertSet('showPreparingModal', true)
+        ->assertSet('pendingFilesDownload', true);
+
+    // Le job n'aboutit jamais : on simule les ticks de polling jusqu'au timeout (24 ticks).
+    for ($i = 0; $i < 24; $i++) {
+        $component->call('checkFilesReady');
+    }
+
+    // La modal se ferme, le polling s'arrête et l'utilisateur est prévenu.
+    $component
+        ->assertSet('showPreparingModal', false)
+        ->assertSet('pendingFilesDownload', false)
+        ->assertSet('pendingDownloadMessageId', null)
+        ->assertDispatched('toast-show');
+
+    // Aucun téléchargement déclenché puisque les assets ne sont jamais arrivés.
+    expect(Storage::disk('public')->allFiles('downloads'))->toBeEmpty();
+});
+
+it('désactive le bouton de téléchargement pendant la préparation', function () {
+    // Garde-fou #2374 : le bouton reste visible mais doit être désactivé tant que
+    // la modal de préparation est ouverte, pour éviter les reclics qui relancent
+    // initiateDownload. Vérifié directement dans le partial (vue stub en test).
+    $view = file_get_contents(
+        __DIR__.'/../../resources/views/livewire/partials/viewer-panel.blade.php'
+    );
+
+    expect($view)->toContain(':disabled="$this->showPreparingModal"');
+});
