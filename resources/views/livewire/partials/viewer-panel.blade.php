@@ -6,7 +6,7 @@
              class="absolute inset-0 z-50 flex items-start justify-center pt-8 bg-white">
             <div class="w-full max-w-4xl mx-4">
                 <div class="bg-gradient-to-r from-violet-600 to-indigo-800 px-6 py-4 text-white flex items-center justify-between rounded-t-2xl">
-                    <h3 class="text-lg font-semibold">La génération de votre fichier peut mettre quelques secondes à plusieurs minutes selon la complexité</h3>
+                    <h3 class="text-lg font-semibold">Génération de votre fichier CAO</h3>
                     <div class="text-sm" x-text="`${completedSteps} sur 5 étapes terminées`"></div>
                 </div>
 
@@ -84,7 +84,8 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div class="flex-1">
-                                <p class="text-sm font-medium text-violet-900 mb-1">Vous pouvez fermer cette fenêtre</p>
+                                <p class="text-sm font-medium text-violet-900 mb-1">La génération de votre fichier peut mettre quelques secondes à plusieurs minutes selon la complexité</p>
+                                <p class="text-xs text-violet-700">Vous pouvez fermer cette fenêtre</p>
                             </div>
                         </div>
                     </template>
