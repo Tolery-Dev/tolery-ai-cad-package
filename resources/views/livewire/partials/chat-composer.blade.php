@@ -27,7 +27,7 @@
                     wire:key="{{ $composerPlaceholder }}"
                     wire:model="message"
                     submit="send"
-                    class="border-violet-300 border-b-violet-300"
+                    class="border-violet-300! border-b-violet-300!"
                     :placeholder="$composerPlaceholder"
                     x-on:input="$dispatch('composer-input', { value: $event.target.value })"
                     x-on:keydown.enter="if (!$event.shiftKey && !busy && hasContent) { $event.preventDefault(); busy = true; $wire.send() }"
