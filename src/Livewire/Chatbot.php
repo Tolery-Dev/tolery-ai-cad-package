@@ -122,7 +122,12 @@ class Chatbot extends Component
         // displays the progress bar even on a ghost chat (landing page).
         /** @var ChatUser $user */
         $user = auth()->user();
-        $this->quotaStatus = app(FileAccessService::class)->getQuotaStatus($user->team);
+        // Un client sans équipe (team_id null) peut atteindre le chatbot depuis
+        // l'ouverture GA de ToleryCAD à tous. getQuotaStatus() exige un ChatTeam
+        // non-null → on garde le null comme partout ailleurs dans le composant (#375).
+        $this->quotaStatus = $user->team
+            ? app(FileAccessService::class)->getQuotaStatus($user->team)
+            : null;
 
         // Charger les codes d'erreur DFM avant le early return : un ghost chat
         // créé en lazy dans send() ne repasse jamais par mount() (l'URL est mise
