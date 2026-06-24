@@ -14,6 +14,10 @@ class CadGenerationStarted implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    public int $tries = 3;
+
+    public int $backoff = 5;
+
     public function __construct(public ChatMessage $message) {}
 
     /** @return array<int, Channel> */
