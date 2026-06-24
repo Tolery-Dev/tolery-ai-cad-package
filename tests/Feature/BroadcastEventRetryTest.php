@@ -40,7 +40,8 @@ describe('CadGeneration broadcast events — BroadcastEvent retry config', funct
     });
 
     it('BroadcastEvent constructor picks up tries and backoff from an event', function () {
-        $event = new class {
+        $event = new class
+        {
             public int $tries = 3;
 
             public int $backoff = 5;
