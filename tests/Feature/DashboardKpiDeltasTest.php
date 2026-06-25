@@ -6,6 +6,7 @@ use Laravel\Cashier\Subscription;
 use Tolery\AiCad\Livewire\Admin\Dashboard;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatTeam;
+use Tolery\AiCad\Models\FilePurchase;
 
 beforeEach(function () {
     config(['ai-cad.chat_team_model' => ChatTeam::class]);
@@ -62,4 +63,25 @@ it('splits active subscribers between paying and trialing counts', function () {
     expect($kpis['paying_count'])->toBe(1)
         ->and($kpis['trialing_count'])->toBe(1)
         ->and($kpis['subscription_count'])->toBe(2);
+});
+
+it('reports the à-la-pièce revenue (HT) and the number of unit purchases', function () {
+    $team = ChatTeam::factory()->create();
+    $chat = Chat::factory()->create(['team_id' => $team->id]);
+
+    foreach (['pi_a', 'pi_b'] as $paymentIntent) {
+        FilePurchase::create([
+            'team_id' => $team->id,
+            'chat_id' => $chat->id,
+            'stripe_payment_intent_id' => $paymentIntent,
+            'amount' => 2900, // 29,00 € HT
+            'currency' => 'eur',
+            'purchased_at' => now()->subDay(),
+        ]);
+    }
+
+    $kpis = (new Dashboard)->getKpis();
+
+    expect($kpis['purchase_count'])->toBe(2)
+        ->and($kpis['purchase_revenue'])->toEqual(58.0); // 2 × 29,00 € HT
 });

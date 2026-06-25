@@ -545,7 +545,14 @@ class StripeWebhookController extends Controller
                 return response()->json(['success' => true], 200);
             }
 
-            DB::transaction(function () use ($team, $chat, $session, $paymentIntentId) {
+            // Revenus comptabilisés en HT (B2B). Stripe Tax (tax_behavior=exclusive)
+            // ajoute la TVA au-dessus du prix HT, donc amount_total est TTC.
+            // HT = total - TVA, ce qui gère aussi d'éventuelles remises.
+            $amountTotal = (int) ($session['amount_total'] ?? 0);
+            $amountTax = (int) ($session['total_details']['amount_tax'] ?? 0);
+            $amountHt = $amountTotal - $amountTax;
+
+            DB::transaction(function () use ($team, $chat, $session, $paymentIntentId, $amountHt) {
                 if (! empty($session['customer'])) {
                     $team->tolerycad_stripe_id = $session['customer'];
                     $team->save();
@@ -556,7 +563,7 @@ class StripeWebhookController extends Controller
                     [
                         'team_id' => $team->id,
                         'chat_id' => $chat->id,
-                        'amount' => $session['amount_total'] ?? 0,
+                        'amount' => $amountHt,
                         'currency' => $session['currency'] ?? 'eur',
                         'purchased_at' => now(),
                     ],

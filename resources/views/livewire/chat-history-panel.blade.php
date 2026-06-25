@@ -59,7 +59,7 @@
                                     @if ($item['type'] === 'subscription')
                                         <flux:badge color="blue" size="sm">Abonnement</flux:badge>
                                     @else
-                                        <flux:badge color="green" size="sm">Achat {{ \Illuminate\Support\Number::currency($item['amount'] / 100, 'EUR') }}</flux:badge>
+                                        <flux:badge color="green" size="sm">Achat {{ \Illuminate\Support\Number::currency($item['amount'] / 100, 'EUR') }} HT</flux:badge>
                                     @endif
                                 </div>
                             </div>

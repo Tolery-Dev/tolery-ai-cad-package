@@ -265,6 +265,35 @@ describe('FilePurchase - Webhook Integration', function () {
         expect($team->fresh()->tolerycad_stripe_id)->toBe('cus_test_oneshot');
     });
 
+    it('stores the HT amount excluding VAT from the checkout session', function () {
+        $team = ChatTeam::factory()->create();
+        $chat = Chat::factory()->create(['team_id' => $team->id]);
+
+        // 29,00 € HT + 20 % TVA = 34,80 € TTC (amount_total). On ne comptabilise que le HT.
+        $session = [
+            'id' => 'cs_test_vat',
+            'mode' => 'payment',
+            'payment_intent' => 'pi_test_vat',
+            'amount_total' => 3480,
+            'currency' => 'eur',
+            'total_details' => ['amount_tax' => 580],
+            'metadata' => [
+                'type' => 'file_purchase',
+                'team_id' => (string) $team->id,
+                'chat_id' => (string) $chat->id,
+            ],
+        ];
+
+        $controller = app(StripeWebhookController::class);
+        $method = new ReflectionMethod($controller, 'handleCheckoutSessionCompleted');
+        $response = $method->invoke($controller, ['object' => $session]);
+
+        expect($response->getStatusCode())->toBe(200);
+
+        $purchase = FilePurchase::first();
+        expect($purchase->amount)->toBe(2900); // HT, et non les 3480 TTC
+    });
+
     it('does not duplicate a file purchase for the same payment intent', function () {
         $team = ChatTeam::factory()->create();
         $chat = Chat::factory()->create(['team_id' => $team->id]);

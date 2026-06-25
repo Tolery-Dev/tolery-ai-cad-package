@@ -11,6 +11,7 @@ use Laravel\Cashier\Cashier;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Tolery\AiCad\Commands\BackfillPurchaseHt;
 use Tolery\AiCad\Commands\DebugApiStream;
 use Tolery\AiCad\Commands\LimitsAutoRenewal;
 use Tolery\AiCad\Commands\MigratePrompts;
@@ -72,6 +73,7 @@ class AiCadServiceProvider extends PackageServiceProvider
                 SyncInvoices::class,
                 UpdateStripeMetadata::class,
                 MigratePrompts::class,
+                BackfillPurchaseHt::class,
             ]);
 
         Cashier::useCustomerModel(ChatTeam::class);
