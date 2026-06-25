@@ -3,6 +3,7 @@
 namespace Tolery\AiCad\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
 use Stripe\Exception\ApiErrorException;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Services\AiCadStripe;
@@ -17,7 +18,7 @@ class BackfillPurchaseHt extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, FilePurchase> $purchases */
+        /** @var Collection<int, FilePurchase> $purchases */
         $purchases = FilePurchase::query()->orderBy('id')->get();
 
         if ($purchases->isEmpty()) {
