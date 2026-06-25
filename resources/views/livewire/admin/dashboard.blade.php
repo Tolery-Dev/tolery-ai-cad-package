@@ -35,9 +35,9 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         @php
             $revenueCards = [
-                ['label' => 'Revenus totaux', 'value' => $kpis['total_revenue'], 'delta' => $kpis['deltas']['total_revenue'], 'icon' => 'banknotes'],
-                ['label' => 'Revenus abonnements', 'value' => $kpis['subscription_revenue'], 'delta' => $kpis['deltas']['subscription_revenue'], 'icon' => 'arrow-path'],
-                ['label' => 'Revenus à la pièce', 'value' => $kpis['purchase_revenue'], 'delta' => $kpis['deltas']['purchase_revenue'], 'icon' => 'cube'],
+                ['label' => 'Revenus totaux HT', 'value' => $kpis['total_revenue'], 'delta' => $kpis['deltas']['total_revenue'], 'icon' => 'banknotes'],
+                ['label' => 'Revenus abonnement HT', 'value' => $kpis['subscription_revenue'], 'delta' => $kpis['deltas']['subscription_revenue'], 'icon' => 'arrow-path'],
+                ['label' => 'Revenus achat unitaire HT', 'value' => $kpis['purchase_revenue'], 'delta' => $kpis['deltas']['purchase_revenue'], 'icon' => 'cube', 'meta' => $kpis['purchase_count'].' fichier'.($kpis['purchase_count'] > 1 ? 's' : '').' acheté'.($kpis['purchase_count'] > 1 ? 's' : '').' à l\'unité'],
             ];
         @endphp
 
@@ -48,6 +48,9 @@
                     <flux:icon :name="$card['icon']" class="size-4 text-zinc-400" />
                 </div>
                 <div class="text-2xl font-bold tabular-nums">{{ number_format($card['value'], 2, ',', ' ') }} €</div>
+                @if (! empty($card['meta']))
+                    <flux:text class="text-xs text-zinc-500">{{ $card['meta'] }}</flux:text>
+                @endif
                 <div class="mt-auto">
                     @if ($card['delta'] !== null)
                         <flux:badge :color="$deltaColor($card['delta'])" size="sm">

@@ -36,7 +36,7 @@ class FilePurchaseTable extends FluxDataTable
                 'render' => fn ($row) => AdminColumnHelpers::teamLinkOrName($row->team),
             ],
             [
-                'label' => 'Montant',
+                'label' => 'Montant HT',
                 'field' => 'amount',
                 'sortable' => true,
                 'render' => fn ($row) => Number::currency($row->amount / 100, 'EUR', 'fr'),
