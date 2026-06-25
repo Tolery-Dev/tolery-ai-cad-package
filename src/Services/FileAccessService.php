@@ -77,6 +77,7 @@ class FileAccessService
                     'can_purchase' => true,
                     'can_subscribe' => true,
                     'purchase_price' => $this->getOneTimePurchasePrice(), // 9.99€ par défaut
+                    'eligible_for_trial' => $this->isEligibleForTrial($team),
                 ],
             ];
         }
@@ -156,6 +157,7 @@ class FileAccessService
                 'can_purchase' => true,
                 'can_subscribe' => true, // peut upgrade son plan
                 'purchase_price' => $this->getOneTimePurchasePrice(),
+                'eligible_for_trial' => false, // déjà abonné → pas d'essai
             ],
         ];
     }
@@ -217,6 +219,7 @@ class FileAccessService
                     'can_purchase' => true,
                     'can_subscribe' => true,
                     'purchase_price' => $this->getOneTimePurchasePrice(),
+                    'eligible_for_trial' => $this->isEligibleForTrial($team),
                 ],
             ];
         }
@@ -295,6 +298,7 @@ class FileAccessService
                 'can_purchase' => true,
                 'can_subscribe' => true, // peut upgrade son plan
                 'purchase_price' => $this->getOneTimePurchasePrice(),
+                'eligible_for_trial' => false, // déjà abonné → pas d'essai
             ],
         ];
     }
@@ -454,6 +458,20 @@ class FileAccessService
             'remaining' => max(0, $product->files_allowed - (int) $limit->used_amount),
             'period_end' => $limit->end_date,
         ];
+    }
+
+    /**
+     * Une équipe est éligible à l'essai gratuit de 30 jours si elle n'a jamais
+     * eu d'abonnement ToleryCad (#2321).
+     *
+     * Cashier ne supprime jamais physiquement les abonnements : un abonnement
+     * annulé reste en base avec `ends_at` renseigné, donc `exists()` suffit à
+     * détecter un abonnement passé. Reflète la règle de
+     * App\Http\Controllers\Client\ToleryCadSubscriptionController côté app hôte.
+     */
+    public function isEligibleForTrial(ChatTeam $team): bool
+    {
+        return ! $team->subscriptions()->exists();
     }
 
     /**
