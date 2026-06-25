@@ -40,6 +40,11 @@
                                     <span>Accès illimité à ce fichier</span>
                                 </li>
                             </ul>
+                            @if($downloadStatus && ! empty($downloadStatus['options']['eligible_for_trial']))
+                                <div class="mt-4">
+                                    <flux:badge color="green" size="sm" icon="gift">30 jours d'essai gratuit</flux:badge>
+                                </div>
+                            @endif
                         </div>
                         <flux:button
                             wire:click="redirectToSubscription"

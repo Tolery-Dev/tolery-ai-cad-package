@@ -165,6 +165,79 @@ describe('FileAccessService - Download Status', function () {
             ->and($status['options']['can_purchase'])->toBeTrue()
             ->and($status['options']['can_subscribe'])->toBeTrue();
     });
+
+    it('flags trial eligibility for a team that never subscribed', function () {
+        $team = ChatTeam::factory()->create();
+        $chat = Chat::factory()->create(['team_id' => $team->id]);
+
+        $service = app(FileAccessService::class);
+        $status = $service->canDownloadChat($team, $chat);
+
+        expect($status['reason'])->toBe('no_subscription')
+            ->and($status['options']['eligible_for_trial'])->toBeTrue();
+    });
+
+    it('does not flag trial eligibility for a team with a past subscription', function () {
+        $team = ChatTeam::factory()->create();
+        $chat = Chat::factory()->create(['team_id' => $team->id]);
+
+        // Abonnement annulé : Cashier le conserve en base avec ends_at renseigné.
+        $team->subscriptions()->create([
+            'type' => 'default',
+            'stripe_id' => 'sub_canceled',
+            'stripe_status' => 'canceled',
+            'stripe_price' => 'price_test',
+            'quantity' => 1,
+            'ends_at' => now()->subDay(),
+        ]);
+
+        $service = app(FileAccessService::class);
+        $status = $service->canDownloadChat($team, $chat);
+
+        expect($status['reason'])->toBe('no_subscription')
+            ->and($status['options']['eligible_for_trial'])->toBeFalse();
+    });
+
+    it('does not flag trial eligibility when quota is exceeded', function () {
+        $product = SubscriptionProduct::create([
+            'stripe_id' => 'prod_test_monthly',
+            'name' => 'Monthly Plan',
+            'description' => 'Monthly subscription',
+            'files_allowed' => 10,
+            'active' => true,
+        ]);
+
+        $team = ChatTeam::factory()->create();
+        $chat = Chat::factory()->create(['team_id' => $team->id]);
+
+        $subscription = $team->subscriptions()->create([
+            'type' => 'default',
+            'stripe_id' => 'sub_test',
+            'stripe_status' => 'active',
+            'stripe_price' => 'price_test',
+            'quantity' => 1,
+        ]);
+
+        $subscription->items()->create([
+            'stripe_id' => 'si_test',
+            'stripe_product' => $product->stripe_id,
+            'stripe_price' => 'price_test',
+            'quantity' => 1,
+        ]);
+
+        $team->limits()->create([
+            'subscription_product_id' => $product->id,
+            'used_amount' => 10,
+            'start_date' => now()->startOfMonth(),
+            'end_date' => now()->endOfMonth(),
+        ]);
+
+        $service = app(FileAccessService::class);
+        $status = $service->canDownloadChat($team, $chat);
+
+        expect($status['reason'])->toBe('quota_exceeded')
+            ->and($status['options']['eligible_for_trial'])->toBeFalse();
+    });
 });
 
 describe('FileAccessService - One-Shot Pricing', function () {
