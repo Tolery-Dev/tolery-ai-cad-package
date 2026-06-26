@@ -90,7 +90,7 @@ class StepMessage extends Model
                 'Définition des tolérances...',
             ],
             'generation_code' => [
-                'Génération du code CAO...',
+                'Génération du fichier CAO...',
                 'Construction de la géométrie 3D...',
                 'Application des opérations...',
             ],
