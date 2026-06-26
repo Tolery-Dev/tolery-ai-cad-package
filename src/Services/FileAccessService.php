@@ -309,6 +309,15 @@ class FileAccessService
      */
     public function recordChatDownload(ChatTeam $team, Chat $chat): void
     {
+        // Un beta testeur a un accès libre permanent via la porte `beta_tester`
+        // de canDownloadChat(). On ne matérialise donc pas de ChatDownload :
+        // sinon cette trace « gratuite » (aucun quota consommé) rouvrirait
+        // l'accès via la porte `already_downloaded` une fois le statut beta
+        // révoqué (#2434).
+        if ($team->isBetaTester()) {
+            return;
+        }
+
         // Vérifie qu'il n'a pas déjà été téléchargé
         if (ChatDownload::isDownloaded($team, $chat)) {
             Log::info('Chat already downloaded, skipping record', [
@@ -363,6 +372,12 @@ class FileAccessService
      */
     public function recordMessageDownload(ChatTeam $team, Chat $chat, ChatMessage $message): void
     {
+        // Idem recordChatDownload : un beta testeur ne laisse pas de trace
+        // ChatDownload, qui rouvrirait l'accès gratuit après révocation (#2434).
+        if ($team->isBetaTester()) {
+            return;
+        }
+
         // Vérifie que cette version n'a pas déjà été téléchargée
         if (ChatDownload::isMessageDownloaded($team, $chat, $message)) {
             Log::info('Message version already downloaded, skipping record', [
