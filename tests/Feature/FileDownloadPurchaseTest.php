@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Http;
 use Stripe\Collection;
 use Tolery\AiCad\Http\Controllers\StripeWebhookController;
 use Tolery\AiCad\Models\Chat;
+use Tolery\AiCad\Models\ChatDownload;
+use Tolery\AiCad\Models\ChatMessage;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
 use Tolery\AiCad\Models\SubscriptionProduct;
@@ -237,6 +239,61 @@ describe('FileAccessService - Download Status', function () {
 
         expect($status['reason'])->toBe('quota_exceeded')
             ->and($status['options']['eligible_for_trial'])->toBeFalse();
+    });
+});
+
+describe('FileAccessService - Beta tester downloads (#2434)', function () {
+    it('does not record a ChatDownload when the team is a beta tester', function () {
+        $realTeam = ChatTeam::factory()->create();
+        $chat = Chat::factory()->create(['team_id' => $realTeam->id]);
+
+        $betaTeam = Mockery::mock(ChatTeam::class)->makePartial();
+        $betaTeam->shouldReceive('isBetaTester')->andReturn(true);
+        $betaTeam->id = $realTeam->id;
+
+        app(FileAccessService::class)->recordChatDownload($betaTeam, $chat);
+
+        expect(ChatDownload::count())->toBe(0);
+    });
+
+    it('still records a ChatDownload for a non beta tester', function () {
+        $team = ChatTeam::factory()->create(); // isBetaTester() => false
+        $chat = Chat::factory()->create(['team_id' => $team->id]);
+
+        app(FileAccessService::class)->recordChatDownload($team, $chat);
+
+        expect(ChatDownload::where('team_id', $team->id)->count())->toBe(1);
+    });
+
+    it('does not record a ChatDownload for a beta tester message version', function () {
+        $realTeam = ChatTeam::factory()->create();
+        $chat = Chat::factory()->create(['team_id' => $realTeam->id]);
+        $message = new ChatMessage(['chat_id' => $chat->id]);
+
+        $betaTeam = Mockery::mock(ChatTeam::class)->makePartial();
+        $betaTeam->shouldReceive('isBetaTester')->andReturn(true);
+        $betaTeam->id = $realTeam->id;
+
+        app(FileAccessService::class)->recordMessageDownload($betaTeam, $chat, $message);
+
+        expect(ChatDownload::count())->toBe(0);
+    });
+
+    it('leaves no perpetual free access once the beta status is revoked', function () {
+        $realTeam = ChatTeam::factory()->create();
+        $chat = Chat::factory()->create(['team_id' => $realTeam->id]);
+
+        // Téléchargement effectué pendant la période beta.
+        $betaTeam = Mockery::mock(ChatTeam::class)->makePartial();
+        $betaTeam->shouldReceive('isBetaTester')->andReturn(true);
+        $betaTeam->id = $realTeam->id;
+        app(FileAccessService::class)->recordChatDownload($betaTeam, $chat);
+
+        // Beta révoqué : le vrai team n'est plus beta, jamais abonné, pas d'achat.
+        $status = app(FileAccessService::class)->canDownloadChat($realTeam, $chat);
+
+        expect($status['can_download'])->toBeFalse()
+            ->and($status['reason'])->toBe('no_subscription');
     });
 });
 
