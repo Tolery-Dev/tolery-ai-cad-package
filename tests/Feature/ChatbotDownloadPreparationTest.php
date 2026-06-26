@@ -1,9 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Livewire\Livewire;
+use Tolery\AiCad\Jobs\DownloadCadAssetsJob;
 use Tolery\AiCad\Livewire\Chatbot;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatDownload;
@@ -265,4 +267,73 @@ it('désactive le bouton de téléchargement pendant la préparation', function 
     );
 
     expect($view)->toContain(':disabled="$this->showPreparingModal"');
+});
+
+/**
+ * #2438 — Quand un précédent DownloadCadAssetsJob a échoué définitivement
+ * (cad_files_failed = true), un nouveau clic relance le téléchargement des assets
+ * (re-dispatch du job depuis les URLs sources DFM toujours présentes dans les
+ * champs) plutôt que de réafficher bêtement l'erreur.
+ */
+it('relance le téléchargement des assets après un échec définitif', function () {
+    $team = ChatTeam::factory()->create();
+    $user = ChatUser::create(['team_id' => $team->id]);
+    Auth::setUser($user);
+
+    $chat = Chat::factory()->create(['team_id' => $team->id, 'user_id' => $user->id, 'name' => 'Support Moteur']);
+    FilePurchase::create([
+        'team_id' => $team->id,
+        'chat_id' => $chat->id,
+        'stripe_payment_intent_id' => 'pi_test_'.uniqid(),
+        'amount' => 999,
+        'currency' => 'eur',
+        'purchased_at' => now(),
+    ]);
+
+    // Assets jamais localisés : les champs pointent encore vers les URLs DFM et
+    // l'échec définitif a été marqué par DownloadCadAssetsJob::failed().
+    $message = ChatMessage::query()->create([
+        'chat_id' => $chat->id,
+        'role' => ChatMessage::ROLE_ASSISTANT,
+        'message' => 'Génération réussie.',
+        'ai_json_edge_path' => 'cad/source.json',
+        'ai_cad_path' => 'https://dfm.test/export/obj',
+        'ai_step_path' => 'https://dfm.test/export/step',
+        'ai_technical_drawing_path' => 'https://dfm.test/export/pdf',
+        'cad_files_ready' => false,
+        'cad_files_failed' => true,
+    ]);
+
+    Bus::fake();
+
+    Livewire::test(Chatbot::class, ['chat' => $chat])
+        ->call('initiateDownload')
+        ->assertSet('showPreparingModal', true)
+        ->assertSet('pendingFilesDownload', true);
+
+    // Le job de téléchargement a été re-dispatché et le flag d'échec réinitialisé.
+    Bus::assertDispatched(DownloadCadAssetsJob::class);
+    expect($message->fresh()->cad_files_failed)->toBeFalse();
+});
+
+it('arrête le polling et prévient quand le téléchargement échoue définitivement', function () {
+    [$chat, $message] = makeAuthedChatForDownload(filesReady: false);
+
+    $component = Livewire::test(Chatbot::class, ['chat' => $chat])
+        ->call('initiateDownload')
+        ->assertSet('showPreparingModal', true)
+        ->assertSet('pendingFilesDownload', true);
+
+    // Le job de téléchargement échoue définitivement en background.
+    $message->update(['cad_files_failed' => true]);
+
+    // Le prochain tick de polling coupe la préparation et prévient l'utilisateur,
+    // sans attendre le timeout du garde-fou (24 ticks).
+    $component->call('checkFilesReady')
+        ->assertSet('showPreparingModal', false)
+        ->assertSet('pendingFilesDownload', false)
+        ->assertSet('pendingDownloadMessageId', null)
+        ->assertDispatched('toast-show');
+
+    expect(Storage::disk('public')->allFiles('downloads'))->toBeEmpty();
 });
