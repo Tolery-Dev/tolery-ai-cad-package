@@ -801,6 +801,22 @@ class Chatbot extends Component
 
         $asst->refresh();
 
+        // #2438 — Échec définitif du téléchargement des assets (DownloadCadAssetsJob
+        // a épuisé ses tentatives) : on coupe le polling et on prévient honnêtement
+        // l'utilisateur sans attendre le timeout du garde-fou. Le bouton reste actif
+        // pour relancer un nouvel essai.
+        if ($asst->cad_files_failed) {
+            $this->resetPendingDownload();
+
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Échec du téléchargement',
+                text: 'La préparation de vos fichiers a échoué. Merci de réessayer dans un instant.'
+            );
+
+            return;
+        }
+
         if (! $asst->cad_files_ready) {
             // #2374 — Garde-fou : si la préparation (modal ouverte) n'aboutit pas
             // après MAX_PREPARING_POLL_ATTEMPTS ticks, on arrête le polling et on
@@ -870,6 +886,34 @@ class Chatbot extends Component
         }
 
         $this->performChatDownload($team);
+    }
+
+    /**
+     * Relance le téléchargement des assets (OBJ/STEP/PDF) après un échec définitif
+     * du DownloadCadAssetsJob (#2438).
+     *
+     * Tant qu'un asset n'a pas été téléchargé localement, son champ contient encore
+     * l'URL source DFM (invariant garanti par le job en all-or-nothing) : on les
+     * réutilise pour re-dispatcher le job. On remet cad_files_failed à false pour
+     * que le polling reparte proprement. Si plus aucune URL n'est disponible, on
+     * laisse le flag d'échec en place afin que le polling prévienne immédiatement.
+     */
+    private function redispatchAssetDownload(ChatMessage $message): void
+    {
+        $urls = array_filter([
+            'obj' => $message->ai_cad_path,
+            'step' => $message->ai_step_path,
+            'pdf' => $message->ai_technical_drawing_path,
+        ], fn ($value) => is_string($value) && str_starts_with($value, 'http'));
+
+        if (empty($urls)) {
+            return;
+        }
+
+        $message->cad_files_failed = false;
+        $message->save();
+
+        DownloadCadAssetsJob::dispatch($message->id, $urls, $this->chat->getStorageFolder());
     }
 
     /**
@@ -1147,6 +1191,14 @@ class Chatbot extends Component
         $currentMessage = $this->findDisplayedPieceMessage();
 
         if ($currentMessage && ! $currentMessage->cad_files_ready) {
+            // #2438 — Un précédent téléchargement d'assets a échoué définitivement :
+            // on relance le job (si les URLs sources DFM sont encore disponibles)
+            // avant de rouvrir la modal de préparation, pour transformer le clic en
+            // véritable nouvel essai plutôt qu'en simple ré-affichage de l'erreur.
+            if ($currentMessage->cad_files_failed) {
+                $this->redispatchAssetDownload($currentMessage);
+            }
+
             $this->startDeferredDownload(null);
 
             return;

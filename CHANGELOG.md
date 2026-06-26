@@ -2,6 +2,14 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.23.3 - 2026-06-26
+
+### Fixes
+
+- **fix(downloads): téléchargement KO après une génération réussie — « Aucun fichier disponible pour ce chat » (mn-tolery#2438)** — `DownloadCadAssetsJob` marquait `cad_files_ready = true` même quand le téléchargement d'un asset (STEP/OBJ/PDF) échouait, et ne retentait jamais (le `continue` n'élevait pas d'exception). `ai_step_path` restait alors sur l'URL externe DFM, que `ZipGeneratorService` ne sait pas lire depuis le Storage → erreur trompeuse alors que la pièce est bien affichée. Le job persiste désormais en **all-or-nothing** : il lève une exception (retries + `backoff`) tant que tous les assets ne sont pas récupérés, ne flippe `cad_files_ready` qu'au succès complet, et signale un échec définitif via le nouveau flag `cad_files_failed`. Côté chat, un échec définitif coupe le polling et prévient honnêtement l'utilisateur (toast) sans attendre le timeout du garde-fou ; un nouveau clic relance réellement le téléchargement des assets. Garde défensif ajouté dans `ZipGeneratorService` (ignore les chemins de type URL).
+
+**Full Changelog**: https://github.com/Tolery-Dev/tolery-ai-cad-package/compare/v1.23.2...v1.23.3
+
 ## v1.23.2 - 2026-06-26
 
 ### Fixes

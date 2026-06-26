@@ -253,6 +253,16 @@ class ZipGeneratorService
         ]);
 
         try {
+            // Defensive guard (#2438): a *_path field may still hold an external DFM
+            // URL when DownloadCadAssetsJob has not localized it yet. Such a value is
+            // not a Storage path — skip it instead of letting Storage::exists() return
+            // a misleading "no file available" further up.
+            if (filter_var($storagePath, FILTER_VALIDATE_URL)) {
+                Log::warning("[ZIP GENERATOR] {$type} path is an external URL, not a storage path — skipping", ['path' => $storagePath]);
+
+                return;
+            }
+
             // Check if the file exists in storage
             if (! Storage::exists($storagePath)) {
                 Log::warning("[ZIP GENERATOR] {$type} file not found in storage", ['path' => $storagePath]);

@@ -23,6 +23,7 @@ use Tolery\AiCad\Enum\GenerationStatus;
  * @property string|null $ai_technical_drawing_path
  * @property string|null $ai_screenshot_path
  * @property bool $cad_files_ready
+ * @property bool $cad_files_failed
  * @property GenerationStatus|null $generation_status
  * @property int|null $generation_progress_pct
  * @property string|null $generation_progress_step
@@ -53,6 +54,7 @@ class ChatMessage extends Model
             'generation_started_at' => 'datetime',
             'generation_completed_at' => 'datetime',
             'cad_files_ready' => 'boolean',
+            'cad_files_failed' => 'boolean',
         ];
     }
 
