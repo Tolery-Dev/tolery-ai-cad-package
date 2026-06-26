@@ -2,6 +2,14 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.23.2 - 2026-06-26
+
+### Fixes
+
+- **fix(downloads): ne plus enregistrer de `ChatDownload` pour les beta testeurs (mn-tolery#2434)** — `recordChatDownload()`/`recordMessageDownload()` créaient une trace `ChatDownload` même pour un téléchargement beta (sans consommation de quota), ce qui rouvrait l'accès gratuit via la porte `already_downloaded` une fois le statut beta révoqué. On retourne désormais tôt si le team est beta : l'accès libre reste assuré par la porte `beta_tester`, sans laisser de trace qui survivrait à la révocation. (#200)
+
+**Full Changelog**: https://github.com/Tolery-Dev/tolery-ai-cad-package/compare/v1.23.1...v1.23.2
+
 ## v1.9.2 - 2026-04-20
 
 ### Fixes
