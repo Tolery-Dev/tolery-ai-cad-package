@@ -136,6 +136,19 @@ class ChatDetail extends Component
         return null;
     }
 
+    /**
+     * Indique si un message est le sentinelle interne « génération en vol ».
+     *
+     * Ce marqueur (`[TYPING_INDICATOR]`) est stocké comme message assistant le
+     * temps qu'une génération s'exécute, puis remplacé par le vrai contenu. La
+     * vue admin doit l'intercepter pour afficher un indicateur plutôt que le
+     * marqueur brut (équivalent de `parseContent()` du front, chat-messages.blade.php).
+     */
+    public static function isTypingIndicator(?string $message): bool
+    {
+        return $message === '[TYPING_INDICATOR]';
+    }
+
     public function render(): View
     {
         return view('ai-cad::livewire.admin.chat-detail', [
