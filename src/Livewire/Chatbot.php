@@ -174,20 +174,17 @@ class Chatbot extends Component
             $this->updateDownloadStatus();
         }
 
-        // Détecter une génération orpheline : dernier message = user sans réponse assistant
-        $lastMsg = $this->chat->messages()
-            ->whereNotIn('message', ['[TYPING_INDICATOR]'])
-            ->latest('id')
-            ->first();
-
-        if ($lastMsg && $lastMsg->role === ChatMessage::ROLE_USER) {
-            $this->hasPendingGeneration = true;
-        }
-
-        // Resume after reload: if a generation is still in flight on this chat
-        // (Phase 2 of #152), tell the frontend to reopen the progress modal and
-        // resubscribe to the Reverb channel. The job keeps running on the queue
-        // worker independently of the browser.
+        // Reprise après reload : si une génération est ENCORE en vol sur ce chat
+        // (Phase 2 de #152), on rouvre la modal de progression et on se réabonne au
+        // canal Reverb. Le job continue de tourner sur le worker indépendamment du
+        // navigateur.
+        //
+        // ⚠️ Ce cas est PRIORITAIRE sur la détection d'orpheline ci-dessous : pendant
+        // une génération en cours, le message assistant est un '[TYPING_INDICATOR]'.
+        // Or la détection d'orpheline exclut justement ces sentinelles, ce qui lui
+        // faisait voir le message user comme « dernier message sans réponse » et
+        // afficher à tort le bandeau « Relancer » EN MÊME TEMPS que la reprise temps
+        // réel. On rend donc les deux états mutuellement exclusifs.
         $runningMessage = $this->chat->messages()
             ->whereIn('generation_status', [
                 GenerationStatus::PENDING->value,
@@ -201,6 +198,20 @@ class Chatbot extends Component
                 messageId: $runningMessage->id,
                 chatId: $this->chat->id,
             );
+
+            return;
+        }
+
+        // Pas de génération en vol → détecter une génération orpheline : dernier
+        // message = user resté sans réponse assistant (ex. coupure réseau avant le
+        // dispatch du job). Affiche le bandeau « Relancer ».
+        $lastMsg = $this->chat->messages()
+            ->whereNotIn('message', ['[TYPING_INDICATOR]'])
+            ->latest('id')
+            ->first();
+
+        if ($lastMsg && $lastMsg->role === ChatMessage::ROLE_USER) {
+            $this->hasPendingGeneration = true;
         }
     }
 
