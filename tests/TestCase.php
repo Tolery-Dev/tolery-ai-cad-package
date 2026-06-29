@@ -42,6 +42,10 @@ class TestCase extends Orchestra
         // Required by Livewire component tests (encrypted snapshot) and any
         // view rendering that relies on the encrypter.
         config()->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
+
+        // Prevent Broadcast::channel() from trying to instantiate Pusher in
+        // the test environment where pusher/pusher-php-server is not available.
+        config()->set('broadcasting.default', 'null');
     }
 
     protected function defineDatabaseMigrations(): void
