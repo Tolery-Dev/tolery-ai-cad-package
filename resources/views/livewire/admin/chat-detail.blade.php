@@ -148,7 +148,17 @@
                             </div>
 
                             {{-- Message Text --}}
-                            @if($message->message)
+                            @if($this::isTypingIndicator($message->message))
+                                {{-- Sentinelle interne « génération en vol » : afficher un indicateur, jamais le marqueur brut (cf. front chat-messages.blade.php). --}}
+                                <div class="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                                    <span class="flex items-center gap-1" aria-hidden="true">
+                                        <span class="size-1.5 rounded-full bg-current animate-bounce" style="animation-delay: -0.3s"></span>
+                                        <span class="size-1.5 rounded-full bg-current animate-bounce" style="animation-delay: -0.15s"></span>
+                                        <span class="size-1.5 rounded-full bg-current animate-bounce"></span>
+                                    </span>
+                                    <span class="italic">Génération en cours…</span>
+                                </div>
+                            @elseif($message->message)
                                 @php
                                     // $dfmErrorCodes ?? [] : filet de sécurité si un composant
                                     // consommateur surcharge render() sans repasser la variable.
