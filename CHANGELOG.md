@@ -2,6 +2,14 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.24.1 - 2026-06-29
+
+### Fixes
+
+- **fix(chatbot): bandeau « Relancer » affiché à tort au retour pendant une génération en cours** — au rechargement d'un chat dont la génération était encore en vol, `Chatbot::mount()` rouvrait bien la modal de progression (reprise temps réel via Reverb) mais affichait EN MÊME TEMPS le bandeau d'erreur « La génération n'a pas pu démarrer… Relancer ». En cause : la détection d'orpheline excluait les messages `[TYPING_INDICATOR]` (le placeholder assistant d'une génération en cours), si bien que le dernier message « visible » redevenait le message user, faussement interprété comme resté sans réponse. Un clic sur « Relancer » relançait alors un second `GenerateCadJob` en doublon. La reprise d'une génération `PENDING`/`RUNNING` est désormais **prioritaire et mutuellement exclusive** avec la détection d'orpheline : tant qu'une génération est en vol, on se réabonne au flux sans jamais lever `hasPendingGeneration`.
+
+**Full Changelog**: https://github.com/Tolery-Dev/tolery-ai-cad-package/compare/v1.24.0...v1.24.1
+
 ## v1.23.3 - 2026-06-26
 
 ### Fixes
