@@ -138,25 +138,16 @@
                 @endif
 
                 {{-- #2374 — Désactivé pendant la préparation pour éviter les reclics
-                     (la modal « en cours de préparation » est déjà ouverte). --}}
+                     (la modal « en cours de préparation » est déjà ouverte).
+                     #2381 — Couleur « Nouveau fichier » (violettes), pill comme la nav.
+                     Le bouton « Chiffrer et commander » vit désormais dans le header. --}}
                 <flux:button
                     wire:click="initiateDownload"
                     :disabled="$this->showPreparingModal"
                     variant="primary"
-                    color="purple"
                     icon="arrow-down-tray"
-                    class="cursor-pointer shadow-lg !px-6 !py-3 !text-base !font-semibold">
+                    class="cursor-pointer shadow-lg !rounded-full !border-0 !bg-violettes !text-white hover:!bg-purple-800 !px-6 !py-3 !text-base !font-semibold">
                     Télécharger votre fichier
-                </flux:button>
-
-                {{-- #2381 — Envoie la pièce dans un devis Tolery (chiffrage + commande). --}}
-                <flux:button
-                    wire:click="orderWithTolery"
-                    variant="primary"
-                    color="blue"
-                    icon="calculator"
-                    class="cursor-pointer shadow-lg !px-6 !py-3 !text-base !font-semibold">
-                    Chiffrer et commander la pièce
                 </flux:button>
             </div>
         @endif

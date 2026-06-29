@@ -43,6 +43,39 @@
         </div>
     @endif
 
-    {{-- History Panel Component --}}
-    <livewire:chat-history-panel />
+    {{-- Actions à droite : chiffrer/commander la pièce (#2381) + historique --}}
+    <div class="flex items-center gap-3 shrink-0">
+        @if($this->hasDownloadablePiece())
+            {{-- #2381 — Chiffrer et commander la pièce. variant="primary" sans color →
+                 couleur accent de l'hôte (= bouton « Nouveau devis », blue-700 #005dff),
+                 pill comme la nav. Gate d'accès (abonnement/achat) géré dans orderWithTolery().
+
+                 Loader : la redirection mène à une route hôte qui matérialise le STEP +
+                 crée la commande (analyse Wicam synchrone) → quelques secondes. On pose un
+                 état Alpine au clic qui PERSISTE jusqu'à la navigation full-page, et qu'on
+                 réinitialise si l'accès est refusé (modal ouverte, pas de navigation) via
+                 l'évènement `cad-order-blocked` émis par orderWithTolery(). --}}
+            <flux:button
+                x-data="{ ordering: false }"
+                x-on:click="ordering = true"
+                x-on:cad-order-blocked.window="ordering = false"
+                x-bind:disabled="ordering"
+                wire:click="orderWithTolery"
+                variant="primary"
+                :loading="false"
+                class="cursor-pointer !rounded-full !border-0 !text-white !font-semibold">
+                <span x-show="!ordering" class="inline-flex items-center gap-2">
+                    <flux:icon.calculator variant="micro" />
+                    Chiffrer et commander la pièce
+                </span>
+                <span x-show="ordering" class="inline-flex items-center gap-2">
+                    <flux:icon.loading variant="micro" />
+                    Préparation du devis…
+                </span>
+            </flux:button>
+        @endif
+
+        {{-- History Panel Component --}}
+        <livewire:chat-history-panel />
+    </div>
 </header>

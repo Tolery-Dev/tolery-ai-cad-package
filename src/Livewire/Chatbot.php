@@ -1351,12 +1351,42 @@ class Chatbot extends Component
     /**
      * Envoie la pièce générée dans un devis Tolery (chiffrage + commande).
      *
-     * Le chiffrage Wicam et la création de la commande appartiennent à l'app
-     * hôte : on redirige vers sa route, qui matérialise le STEP en commande puis
-     * ouvre l'éditeur de devis. (#2381)
+     * Même gate d'accès que le téléchargement (cf. initiateDownload) : l'utilisateur
+     * doit avoir un abonnement actif (essai gratuit ou payant) ou avoir déjà acheté
+     * la pièce. Sinon on ouvre la modal d'achat/abonnement plutôt que de rediriger.
+     * Le chiffrage/commande lui-même vit dans l'app hôte (route ci-dessous). (#2381)
      */
     public function orderWithTolery(): void
     {
+        /** @var ChatUser $user */
+        $user = auth()->user();
+        $team = $user->team;
+
+        if (! $team) {
+            // Pas de navigation → réinitialise le loader du bouton (cf. chat-header).
+            $this->dispatch('cad-order-blocked');
+
+            Flux::toast(
+                variant: 'danger',
+                heading: 'Erreur',
+                text: 'Impossible de commander : aucune équipe associée.'
+            );
+
+            return;
+        }
+
+        $status = app(FileAccessService::class)->canDownloadChat($team, $this->chat);
+
+        if (! $status['can_download']) {
+            // Pas d'accès → même modal d'achat/abonnement que le bouton « Télécharger ».
+            // Pas de navigation → réinitialise le loader du bouton (cf. chat-header).
+            $this->showPurchaseModal = true;
+            $this->downloadStatus = $status;
+            $this->dispatch('cad-order-blocked');
+
+            return;
+        }
+
         $this->redirect(route('client.tolerycad.create-order', ['chat' => $this->chat]));
     }
 
