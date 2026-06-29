@@ -148,6 +148,16 @@
                     class="cursor-pointer shadow-lg !px-6 !py-3 !text-base !font-semibold">
                     Télécharger votre fichier
                 </flux:button>
+
+                {{-- #2381 — Envoie la pièce dans un devis Tolery (chiffrage + commande). --}}
+                <flux:button
+                    wire:click="orderWithTolery"
+                    variant="primary"
+                    color="blue"
+                    icon="calculator"
+                    class="cursor-pointer shadow-lg !px-6 !py-3 !text-base !font-semibold">
+                    Chiffrer et commander la pièce
+                </flux:button>
             </div>
         @endif
     </div>

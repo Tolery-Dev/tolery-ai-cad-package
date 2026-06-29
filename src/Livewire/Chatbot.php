@@ -1338,6 +1338,18 @@ class Chatbot extends Component
     }
 
     /**
+     * Envoie la pièce générée dans un devis Tolery (chiffrage + commande).
+     *
+     * Le chiffrage Wicam et la création de la commande appartiennent à l'app
+     * hôte : on redirige vers sa route, qui matérialise le STEP en commande puis
+     * ouvre l'éditeur de devis. (#2381)
+     */
+    public function orderWithTolery(): void
+    {
+        $this->redirect(route('client.tolerycad.create-order', ['chat' => $this->chat]));
+    }
+
+    /**
      * Annule un téléchargement en attente : ferme la modal et coupe le polling.
      * Appelé quand l'utilisateur ferme manuellement la modal de préparation.
      */
