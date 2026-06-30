@@ -52,6 +52,18 @@
                         <div class="font-semibold" x-text="`${overall}%`"></div>
                     </div>
 
+                    {{-- Estimated remaining generation time, forwarded by the DFM stream
+                         via CadGenerationProgress.estimated_time_seconds (mn-tolery#2475).
+                         Hidden when absent or once the generation completes. --}}
+                    <div class="mt-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400"
+                         x-show="estimatedTimeSeconds"
+                         x-cloak>
+                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span x-text="`Temps de génération estimé : ${formatEstimatedTime()}`"></span>
+                    </div>
+
                     {{-- Error state (async flow — the job reports to Nightwatch and notifies
                          the user; a retry is just a new message in the chat). --}}
                     <template x-if="hasError">

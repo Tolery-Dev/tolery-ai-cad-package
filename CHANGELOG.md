@@ -2,6 +2,14 @@
 
 All notable changes to `ai-cad` will be documented in this file.
 
+## v1.25.0 - 2026-06-30
+
+### Nouveautés
+
+- **feat(chatbot): temps de génération estimé affiché pendant la génération (mn-tolery#2475)** — le flux SSE DFM expose désormais un champ `estimated_time_seconds` (entier, en secondes). `GenerateCadJob::onProgress` le lit et le relaie via l'event `CadGenerationProgress` (nouvelle clé `estimated_time_seconds` dans `broadcastWith()`), et la modal de progression du chatbot l'affiche sous la barre — formaté en français (`~3 min 02 s`, `~45 s`) — tant qu'il est présent, masqué à la complétion. Aucune persistance en base : la valeur est purement temps réel (broadcast Reverb). La position dans la file (`queue_position`) n'est volontairement pas exposée (non pertinente côté utilisateur).
+
+**Full Changelog**: https://github.com/Tolery-Dev/tolery-ai-cad-package/compare/v1.24.4...v1.25.0
+
 ## v1.24.1 - 2026-06-29
 
 ### Fixes

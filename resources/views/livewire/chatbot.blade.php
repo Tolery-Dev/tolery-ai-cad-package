@@ -200,6 +200,10 @@
             activeStep: null,
             completedSteps: 0,
 
+            // Estimated remaining generation time (seconds) forwarded by the DFM
+            // stream via CadGenerationProgress.estimated_time_seconds (#2475).
+            estimatedTimeSeconds: null,
+
             // Error state — surface a friendly message on CadGenerationFailed
             hasError: false,
             errorMessage: '',
@@ -234,6 +238,18 @@
                 this.stepMessageIndex = {};
                 this.hasError = false;
                 this.errorMessage = '';
+                this.estimatedTimeSeconds = null;
+            },
+            // Human-friendly French rendering of estimatedTimeSeconds (e.g. "~3 min 02 s").
+            formatEstimatedTime() {
+                const total = Number(this.estimatedTimeSeconds);
+                if (!Number.isFinite(total) || total <= 0) return '';
+                if (total < 60) return `~${Math.round(total)} s`;
+                const minutes = Math.floor(total / 60);
+                const seconds = Math.round(total % 60);
+                return seconds > 0
+                    ? `~${minutes} min ${String(seconds).padStart(2, '0')} s`
+                    : `~${minutes} min`;
             },
             getDetailedMessage(stepKey) {
                 const messages = this.stepMessages[stepKey];
@@ -298,11 +314,13 @@
                     })
                     .listen('.Tolery\\AiCad\\Events\\CadGenerationProgress', (e) => {
                         if (e.message_id !== this.currentMessageId) return;
+                        this.estimatedTimeSeconds = e.estimated_time_seconds || null;
                         this.markStep(e.step, null, e.message, e.pct);
                     })
                     .listen('.Tolery\\AiCad\\Events\\CadGenerationCompleted', (e) => {
                         if (e.message_id !== this.currentMessageId) return;
                         aicadLog('[AICAD] ✅ CadGenerationCompleted', e);
+                        this.estimatedTimeSeconds = null;
                         this.markStep('complete', 'Completed', 'Terminé', 100);
                         this.unsubscribe();
                         // Trigger the server-side listener so the new message text is
