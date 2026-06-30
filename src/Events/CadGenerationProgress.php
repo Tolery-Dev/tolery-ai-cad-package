@@ -23,6 +23,7 @@ class CadGenerationProgress implements ShouldBroadcast
         public ?string $step,
         public ?int $pct,
         public ?string $progressMessage,
+        public ?int $estimatedTimeSeconds = null,
     ) {}
 
     /** @return array<int, Channel> */
@@ -40,6 +41,7 @@ class CadGenerationProgress implements ShouldBroadcast
             'step' => $this->step,
             'pct' => $this->pct,
             'message' => $this->progressMessage,
+            'estimated_time_seconds' => $this->estimatedTimeSeconds,
         ];
     }
 }

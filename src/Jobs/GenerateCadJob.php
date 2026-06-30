@@ -111,9 +111,14 @@ class GenerateCadJob implements ShouldBeUnique, ShouldQueue
                     $step = $event['step'] ?? null;
                     $pct = isset($event['overall_percentage']) ? (int) $event['overall_percentage'] : null;
                     $msg = $event['message'] ?? $event['status'] ?? null;
+                    // Estimated remaining generation time (seconds) forwarded by the DFM
+                    // SSE stream — surfaced to the user in the progress modal (mn-tolery#2475).
+                    $estimatedTimeSeconds = isset($event['estimated_time_seconds'])
+                        ? (int) $event['estimated_time_seconds']
+                        : null;
 
                     // Always broadcast (cheap) — DB writes throttled to 1/s.
-                    CadGenerationProgress::dispatch($message, $step, $pct, $msg);
+                    CadGenerationProgress::dispatch($message, $step, $pct, $msg, $estimatedTimeSeconds);
 
                     $now = microtime(true);
                     if ($now - $lastDbWriteAt < 1.0) {
