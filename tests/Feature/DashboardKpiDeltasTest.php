@@ -7,6 +7,7 @@ use Tolery\AiCad\Livewire\Admin\Dashboard;
 use Tolery\AiCad\Models\Chat;
 use Tolery\AiCad\Models\ChatTeam;
 use Tolery\AiCad\Models\FilePurchase;
+use Tolery\AiCad\Models\SubscriptionPrice;
 
 beforeEach(function () {
     config(['ai-cad.chat_team_model' => ChatTeam::class]);
@@ -63,6 +64,75 @@ it('splits active subscribers between paying and trialing counts', function () {
     expect($kpis['paying_count'])->toBe(1)
         ->and($kpis['trialing_count'])->toBe(1)
         ->and($kpis['subscription_count'])->toBe(2);
+});
+
+it('excludes trialing subscriptions from the subscription revenue', function () {
+    $payingTeam = ChatTeam::factory()->create();
+    $trialTeam = ChatTeam::factory()->create();
+
+    SubscriptionPrice::factory()->monthly()->create([
+        'stripe_price_id' => 'price_active',
+        'amount' => 4900, // 49,00 € HT
+    ]);
+    SubscriptionPrice::factory()->monthly()->create([
+        'stripe_price_id' => 'price_trial',
+        'amount' => 4900, // 49,00 € HT
+    ]);
+
+    Subscription::query()->forceCreate([
+        'team_id' => $payingTeam->id,
+        'type' => 'default',
+        'stripe_id' => 'sub_active_rev',
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_active',
+        'quantity' => 1,
+    ]);
+
+    // Trial subscriber: no payment collected yet, must not count as revenue.
+    Subscription::query()->forceCreate([
+        'team_id' => $trialTeam->id,
+        'type' => 'default',
+        'stripe_id' => 'sub_trial_rev',
+        'stripe_status' => 'trialing',
+        'stripe_price' => 'price_trial',
+        'quantity' => 1,
+        'trial_ends_at' => now()->addDays(7),
+    ]);
+
+    $kpis = (new Dashboard)->getKpis();
+
+    // Only the paying plan is counted (49,00 €), the trial plan is ignored.
+    expect($kpis['subscription_revenue'])->toEqual(49.0);
+});
+
+it('flags only paying subscriptions with a scheduled cancellation as at risk', function () {
+    $payingTeam = ChatTeam::factory()->create();
+    $trialTeam = ChatTeam::factory()->create();
+
+    // Paying customer who scheduled a cancellation, still in grace period → at risk.
+    Subscription::query()->forceCreate([
+        'team_id' => $payingTeam->id,
+        'type' => 'default',
+        'stripe_id' => 'sub_active_grace',
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_x',
+        'quantity' => 1,
+        'ends_at' => now()->addDays(10),
+    ]);
+
+    // Trial that auto-cancels at trial end (Stripe sets ends_at) → NOT at risk.
+    Subscription::query()->forceCreate([
+        'team_id' => $trialTeam->id,
+        'type' => 'default',
+        'stripe_id' => 'sub_trial_grace',
+        'stripe_status' => 'trialing',
+        'stripe_price' => 'price_x',
+        'quantity' => 1,
+        'trial_ends_at' => now()->addDays(10),
+        'ends_at' => now()->addDays(10),
+    ]);
+
+    expect((new Dashboard)->getKpis()['at_risk_count'])->toBe(1);
 });
 
 it('reports the à-la-pièce revenue (HT) and the number of unit purchases', function () {

@@ -79,9 +79,13 @@ class Dashboard extends Component
 
         $subscriptionsByProduct = $this->groupByProduct($activeSubscriptions);
 
-        // À risque : résiliation programmée encore en période de grâce.
+        // À risque : abonné *payant* dont la résiliation est programmée mais encore en
+        // période de grâce. On exclut les essais : un abonnement en essai sans moyen de
+        // paiement reçoit cancel_at_period_end=true de Stripe (auto-annulation en fin
+        // d'essai), ce qui pose un ends_at futur — mais ce n'est pas un client qui churn.
         $atRiskCount = Subscription::query()
             ->where('type', 'default')
+            ->where('stripe_status', 'active')
             ->whereNotNull('ends_at')
             ->where('ends_at', '>', now())
             ->count();
@@ -123,9 +127,11 @@ class Dashboard extends Component
         $purchaseQuery = FilePurchase::query();
         $chatQuery = Chat::query();
         $downloadQuery = ChatDownload::query();
+        // Revenue only counts *paying* subscriptions. Trials are excluded: no payment
+        // has been collected yet, so a trialing plan must not inflate "Revenus abonnement".
         $subscriptionsQuery = Subscription::query()
             ->where('type', 'default')
-            ->whereIn('stripe_status', ['active', 'trialing']);
+            ->where('stripe_status', 'active');
 
         if ($hasDateFilter) {
             $purchaseQuery->whereBetween('purchased_at', [$start, $end]);
@@ -134,7 +140,7 @@ class Dashboard extends Component
             $subscriptionsQuery->whereBetween('created_at', [$start, $end]);
         }
 
-        // Subscription revenue: sum each created subscription's plan amount,
+        // Subscription revenue: sum each active subscription's plan amount,
         // resolved in one batch to avoid N+1.
         $subscriptions = $subscriptionsQuery->get(['id', 'stripe_price']);
         $priceAmounts = SubscriptionPrice::query()
